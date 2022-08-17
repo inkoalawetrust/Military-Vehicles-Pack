@@ -1,0 +1,38 @@
+Version "4.8.2"
+
+//Base classes and common functions shared acros across all actors.
+#Include "ZScript/Vehicles/Base/Base.zsc"
+#Include "ZScript/Vehicles/Base/BaseProp.zsc"
+#Include "ZScript/Vehicles/Base/CommonFunctions.zsc"
+
+//=====|The vehicles|=====\\
+	//Army Car
+	#Include "ZScript/Vehicles/Army Car/ArmyCar.zsc"
+	#Include "ZScript/Vehicles/Army Car/OtherActors.zsc"
+
+
+//Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.
+Class SM_MarineChecker : EventHandler
+{
+	Bool NoCustomMarines;
+	
+	Bool SM_MarinesLoaded()
+	{
+		Let FindMarines = ServiceIterator.Find("SM_SmartMarines");
+		
+		While (FindMarines.Next())
+			Return True;
+		
+		Console.Printf ("No marines found :pepesad:");
+		Return False;
+	}
+	
+	Override Void OnRegister()
+	{
+		If (!SM_MarinesLoaded())
+		{
+			Console.Printf ("\c[Red]WARNING: The Smart Marine NPC is not loaded alongside the Military Vehicles Pack, the mod will fall back to using the ZDoom marines. \n\c[Red]You should REALLY be using the Smart Marine NPC instead, do not report any bugs unless they also occur with the Smart Marine NPC loaded. I am not responsible for any dumb behavior on the ZDoom marines' part.\n\c[Yellow]Download link for the Smart Marines: https://github.com/inkoalawetrust/Smart-Marines/releases");
+			NoCustomMarines = True;
+		}
+	}
+}

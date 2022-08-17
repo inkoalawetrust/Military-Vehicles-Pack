@@ -1,0 +1,90 @@
+Extend Class MVP_BaseVehicle
+{
+	//Is the other actor dead ?
+	Bool IsDead (Actor Other)
+	{
+		If (!Other) Return False;
+		
+		Return (Other.Health <= 0);
+	}
+	
+	//Can the vehicle spawn Smart Marines ?
+	Bool CustomMarinesAvailable()
+	{
+		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
+		
+		If (!MarineCheck.NoCustomMarines)
+			Return True;
+		Else
+			Return False;
+	}
+	
+	Actor SpawnMarine (Vector2 Position = (0,0), Bool SetMaster = False)
+	{
+		Name CustomMarine = 'SmartMarine';
+		Class<Actor> WhatToSpawn;
+		Actor Spawnee;
+		
+		If (CustomMarinesAvailable())
+			WhatToSpawn = CustomMarine;
+		//Smart Marines aren't loaded, so spawn shitty ZDoom marines instead.
+		Else
+			WhatToSpawn = "MarineChaingun";
+		
+		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X,Position.Y,GetZAt (Position.X,Position.Y)));
+		Spawnee.CopyFriendliness (Self,True);
+		Spawnee.bSummonedMonster = True;
+		Spawnee.Angle = Self.Angle;
+		If (SetMaster)
+			Spawnee.Master = Self;
+		
+		Return Spawnee;
+	}
+	
+	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
+	Void FollowPlayerControl (Double MaxDist = 284)
+	{
+		If (!PlayerInGame[FriendPlayer])
+			Return;
+		
+		If (bFriendly)
+			bDontFollowPlayers = (Distance3DSquared (Players[FriendPlayer].Mo) <= MaxDist*MaxDist);
+	}
+	
+	Bool MarineIsOnTurret (Actor Other)
+	{
+		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		If (!IsOnTurret)
+			Return False;
+		
+		If (IsOnTurret.GetInt("",ObjectArg:Other))
+			Return True;
+		
+		Return False;
+	}
+	
+	//Add a function that determines if the vehicles' target is a powerful enemy, and another one that determines if they are a VERY powerful enemy.
+	Bool IsPowerful (Actor Other)
+	{
+		Name CustomMarine = 'SmartMarine';
+		Name CustomTurretMarine = "TurretMarine";
+		Name TurretWeapon = 'SmartMarineMGWeapon';
+		
+		If (!Other)
+			Return False;
+		
+		//Is the other actor a smart marine or player on a turret ?
+		If (CustomMarinesAvailable()
+		&& (Other Is CustomMarine && MarineIsOnTurret (Other)
+		|| Other Is CustomTurretMarine
+		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon))
+			{a_log ("say hello to my little friend");Return True;}
+		
+		//Does the actor have 2500 health or more, is sufficiently large, or can reflect projectiles ?
+		If (Other.SpawnHealth() >= 2500 || (Other.Height >= 80 && Other.Radius >= 72) || Other.bReflective)
+			{a_log ("spooky scary demons");Return True;}
+		
+		Return False;
+	}
+}

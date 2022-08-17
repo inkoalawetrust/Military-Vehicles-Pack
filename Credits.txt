@@ -1,0 +1,47 @@
+Mod made by Inkoalawetrust
+
+|==============|Code|==============|
+Any code not written by me (Inkoalawetrust) will be specified here.
+|==============|Code|==============|
+
+
+
+
+|==============|Sprites|==============|
+
+=====<Vehicles>=====
+All vehicle sprites are entirelymade by me (Inkoalawetrust) unless otherwise specified.
+
+=====<SFX>=====
+Fire sprites (F1RE and F2RE) are from Duke Nukem 3D, ripped from Project Brutality.
+Large explosion (MCR3A0-MCR3G0) made by Inkoalawetrust.
+
+|==============|Sprites|==============|
+
+
+
+
+|==============|Sounds|==============|
+SFX:
+Generic large explosion sound (BigExplosion.ogg) is from the GDC 2018 sound library, "Olivier Girardot - Guns & Explosions"
+Generic fire sound (Fire.ogg) is from the GDC 2018 sound library, "Gregor Quendel – Designed Fire"
+Metal impact sound (MetalImpact.ogg) is from the GDC 2020 sound library, "Bluezone - Cinematic Metal Impacts"
+Wheel impact sound (WheelImpact.ogg) is from the GDC 2020 sound library, "Shapeforms - Hit & Punch"
+
+Vehicles:
+Army car idle sound (CarIdle.ogg) is from the 2018 GDC sound library, "Pole Position - M5 High Speed Tractor"
+Army car running sound (CarMove.ogg) is from the 2018 GDC sound library, "Pole Position - M5 High Speed Tractor"
+Army car pain ray sounds made by me (Inkoalawetrust).
+Army car handle sound (CarHandle.ogg) by RutgerMuller https://freesound.org/people/RutgerMuller/sounds/50697/
+Army car door slam sound (CarSlam.ogg) by Frederick_Sunne https://freesound.org/people/Frederik_Sunne/sounds/324138/
+|==============|Sounds|==============|
+
+
+|==============|TOOLS USED|==============|
+A list of all the tools I have used to make my own assets for this mod, and what I used them for.
+
+Blender (https://www.blender.org/): Modelling, texturing, and animating the actual vehicles.
+Sprite Batch Render Ex (https://github.com/nashmuhandes/SpriteBatchRender): Blender addon, used to render the vehicles into sprites with proper sprite names, I use the Blender3.2.1 branch.
+Batch Image Manipulation Program (https://alessandrofrancesconi.it/projects/bimp/): Used to autocrop, convert to 8-Bit PNGs, and compress my sprites en mass. Here is a link to set of image manipulations I use(May be outdated): https://drive.google.com/file/d/1Yyq1X-TClofjVrcsoOsGxSPzehcS-Ads/view?usp=sharing
+SLADE: Used to automatically offset the sprites, and then for me to also manually adjust the offsets to be more accurate.
+DeflOpt, PNGCrush, PNGout: Plugged into SLADE, and used to even further compress sprites. Here is a guide on how to do that and where to find these programs: https://imgur.com/a/DJ4x4hS

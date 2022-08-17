@@ -1,0 +1,14 @@
+//Generic sound effects
+
+SFX/BigExplosion "Sounds/SFX/BigExplosion.ogg"
+SFX/Explosion "Sounds/SFX/Explosion.ogg"
+SFX/Fire "Sounds/SFX/Fire.ogg"
+SFX/MetalHit "Sounds/SFX/MetalImpact.ogg"
+SFX/WheelHit "Sounds/SFX/WheelImpact.ogg"
+
+//=====|Vehicle specific sound effects|=====\\
+	//Army car
+	Vehicle/ArmyCar/Idle "Sounds/Vehicles/Army Car/CarIdle.ogg"
+	Vehicle/ArmyCar/Moving "Sounds/Vehicles/Army Car/CarMove.ogg"
+	Vehicle/ArmyCar/DoorHandle "Sounds/Vehicles/Army Car/CarHandle.ogg"
+	Vehicle/ArmyCar/DoorSlam "Sounds/Vehicles/Army Car/CarSlam.ogg"

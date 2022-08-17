@@ -1,0 +1,172 @@
+//To do
+/*Perhaps I should make a system that allows troop carrying vehicles like the car, truck, and APC, to follow patrol points, and then also add an
+ACS script that can call a static function that makes the vehicle drop its' troops, which can be triggered by having the vehicle cross a patrol special.*/
+//Make the pain ray.
+//Make the generic big explosion actor, and the army car specific debris actors, who should be able to act as gravity affected projectiles as well.
+
+Class MVP_ArmyCar : MVP_BaseVehicle
+{
+	Default
+	{
+		//$Title Army Car
+		//$Category Vehicles
+		//$Sprite MCR1A1
+		//Most of the actors' properties are basically the default properties for the base class.
+		Speed 12;
+		FastSpeed 18;
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
+		Health 800;
+		GibHealth 200;
+		Tag "Army Car";
+		+MissileEvenMore
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		MarinesDeployed = User_NoMarines;
+		
+		If (CustomMarinesAvailable())
+			Console.Printf ("It's marinatin' time.");
+		Else
+			Console.Printf ("Forever alone.");
+	}
+	
+	Bool MarinesDeployed;
+	Actor[3] Marines;
+	
+	String User_SupplyType; //Maybe I could make friendly cars carrying supplies follow the player around after dropping off their marines.
+	Bool User_PainRay; //The car carries a non lethal weapon that pain locks enemies, similar to the Active Denial System.
+	Bool User_NoMarines; //The car spawns with no marines in it.
+	States
+	{
+		Spawn:
+			MCR1 A 0; //Has to exist to shut GZDoom up.
+			#### A 1
+			{
+				//If the car is carrying supplies, change all of its' non-death sprites to have an open trunk.
+				If (User_SupplyType && !(User_SupplyType ~== "" || User_SupplyType ~== "None"))
+					Sprite = GetSpriteIndex ("MCR2");
+				Else
+					Sprite = GetSpriteIndex ("MCR1");
+				
+				A_StopSound (CHAN_MOVING);
+				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
+				A_LookEx (0,0,8192,3072);
+			}
+			Loop;
+		See:
+			#### DDDDCCCCBBBBAAAA 2
+			{
+				A_StopSound (CHAN_IDLING);
+				A_StartSound ("Vehicle/ArmyCar/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.8);
+				
+				bFrightened = (IsPowerful (Target) && Target.IsVisible(Self, True)); //Be scared of your target if it is powerful and can see you.
+				
+				If (bFrightened)
+					MinMissileChance = bMissileMore = 1;
+				
+				FollowPlayerControl();
+				if (bdontfollowplayers) a_log ("too close");
+				//Don't randomly swerve left and right while moving if you have no target or haven't deployed your marines yet.
+				If (!Target || !MarinesDeployed)
+					A_Chase (Null,"DeployMarines",CHF_DONTIDLE|CHF_NORANDOMTURN);
+				//Chase enemies around to stun them if you have the ADS equipped.
+				Else If (MarinesDeployed && User_PainRay)
+					A_Chase (Null,Null,CHF_DONTIDLE);
+				//You are completely defenseless.
+				Else If (MarinesDeployed && !User_PainRay)
+				{
+					//Only run away if the target is visible.
+					If (!Target || Target && IsVisible (Target,True))
+						bFrightened = True;
+					A_Chase (Null,Null,CHF_DONTIDLE);
+				}
+				
+				MinMissileChance = Default.MinMissileChance;
+				bFrightened = bMissileMore = False;
+			}
+			Loop;
+		DeployMarines:
+			#### A 0 //Temporarily make the car bigger, to see if any of the marines would get stuck anywhere.
+			{
+				A_SetSize (Radius*1.25);
+				
+				If (!TestMobjLocation()) //If they would be stuck, cancel the drop.
+				{
+					A_SetSize (Default.Radius);
+					Return ResolveState ("See");
+				}
+				
+				A_SetSize (Default.Radius);
+				
+				Return State (Null);
+			}
+			#### E 5 A_StartSound ("Vehicle/ArmyCar/DoorHandle",flags:CHANF_OVERLAP);
+			#### F 8;
+			#### G 12 A_StartSound ("Vehicle/ArmyCar/DoorSlam",flags:CHANF_OVERLAP);
+			#### G 17
+			{
+				//Store the marines spawned in an array, just in case they need to be kept track of.
+				Marines[0] = SpawnMarine ((Default.Radius*2,16),True); //Front left door.
+				Marines[1] = SpawnMarine ((-Default.Radius*2,-16),True); //Back right door.
+				Marines[2] = SpawnMarine ((Default.Radius*2,-16),True); //Back left door.
+				MarinesDeployed = True;
+			}
+			#### G 12 A_StartSound ("Vehicle/ArmyCar/DoorHandle",flags:CHANF_OVERLAP);
+			#### F 8;
+			#### E 5;
+			Goto See;
+		Death:
+			MCR1 H 4
+			{
+				A_Explode (128,80,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
+				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.6);
+				A_StopSound (CHAN_IDLING);
+				A_StopSound (CHAN_MOVING);
+				
+				//Spawn parts of the vehicle as debris.
+				//A_SpawnItemEx ("MVP_ArmyCarDoor",-8,-Radius,6,FRandom(-0.2,0.2),FRandom (8,14),FRandom (-1,1),flags:SXF_SETTARGET);
+				//A_SpawnItemEx ("MVP_ArmyCarHood",24,0,8,FRandom(-0.5,0.5),FRandom (-0.5,0.5),FRandom (8,32),flags:SXF_SETTARGET);
+				
+				//Don't spawn the spare wheel if the car had a back open trunk, since if it did, that would mean that it had no spare wheel visible on it.
+				//If (User_SupplyType == 0)
+				//A_SpawnItemEx ("MVP_ArmyCarWheel",-32,0,10,FRandom(-6,-16),FRandom (-2,2),FRandom (-0.5,4),flags:SXF_SETTARGET);
+			}
+			MCR1 IJ 6;
+			MCR1 KLM 8;
+			MCR1 M -1 A_RemoveLight ('CarExplosion');
+			Stop;
+		XDeath:
+			MCR1 N 0
+			{
+				Int RandomFlames; RandomFlames = Random (2,6);
+				Actor Flame;
+				Vector3 SpawnPos;
+				
+				Height = 24;
+				
+				/*Spawn ("MVP_BigExplosion",Pos); //BigExplosion is a generic effect, not specific to this vehicle.
+				//Spawn a random amount of flames around the car wreck.
+				For (Int I = 0; I < RandomFlames; I++)
+				{
+					SpawnPos = Vec3Offset(FRandom (-Radius,Radius),FRandom (-Radius,Radius),0);
+					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
+					
+					If (!Level.IsPointInLevel (Flame.Pos))
+						Flame.Destroy();
+				}*/
+				
+			}
+			MCR1 N -1;
+			Stop;
+		//So the conditional sprite change for the open trunk doesn't crash the game.
+		Sprites:
+			TNT1 A 0 A_Log ("The army car shouldn't be in this state.");
+			MCR1 ABCDEFG 0;
+			MCR2 ABCDEFG 0;
+			Stop;
+	}
+}

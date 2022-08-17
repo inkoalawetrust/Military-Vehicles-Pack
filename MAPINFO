@@ -1,0 +1,9 @@
+GameInfo
+{
+	AddEventHandlers = "SM_MarineChecker"
+}
+
+DoomEdNums
+{
+	17000 = MVP_ArmyCar
+}
