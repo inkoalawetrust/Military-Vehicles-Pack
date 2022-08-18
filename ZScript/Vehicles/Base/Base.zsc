@@ -16,7 +16,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		MaxStepHeight 32;
 		Species "Military";
 		Obituary "%o managed to be killed by an abstract class, congratulations %o, we are all very proud of you. Or maybe a modder forgot to define a custom obituary.";
-		Tag "Military Vehicle Base";
+		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
 		
 		//Flags
 		Monster;
@@ -29,9 +29,11 @@ Class MVP_BaseVehicle : Actor Abstract
 		//+DontSquash; Not on for all vehicles by default, but will be useful for more powerful vehicles like the tank.
 		+DontMorph; //This is just here because ZDoom's morphing code is a mess internally, and having any of the vehicles morph would definitely break something.
 		+DontDrain; //How would you suck the life out of an inanimate object ?
+		+DontCorpse; //Keeps the vehicles normal collision even after they are destroyed.
 		+NoBlood; //https://www.youtube.com/watch?v=K63AVSCPcSI
 		+NoPain;
 		+FloorClip;
+		+AddLightLevel;
 		
 		//Damage factors that act as the vehicles "armor".
 		DamageFactor 0.9; //Generic damage factor for all damage.
@@ -53,6 +55,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		DamageFactor "MarineGrenade", 0.7;
 		DamageFactor "MarineRifle", 0.5;
 	}
+	
 	Override Void BeginPlay()
 	{
 		Super.BeginPlay();
@@ -64,16 +67,89 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (!User_NoHeadlights)
+			HeadLightsOn = (CurSector && CurSector.LightLevel <= 104);
+	}
+	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die(Source, Inflictor, DmgFlags, MeansOfDeath);
 		
-		bShootable = True; //Destroyed vehicles stay shootable unles specified otherwise.
+		bShootable = True; //Destroyed vehicles stay shootable unless specified otherwise.
+		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
+		HeadlightsOn = False;
+		A_StopSound (CHAN_IDLING);
+		A_StopSound (CHAN_MOVING);
+	}
+	
+	Override Void OnDestroy()
+	{
+		Super.OnDestroy();
+		RemoveHeadlights();
 	}
 	
 	Enum VehicleSoundChannels
 	{
 		CHAN_IDLING = 23500,
 		CHAN_MOVING = 23501
+	}
+	
+	//Internal variables
+	Array <MVP_Headlight> Headlights;
+	Bool HeadlightsOn;
+	//Flag variables
+	Private Int VehicleFlags;
+	FlagDef Transport : VehicleFlags, 0;
+	//Properties
+	StateLabel TroopState;
+	Property TransportState : TroopState;
+	
+	//Generic user variables
+	Bool User_NoHeadLights;
+}
+
+Class MVP_Headlight : DynamicLight
+{
+	Default
+	{
+		DynamicLight.Type "Point";
+		//+DynamicLight.Attenuate;
+		+DynamicLight.Spot;
+	}
+	
+	Bool Active; //The actual internal m_active variable that reports if a dynamic light is on, isn't exposed to ZScript.
+	Vector3 Offset; //X = Side to side, Y = Back and front, Z = Up and down
+	Bool IsBacklight;
+	
+	Override Void Tick()
+	{
+		If (Master && MVP_BaseVehicle(Master).HeadlightsOn)
+		{
+			If (!IsBacklight)
+				Warp (Master,Offset.Y,Offset.X,Offset.Z);
+			Else
+				Warp (Master,Offset.Y,Offset.X,Offset.Z,180);
+			a_log ("wheee");
+		}
+	}
+	
+	Override Void BeginPlay()
+	{
+		Super.BeginPlay();
+		
+		Args[LIGHT_RED] = 255;
+		Args[LIGHT_GREEN] = 255;
+		Args[LIGHT_BLUE] = 255;
+		Args[LIGHT_INTENSITY] = 256;
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		Deactivate(Self);
 	}
 }

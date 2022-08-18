@@ -1,6 +1,4 @@
 //To do
-/*Perhaps I should make a system that allows troop carrying vehicles like the car, truck, and APC, to follow patrol points, and then also add an
-ACS script that can call a static function that makes the vehicle drop its' troops, which can be triggered by having the vehicle cross a patrol special.*/
 //Make the pain ray.
 //Make the generic big explosion actor, and the army car specific debris actors, who should be able to act as gravity affected projectiles as well.
 
@@ -19,7 +17,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Health 800;
 		GibHealth 200;
 		Tag "Army Car";
+		//MVP_BaseVehicle.TransportState "DeployMarines";
 		+MissileEvenMore
+		+MVP_BaseVehicle.Transport;
 	}
 	
 	Override Void PostBeginPlay ()
@@ -28,10 +28,96 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		
 		MarinesDeployed = User_NoMarines;
 		
+		//Initialize headlights
+			//Front left headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[0].Offset = (28,12,8);
+			Headlights[0].Master = Self;
+			//Front right headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[1].Offset = (-28,12,8);
+			Headlights[1].Master = Self;
+			
+			//Back left headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[2].Offset = (28,40,8);
+			Headlights[2].Master = Self;
+			HeadLights[2].IsBacklight = True;
+			HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
+			HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+			HeadLights[2].SpotInnerAngle = 40;
+			Headlights[2].SpotOuterAngle = 80;
+			//Back right headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[3].Offset = (-28,40,8);
+			Headlights[3].Master = Self;
+			HeadLights[3].IsBacklight = True;
+			HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
+			HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+			HeadLights[3].SpotInnerAngle = 40;
+			Headlights[3].SpotOuterAngle = 80;
+		
 		If (CustomMarinesAvailable())
 			Console.Printf ("It's marinatin' time.");
 		Else
 			Console.Printf ("Forever alone.");
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (HeadLightsOn)
+			TurnHeadlightsOn();
+		Else
+			TurnHeadlightsOff();
+	}
+	
+	/*Supply system:
+	This is the code that makes the car give different types of items to the player when they use it,
+	you can change what kind of items each supply type uses by adding more User.GiveInventory lines for each type, or replace the existing ones.
+	For example, if you mod adds a rocker launcher with custom "SmartRocketAmmo" and "SmartRocketBox" ammo types, that's how you can make cars
+	with User_SupplyType set to Ammo give those smart rockets to the player, instead of the vanilla ones.
+	==============*/
+	//Also, I should probably REALLY add a way to limit and control how many times you can pick up supplies, so the car won't be overpowered.
+	Override Bool Used (Actor User)
+	{
+		Super.Used (User);
+		
+		//Non-existent users, cars with no supplies, hostile cars, and dead cars GTFO.
+		If (!User || !HasSupplies() || !bFriendly || IsDead (Self))
+			Return False;
+		
+		//If the car is friendly and not in deathmatch, or if in deathmatch and the player that used the car is its' friend.
+		If (!Deathmatch)// || Deathmatch && User.Player && Players[User.Player] == Players[FriendPlayer])
+		{
+			//A_StartSound (); //Find a picking up stuff sound.
+			//Ammo drops.
+			If (User_SupplyType ~== "Ammo" || User_SupplyType ~== "Ammunition")
+			{
+				User.GiveInventory ("Clip",50);
+				User.GiveInventory ("Shell",8);
+				User.GiveInventory ("RocketAmmo",1);
+				Return True;
+			}
+			//Health drops.
+			Else If (User_SupplyType ~== "Health" || User_SupplyType ~== "First Aid" || User_SupplyType ~== "FirstAid")
+			{
+				Return True;
+			}
+			//Armor drops, I love ZDoom's armor systen.
+			If (User_SupplyType ~== "Armor")
+			{
+				Return True;
+			}
+		}
+		
+		Return False;
+	}
+	
+	Bool HasSupplies()
+	{
+		Return (User_SupplyType && !(User_SupplyType ~== "" || User_SupplyType ~== "None"));
 	}
 	
 	Bool MarinesDeployed;
@@ -47,7 +133,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			#### A 1
 			{
 				//If the car is carrying supplies, change all of its' non-death sprites to have an open trunk.
-				If (User_SupplyType && !(User_SupplyType ~== "" || User_SupplyType ~== "None"))
+				If (HasSupplies())
 					Sprite = GetSpriteIndex ("MCR2");
 				Else
 					Sprite = GetSpriteIndex ("MCR1");
@@ -63,18 +149,25 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound ("Vehicle/ArmyCar/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.8);
 				
-				bFrightened = (IsPowerful (Target) && Target.IsVisible(Self, True)); //Be scared of your target if it is powerful and can see you.
+				LookExParams ArmyCarSight;
+				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
+				
+				bFrightened = (IsPowerful (Target) && Target.IsVisible(Self, True, ArmyCarSight)); //Be scared of your target if it is powerful, can see you, and isn't too far away.
 				
 				If (bFrightened)
 					MinMissileChance = bMissileMore = 1;
 				
 				FollowPlayerControl();
-				if (bdontfollowplayers) a_log ("too close");
+				
+				If (IsPatrolling() && !MarinesDeployed)
+				{	A_Chase (Null,"DeployMarines",CHF_DONTIDLE);a_log ("patrolling");}
+				Else If (IsPatrolling() && MarinesDeployed)
+				{	A_Chase (Null,Null,CHF_DONTIDLE);a_log ("patrolling");}
 				//Don't randomly swerve left and right while moving if you have no target or haven't deployed your marines yet.
-				If (!Target || !MarinesDeployed)
+				Else If (!Target || !MarinesDeployed)
 					A_Chase (Null,"DeployMarines",CHF_DONTIDLE|CHF_NORANDOMTURN);
 				//Chase enemies around to stun them if you have the ADS equipped.
-				Else If (MarinesDeployed && User_PainRay)
+				Else If ((MarinesDeployed && User_PainRay))
 					A_Chase (Null,Null,CHF_DONTIDLE);
 				//You are completely defenseless.
 				Else If (MarinesDeployed && !User_PainRay)
@@ -92,7 +185,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		DeployMarines:
 			#### A 0 //Temporarily make the car bigger, to see if any of the marines would get stuck anywhere.
 			{
-				A_SetSize (Radius*1.25);
+				A_SetSize (Radius*1.5);
 				
 				If (!TestMobjLocation()) //If they would be stuck, cancel the drop.
 				{
@@ -137,7 +230,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			}
 			MCR1 IJ 6;
 			MCR1 KLM 8;
-			MCR1 M -1 A_RemoveLight ('CarExplosion');
+			MCR1 M -1;
 			Stop;
 		XDeath:
 			MCR1 N 0
@@ -146,7 +239,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Actor Flame;
 				Vector3 SpawnPos;
 				
-				Height = 24;
+				Height = 34;
 				
 				/*Spawn ("MVP_BigExplosion",Pos); //BigExplosion is a generic effect, not specific to this vehicle.
 				//Spawn a random amount of flames around the car wreck.

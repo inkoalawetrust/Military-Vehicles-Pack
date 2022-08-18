@@ -1,6 +1,6 @@
 Version "4.8.2"
 
-//Base classes and common functions shared acros across all actors.
+//Base classes and common functions shared across all actors.
 #Include "ZScript/Vehicles/Base/Base.zsc"
 #Include "ZScript/Vehicles/Base/BaseProp.zsc"
 #Include "ZScript/Vehicles/Base/CommonFunctions.zsc"

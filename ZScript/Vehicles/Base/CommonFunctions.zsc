@@ -1,5 +1,6 @@
 Extend Class MVP_BaseVehicle
 {
+	//=====|Status checks|=====\\
 	//Is the other actor dead ?
 	Bool IsDead (Actor Other)
 	{
@@ -8,6 +9,36 @@ Extend Class MVP_BaseVehicle
 		Return (Other.Health <= 0);
 	}
 	
+	Bool IsPatrolling ()
+	{
+		Return (Goal || Target Is "PatrolPoint");
+	}
+	
+	//Add a function that determines if the vehicles' target is a VERY powerful enemy.
+	Bool IsPowerful (Actor Other)
+	{
+		Name CustomMarine = 'SmartMarine';
+		Name CustomTurretMarine = "TurretMarine";
+		Name TurretWeapon = 'SmartMarineMGWeapon';
+		
+		If (!Other)
+			Return False;
+		
+		//Is the other actor a smart marine or player on a turret ?
+		If (CustomMarinesAvailable()
+		&& (Other Is CustomMarine && MarineIsOnTurret (Other)
+		|| Other Is CustomTurretMarine
+		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon))
+			{a_log ("say hello to my little friend");Return True;}
+		
+		//Does the actor have 2500 health or more, is sufficiently large, or can reflect projectiles ?
+		If (Other.SpawnHealth() >= 2500 || (Other.Height >= 80 && Other.Radius >= 72) || Other.bReflective)
+			{a_log ("spooky scary demons");Return True;}
+		
+		Return False;
+	}
+	
+	//=====|Marine related functions|=====\\
 	//Can the vehicle spawn Smart Marines ?
 	Bool CustomMarinesAvailable()
 	{
@@ -41,16 +72,6 @@ Extend Class MVP_BaseVehicle
 		Return Spawnee;
 	}
 	
-	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
-	Void FollowPlayerControl (Double MaxDist = 284)
-	{
-		If (!PlayerInGame[FriendPlayer])
-			Return;
-		
-		If (bFriendly)
-			bDontFollowPlayers = (Distance3DSquared (Players[FriendPlayer].Mo) <= MaxDist*MaxDist);
-	}
-	
 	Bool MarineIsOnTurret (Actor Other)
 	{
 		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
@@ -64,27 +85,66 @@ Extend Class MVP_BaseVehicle
 		Return False;
 	}
 	
-	//Add a function that determines if the vehicles' target is a powerful enemy, and another one that determines if they are a VERY powerful enemy.
-	Bool IsPowerful (Actor Other)
+	//=====|Vehicle behaviors|=====\\
+	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
+	Void FollowPlayerControl (Double MaxDist = 284)
 	{
-		Name CustomMarine = 'SmartMarine';
-		Name CustomTurretMarine = "TurretMarine";
-		Name TurretWeapon = 'SmartMarineMGWeapon';
+		If (!PlayerInGame[FriendPlayer])
+			Return;
 		
-		If (!Other)
+		If (bFriendly)
+			bDontFollowPlayers = (Distance3DSquared (Players[FriendPlayer].Mo) <= MaxDist*MaxDist);
+	}
+	/*
+	Static Bool DropMarines()
+	{
+		If (!MVP_BaseVehicle.Transport || !MVP_BaseVehicle.TransportState || IsDead (Self))
 			Return False;
 		
-		//Is the other actor a smart marine or player on a turret ?
-		If (CustomMarinesAvailable()
-		&& (Other Is CustomMarine && MarineIsOnTurret (Other)
-		|| Other Is CustomTurretMarine
-		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon))
-			{a_log ("say hello to my little friend");Return True;}
+		SetStateLabel (MVP_BaseVehicle.TransportState);
 		
-		//Does the actor have 2500 health or more, is sufficiently large, or can reflect projectiles ?
-		If (Other.SpawnHealth() >= 2500 || (Other.Height >= 80 && Other.Radius >= 72) || Other.bReflective)
-			{a_log ("spooky scary demons");Return True;}
+		Return True;
+	}*/
+	
+		//=====|Headlight functions|=====\\
+		//Turn the vehicles' headlights on.
+		Void TurnHeadlightsOn()
+		{
+			LightLevel = 64; //Light up the vehicle.
+			For (Int I = HeadLights.Size()-1; I >= 0; I--)
+			{
+				If (Headlights[I])
+				{
+					Headlights[I].Activate(Self);
+					Headlights[I].Active = True;
+				}
+			}
+		}
 		
-		Return False;
+		//Turn them off.
+		Void TurnHeadlightsOff()
+		{
+			LightLevel = 0;
+			For (Int I = HeadLights.Size()-1; I >= 0; I--)
+			{
+				If (Headlights[I])
+				{
+					Headlights[I].Deactivate(Self);
+					Headlights[I].Active = False;
+				}
+			}
+		}
+		
+		//Remove them when the vehicle is killed or removed.
+		Void RemoveHeadlights()
+		{
+			For (Int I = HeadLights.Size()-1; I >= 0; I--)
+			{
+				If (Headlights[I])
+				{
+					Headlights[I].Destroy();
+					Headlights.Delete(I);
+				}
+			}
+		}
 	}
-}
