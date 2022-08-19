@@ -1,7 +1,7 @@
 Extend Class MVP_BaseVehicle
 {
 	//=====|Status checks|=====\\
-	//Is the other actor dead ?
+	
 	Bool IsDead (Actor Other)
 	{
 		If (!Other) Return False;
@@ -12,6 +12,11 @@ Extend Class MVP_BaseVehicle
 	Bool IsPatrolling ()
 	{
 		Return (Goal || Target Is "PatrolPoint");
+	}
+	
+	Bool IsInState (StateLabel CheckFor = "Spawn")
+	{
+		Return (InStateSequence(CurState,ResolveState (CheckFor)));
 	}
 	
 	//Add a function that determines if the vehicles' target is a VERY powerful enemy.
@@ -55,6 +60,7 @@ Extend Class MVP_BaseVehicle
 		Name CustomMarine = 'SmartMarine';
 		Class<Actor> WhatToSpawn;
 		Actor Spawnee;
+		Bool b;
 		
 		If (CustomMarinesAvailable())
 			WhatToSpawn = CustomMarine;
@@ -62,6 +68,8 @@ Extend Class MVP_BaseVehicle
 		Else
 			WhatToSpawn = "MarineChaingun";
 		
+		//[b,Spawnee] = A_SpawnItemEx (WhatToSpawn,Position.X,Position.Y,GetZAt (Position.X,Position.Y),flags:SXF_NOCHECKPOSITION);
+		//Position = Vec2Offset (Position.X * Cos (Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle));
 		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X,Position.Y,GetZAt (Position.X,Position.Y)));
 		Spawnee.CopyFriendliness (Self,True);
 		Spawnee.bSummonedMonster = True;

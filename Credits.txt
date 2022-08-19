@@ -34,6 +34,7 @@ Army car running sound (CarMove.ogg) is from the 2018 GDC sound library, "Pole P
 Army car pain ray sounds made by me (Inkoalawetrust).
 Army car handle sound (CarHandle.ogg) by RutgerMuller https://freesound.org/people/RutgerMuller/sounds/50697/
 Army car door slam sound (CarSlam.ogg) by Frederick_Sunne https://freesound.org/people/Frederik_Sunne/sounds/324138/
+Army car crate open sound (CrateOpen.ogg) is from the 2020 GDC sound library, "Wav Junction Sound Effects - Doors"
 |==============|Sounds|==============|
 
 

@@ -56,14 +56,37 @@ Class MVP_BaseVehicle : Actor Abstract
 		DamageFactor "MarineRifle", 0.5;
 	}
 	
+	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
+	because it allows default user variable values to be set for actors that are spawned in-game as well, not just ones placed in UDB*/
+	Virtual Void UserVariableDefaults () {}
+	
 	Override Void BeginPlay()
 	{
 		Super.BeginPlay();
 		
-		If (GetClassName() == "MVP_BaseVehicle")
+		If (GetClassName() == "MVP_BaseVehicle" || GetClassName() == "MVP_BaseTurret")
 		{
 			Console.Printf ("How the fuck did you spawn this in ?");
 			Destroy();
+		}
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		UserVariableDefaults();
+		
+		If (VehicleTurret)
+		{
+			Turret = MVP_BaseTurret(Spawn (VehicleTurret,TurretOffsets));
+			If (Turret)
+			{
+				CopyFriendliness (Turret,False);
+				Turret.Angle = Angle;
+				Turret.Pitch = Pitch;
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+			}
 		}
 	}
 	
@@ -79,7 +102,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Super.Die(Source, Inflictor, DmgFlags, MeansOfDeath);
 		
-		bShootable = True; //Destroyed vehicles stay shootable unless specified otherwise.
+		bShootable = bNotAutoaimed = True; //Destroyed vehicles stay shootable and non-autoaimable unless specified otherwise.
 		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
 		HeadlightsOn = False;
 		A_StopSound (CHAN_IDLING);
@@ -101,15 +124,44 @@ Class MVP_BaseVehicle : Actor Abstract
 	//Internal variables
 	Array <MVP_Headlight> Headlights;
 	Bool HeadlightsOn;
+	MVP_BaseTurret Turret;
 	//Flag variables
 	Private Int VehicleFlags;
-	FlagDef Transport : VehicleFlags, 0;
-	//Properties
-	StateLabel TroopState;
-	Property TransportState : TroopState;
+	FlagDef Transport : VehicleFlags, 0; //The vehicle is marked as being able to transport soldiers.
+	Class<MVP_BaseTurret> VehicleTurret;
+	Property VehicleTurret : VehicleTurret;
+	Vector3 TurretOffsets;
+	Property TurretOffsets : TurretOffsets;
 	
 	//Generic user variables
 	Bool User_NoHeadLights;
+}
+
+Class MVP_BaseTurret : MVP_BaseVehicle Abstract
+{
+	Default
+	{
+		Speed 0;
+		FastSpeed 0;
+		RipLevelMin 2;
+		MaxStepHeight 0;
+		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
+		DamageFactor "MarineGrenade", 0.9;
+		DamageFactor "MarineRifle", 0.75;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Actor.PostBeginPlay ();
+	}
+	
+	Override Void Tick()
+	{
+		Actor.Tick();
+		
+		If (Master)
+			SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,TurretOffsets.X),True);
+	}
 }
 
 Class MVP_Headlight : DynamicLight

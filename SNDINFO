@@ -12,3 +12,9 @@ SFX/WheelHit "Sounds/SFX/WheelImpact.ogg"
 	Vehicle/ArmyCar/Moving "Sounds/Vehicles/Army Car/CarMove.ogg"
 	Vehicle/ArmyCar/DoorHandle "Sounds/Vehicles/Army Car/CarHandle.ogg"
 	Vehicle/ArmyCar/DoorSlam "Sounds/Vehicles/Army Car/CarSlam.ogg"
+	Vehicle/ArmyCar/Crate "Sounds/Vehicles/Army Car/CrateOpen.ogg"
+	$Limit Vehicle/ArmyCar/Idle 0
+	$Limit Vehicle/ArmyCar/Moving 0
+	$Limit Vehicle/ArmyCar/DoorHandle 0
+	$Limit Vehicle/ArmyCar/DoorSlam 0
+	$Limit Vehicle/ArmyCar/Crate 0
