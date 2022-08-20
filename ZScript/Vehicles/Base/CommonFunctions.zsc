@@ -1,3 +1,4 @@
+//Vehicle functions
 Extend Class MVP_BaseVehicle
 {
 	//=====|Status checks|=====\\
@@ -103,22 +104,49 @@ Extend Class MVP_BaseVehicle
 		If (bFriendly)
 			bDontFollowPlayers = (Distance3DSquared (Players[FriendPlayer].Mo) <= MaxDist*MaxDist);
 	}
-	/*
-	Static Bool DropMarines()
+	
+	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
+	Int AttackByQuantity (Double Range = 256, Bool AvoidAllies = False)
 	{
-		If (!MVP_BaseVehicle.Transport || !MVP_BaseVehicle.TransportState || IsDead (Self))
-			Return False;
+		Actor Mobj;
+		Int Chance;
 		
-		SetStateLabel (MVP_BaseVehicle.TransportState);
+		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Self,Range);
 		
-		Return True;
-	}*/
+		While (FindEnemies.Next())
+		{
+			Mobj = FindEnemies.Thing;
+			
+			If (IsDead (Mobj) || Mobj == Self) Continue;
+			
+			If (AvoidAllies && !IsHostile (Mobj) && IsVisible (Mobj,False))
+			{
+				If (Mobj.bIsMonster) Chance -= 5;
+				If (Mobj.Player) Chance -= 25;
+				Continue;
+			}
+			
+			If ((Mobj.bIsMonster || Mobj.Player) && Mobj != Target && Mobj.Distance3DSquared (Target) <= Range*Range && IsHostile (Mobj) && IsVisible (Mobj,False))
+			{
+				If (Mobj.Health >= 10)
+					Chance += 5;
+				Else
+					Chance += 1;
+				
+				If (IsPowerful (Mobj))
+					Chance += 25;
+			}
+		}
+		
+		Return Chance;
+	}
 	
 		//=====|Headlight functions|=====\\
 		//Turn the vehicles' headlights on.
 		Void TurnHeadlightsOn()
 		{
 			LightLevel = 64; //Light up the vehicle.
+			If (Turret) Turret.LightLevel = 64; //And the turret, if any.
 			For (Int I = HeadLights.Size()-1; I >= 0; I--)
 			{
 				If (Headlights[I])
@@ -133,6 +161,7 @@ Extend Class MVP_BaseVehicle
 		Void TurnHeadlightsOff()
 		{
 			LightLevel = 0;
+			If (Turret) Turret.LightLevel = 0;
 			For (Int I = HeadLights.Size()-1; I >= 0; I--)
 			{
 				If (Headlights[I])

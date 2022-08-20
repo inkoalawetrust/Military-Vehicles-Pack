@@ -1,0 +1,101 @@
+//To do:
+//I should probably make the turret give up on its' target after losing sight of it for long enough or something.
+//Have the pain ray drop a warning zone when it begins charging up, that can alert the marines to runn away.
+
+Class MVP_PainRay : MVP_BaseTurret
+{
+	Default
+	{
+		Health 350;
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
+		Height 64;
+		DeathHeight 16;
+		Radius 24;
+		DefThreshold 500; //Sticks to targets longer.
+		MaxTargetRange 1024;
+		DamageFactor "Electric", 1.2;
+		Obituary "%o was killed by a non-lethal weapon, somehow";
+		Tag "Pain Ray";
+		+MissileMore;
+		+LookAllAround;
+		+MVP_BaseTurret.FallOnDeath;
+	}
+	
+	States
+	{
+		Spawn:
+			MCR3 H 1 A_LookEx (0,0,8192,3072);
+			Loop;
+		See:
+			MCR3 H 1
+			{
+				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE);
+				
+				If (Target)
+				{
+					Int AttackChance = Random (0,256);
+					If (CheckMissileRange() && AttackByQuantity (384)+AttackChance < 224)
+					{
+						bJustAttacked = bInCombat = True;
+						Return ResolveState ("ChargeUp");
+					}
+				}
+				
+				Return State (Null);
+			}
+			Loop;
+		ChargeUp:
+			MCR3 H 0 A_StartSound ("Vehicle/ArmyCar/PainRay/On",CHAN_VOICE,0,1,0.5);
+			MCR3 HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH 1 A_FaceTarget (5,5,FAF_MIDDLE);
+		PainAttack: //Maybe LookForPlayers could be infrequently called to have the ray change targets sometimes.
+			MCR3 H Random (2,8)
+			{
+				A_StartSound ("Vehicle/ArmyCar/PainRay/Active",CHAN_VOICE,CHANF_LOOPING,1,0.5);
+				Actor Victim;
+				BlockThingsIterator ItBurnsItBurns = BlockThingsIterator.Create (Target,512);
+				
+				While (ItBurnsItBurns.Next())
+				{
+					Victim = ItBurnsItBurns.Thing;
+					
+					//Don't painlock actors with a lot of health. Or who are already in pain, to avoid breaking states. This last one needs to be added later.
+					If (Victim.Health >= 400 || (IsInState ("Pain") || IsInState ("Pain.Microwave"))) Continue;
+					
+					//Ignore yourself, non-monsters, dormant monsters, allies, or actors that are just too far away.
+					If (Victim == Self || !Victim.bIsMonster || Victim.bDormant || !IsHostile(Victim)|| Distance3DSquared (Victim) >= 384*384) Continue;
+					
+					//And finally, ignore actors that cannot feel pain in the first place.
+					If (Victim.bNoPain || (Victim.bInvulnerable && !(Victim.bCausePain && Victim.bAllowPain))) Continue;
+					
+					Victim.TriggerPainChance ('Microwave', False);
+				}
+			}
+			MCR3 H 0 A_MonsterRefire (0,"ChargeDown");
+			Loop;
+		ChargeDown:
+			MCR3 H 0 A_StartSound ("Vehicle/ArmyCar/PainRay/Off",CHAN_VOICE,0,1,0.5);
+			MCR3 HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH 1;
+			Goto See;
+		Death:
+			TNT1 A 0 A_StartSound ("Vehicle/ArmyCar/PainRay/Break",CHAN_VOICE);
+			MCR3 IJ 10;
+			MCR3 KL 5;
+			MCR3 L 1
+			{
+				//May spark sometimes. Maybe add a limit to how many times the destroyed turret can spark ?
+				If (Random[pr_cajump](0,255) < 8)
+					Spawn ("TempSpark",(FRandom (Radius,-Radius),FRandom(Radius,-Radius),FRandom (Pos.Z,Pos.Z+Height)));
+			}
+			Goto Death+5;
+	}
+}
+
+Class TempSpark : Spark
+{
+	Override Void Activate (Actor Activator)
+	{
+		Super.Activate (Activator);
+		Destroy();
+	}
+}

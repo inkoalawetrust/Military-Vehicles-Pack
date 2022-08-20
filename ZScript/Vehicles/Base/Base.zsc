@@ -27,6 +27,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		+Telestomp;
 		+NoInfightSpecies;
 		//+DontSquash; Not on for all vehicles by default, but will be useful for more powerful vehicles like the tank.
+		//+DontBlast; Also reserved for the tank.
 		+DontMorph; //This is just here because ZDoom's morphing code is a mess internally, and having any of the vehicles morph would definitely break something.
 		+DontDrain; //How would you suck the life out of an inanimate object ?
 		+DontCorpse; //Keeps the vehicles normal collision even after they are destroyed.
@@ -60,6 +61,23 @@ Class MVP_BaseVehicle : Actor Abstract
 	because it allows default user variable values to be set for actors that are spawned in-game as well, not just ones placed in UDB*/
 	Virtual Void UserVariableDefaults () {}
 	
+	//Handles spawning each vehicles turret, if they have any.
+	Virtual Void SpawnVehicleTurret ()
+	{
+		If (VehicleTurret)
+		{
+			Turret = MVP_BaseTurret(Spawn (VehicleTurret,TurretOffsets));
+			If (Turret)
+			{
+				Turret.CopyFriendliness (Self,False);
+				Turret.Angle = Angle;
+				Turret.Pitch = Pitch;
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+			}
+		}
+	}
+	
 	Override Void BeginPlay()
 	{
 		Super.BeginPlay();
@@ -75,19 +93,9 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Super.PostBeginPlay();
 		UserVariableDefaults();
+		SpawnVehicleTurret();
 		
-		If (VehicleTurret)
-		{
-			Turret = MVP_BaseTurret(Spawn (VehicleTurret,TurretOffsets));
-			If (Turret)
-			{
-				CopyFriendliness (Turret,False);
-				Turret.Angle = Angle;
-				Turret.Pitch = Pitch;
-				Turret.Master = Self;
-				Turret.TurretOffsets = TurretOffsets;
-			}
-		}
+		If (!bFriendly) Species = 'MilitaryHostile';
 	}
 	
 	Override Void Tick()
@@ -100,7 +108,8 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
-		Super.Die(Source, Inflictor, DmgFlags, MeansOfDeath);
+		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		If (Turret) Turret.Die (Source, Inflictor, DmgFlags, MeansOfDeath); //When dead, kill the turret the same way as the vehicle died.
 		
 		bShootable = bNotAutoaimed = True; //Destroyed vehicles stay shootable and non-autoaimable unless specified otherwise.
 		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
@@ -113,6 +122,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Super.OnDestroy();
 		RemoveHeadlights();
+		If (Turret) Turret.Destroy();
 	}
 	
 	Enum VehicleSoundChannels
@@ -125,13 +135,13 @@ Class MVP_BaseVehicle : Actor Abstract
 	Array <MVP_Headlight> Headlights;
 	Bool HeadlightsOn;
 	MVP_BaseTurret Turret;
+	Vector3 TurretOffsets;
+	
 	//Flag variables
 	Private Int VehicleFlags;
 	FlagDef Transport : VehicleFlags, 0; //The vehicle is marked as being able to transport soldiers.
 	Class<MVP_BaseTurret> VehicleTurret;
 	Property VehicleTurret : VehicleTurret;
-	Vector3 TurretOffsets;
-	Property TurretOffsets : TurretOffsets;
 	
 	//Generic user variables
 	Bool User_NoHeadLights;
@@ -145,10 +155,21 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		FastSpeed 0;
 		RipLevelMin 2;
 		MaxStepHeight 0;
+		Mass 500;
 		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
+		+DontThrust;
+		+StandStill;
+		+DontFollowPlayers;
+		-AvoidHazards;
+		-AvoidMelee;
+		-CanBlast; //Turrets are attached to their vehicle.
+		-CountKill; //And because of that, they don't count as kills either.
 	}
+	
+	Private Int TurretFlags;
+	FlagDef FallOnDeath : TurretFlags, 0; //Turret stops being attached to its' vehicle after dying.
 	
 	Override Void PostBeginPlay ()
 	{
@@ -159,8 +180,19 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	{
 		Actor.Tick();
 		
-		If (Master)
-			SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,TurretOffsets.X),True);
+		If (Master && !(IsDead(Self) && bFallOnDeath))
+			SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,Master.Height+TurretOffsets.Z),True);
+	}
+	
+	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
+	{
+		Actor.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		bShootable = bNotAutoaimed = True;
+	}
+	
+	Override Void OnDestroy()
+	{
+		Actor.OnDestroy();
 	}
 }
 
@@ -185,7 +217,6 @@ Class MVP_Headlight : DynamicLight
 				Warp (Master,Offset.Y,Offset.X,Offset.Z);
 			Else
 				Warp (Master,Offset.Y,Offset.X,Offset.Z,180);
-			a_log ("wheee");
 		}
 	}
 	
@@ -202,6 +233,6 @@ Class MVP_Headlight : DynamicLight
 	Override Void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
-		Deactivate(Self);
+		Deactivate(Self); //Off by default.
 	}
 }

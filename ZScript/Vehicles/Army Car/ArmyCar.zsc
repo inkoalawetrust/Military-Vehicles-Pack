@@ -1,6 +1,6 @@
 //To do
-//Make the pain ray.
 //Make the generic big explosion actor, and the army car specific debris actors, who should be able to act as gravity affected projectiles as well.
+//Figure out why all army cars, friendly or hostile, are made aware of the players' presense right after being spawned, even when the player is not in sight.
 
 Class MVP_ArmyCar : MVP_BaseVehicle
 {
@@ -17,16 +17,18 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Health 800;
 		GibHealth 200;
 		Tag "Army Car";
-		//MVP_BaseVehicle.TransportState "DeployMarines";
+		MVP_BaseVehicle.VehicleTurret "MVP_PainRay";
 		+MissileEvenMore
 		+MVP_BaseVehicle.Transport;
 	}
 	
 	Override Void PostBeginPlay ()
 	{
+		TurretOffsets = (0,0,1.25);
 		Super.PostBeginPlay();
 		
 		MarinesDeployed = User_NoMarines;
+		If (HasSupplies()) SetTag ("Army Car (Open Trunk)");
 		
 		//Initialize headlights
 			//Front left headlight
@@ -69,12 +71,20 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		
 		If (IsFrozen()) Return;
 		
-		If (WaitTimer) WaitTimer--; a_logint (waittimer);
+		If (Turret && !IsDead (Turret) && !Turret.Target) Turret.Angle = Self.Angle;
+		
+		If (WaitTimer) WaitTimer--;
 		
 		If (HeadLightsOn)
 			TurnHeadlightsOn();
 		Else
 			TurnHeadlightsOff();
+	}
+	
+	Override Void SpawnVehicleTurret ()
+	{
+		If (User_PainRay)
+			Super.SpawnVehicleTurret();
 	}
 	
 	Override Void UserVariableDefaults()
@@ -178,7 +188,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
-				A_LookEx (0,0,0,8192,3072);
+				A_LookEx (0,0,8192,3072);
 				
 				If (!IsPatrolling() && WaitTimer <= 0)
 					SetStateLabel ("See");
@@ -250,6 +260,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);
 				
+				If (Turret)
+					Turret.A_ChangeVelocity (FRandom (12,-12),FRandom (12,-12),FRandom (0,6),CVF_RELATIVE);
+				
 				//Spawn parts of the vehicle as debris.
 				//A_SpawnItemEx ("MVP_ArmyCarDoor",-8,-Radius,6,FRandom(-0.2,0.2),FRandom (8,14),FRandom (-1,1),flags:SXF_SETTARGET);
 				//A_SpawnItemEx ("MVP_ArmyCarHood",24,0,8,FRandom(-0.5,0.5),FRandom (-0.5,0.5),FRandom (8,32),flags:SXF_SETTARGET);
@@ -282,6 +295,8 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 						Flame.Destroy();
 				}*/
 				
+				If (Turret)
+					Turret.A_ChangeVelocity (FRandom (16,-16),FRandom (16,-16),FRandom (0,32),CVF_RELATIVE);
 			}
 			MCR1 N -1;
 			Stop;
