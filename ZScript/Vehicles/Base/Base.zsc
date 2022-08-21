@@ -66,7 +66,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		If (VehicleTurret)
 		{
-			Turret = MVP_BaseTurret(Spawn (VehicleTurret,TurretOffsets));
+			Turret = MVP_BaseTurret(Spawn (VehicleTurret,Pos+TurretOffsets));
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
@@ -95,7 +95,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		UserVariableDefaults();
 		SpawnVehicleTurret();
 		
-		//If (!bFriendly) Species = 'MilitaryHostile';
+		If (!bFriendly) Species = 'MilitaryHostile';
 	}
 	
 	Override Void Tick()

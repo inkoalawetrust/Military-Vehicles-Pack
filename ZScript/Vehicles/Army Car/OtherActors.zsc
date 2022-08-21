@@ -1,6 +1,7 @@
 //To do:
 //I should probably make the turret give up on its' target after losing sight of it for long enough or something.
 //Have the pain ray drop a warning zone when it begins charging up, that can alert the marines to runn away.
+//Make the pain ray affect the player by slowing them down.
 
 Class MVP_PainRay : MVP_BaseTurret
 {
@@ -21,7 +22,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		+LookAllAround;
 		+MVP_BaseTurret.FallOnDeath;
 	}
-	
+	Int Patience;
 	States
 	{
 		Spawn:
@@ -30,6 +31,17 @@ Class MVP_PainRay : MVP_BaseTurret
 		See:
 			MCR3 H 1
 			{
+				LookExParams PainRaySight;
+				PainRaySight.MaxDist = 8192;
+				PainRaySight.MaxHearDist = 3072;
+				
+				//Look for another target if the current one hasn't been attackable for long enough.
+				If (Patience >= 35*5)
+				{
+					Patience = 0;
+					Return ResolveState ("See");
+				}
+				
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE);
 				
 				If (Target)
@@ -37,9 +49,13 @@ Class MVP_PainRay : MVP_BaseTurret
 					Int AttackChance = Random (0,256);
 					If (CheckMissileRange() && AttackByQuantity (384)+AttackChance < 224)
 					{
+						Patience = 0; //Reset timer.
 						bJustAttacked = bInCombat = True;
 						Return ResolveState ("ChargeUp");
 					}
+					//If the target isn't visible, increment the timer.
+					Else
+						Patience++;
 				}
 				
 				Return State (Null);
@@ -52,6 +68,7 @@ Class MVP_PainRay : MVP_BaseTurret
 			MCR3 H Random (2,8)
 			{
 				A_StartSound ("Vehicle/ArmyCar/PainRay/Active",CHAN_VOICE,CHANF_LOOPING,1,0.5);
+				
 				Actor Victim;
 				BlockThingsIterator ItBurnsItBurns = BlockThingsIterator.Create (Target,512);
 				
@@ -63,7 +80,7 @@ Class MVP_PainRay : MVP_BaseTurret
 					If (Victim.Health >= 400 || (IsInState ("Pain") || IsInState ("Pain.Microwave"))) Continue;
 					
 					//Ignore yourself, non-monsters, dormant monsters, allies, or actors that are just too far away.
-					If (Victim == Self || !Victim.bIsMonster || Victim.bDormant || !IsHostile(Victim)|| Distance3DSquared (Victim) >= 384*384) Continue;
+					If (Victim == Self || !Victim.bIsMonster || Victim.bDormant || !IsHostile(Victim)|| Distance3DSquared (Victim) >= 512*512) Continue;
 					
 					//And finally, ignore actors that cannot feel pain in the first place.
 					If (Victim.bNoPain || (Victim.bInvulnerable && !(Victim.bCausePain && Victim.bAllowPain))) Continue;
@@ -71,7 +88,24 @@ Class MVP_PainRay : MVP_BaseTurret
 					Victim.TriggerPainChance ('Microwave', False);
 				}
 			}
-			MCR3 H 0 A_MonsterRefire (0,"ChargeDown");
+			MCR3 H 0
+			{
+				LookExParams PainRaySight;
+				PainRaySight.MaxDist = 1024;
+				
+				//Target is out of sight.
+				If (!IsVisible(Target,True,PainRaySight) || IsDead (Target))
+				{
+					A_ClearTarget(); //Forget it.
+					LookForPlayers (True,PainRaySight); //And look for a new one.
+				}
+				
+				//No new target found, so charge down.
+				If (!Target)
+					Return ResolveState ("ChargeDown");
+				
+				Return State (Null);
+			}
 			Loop;
 		ChargeDown:
 			MCR3 H 0 A_StartSound ("Vehicle/ArmyCar/PainRay/Off",CHAN_VOICE,0,1,0.5);

@@ -201,12 +201,12 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_IDLING);
 				A_StartSound ("Vehicle/ArmyCar/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.8);
-				console.printf ("reaction time: %d",reactiontime);
+				
 				LookExParams ArmyCarSight;
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
 				
-				If (Target && MarinesDeployed && !User_PainRay || Target && (Health <= 200 || (IsPowerful (Target))))
-					If (Target.IsVisible(Self, True))
+				If (Target && MarinesDeployed && !User_PainRay || Target && IsPowerful (Target))
+					If (IsVisible(Target, True))
 						bFrightened = True;
 				
 				If (bFrightened)
