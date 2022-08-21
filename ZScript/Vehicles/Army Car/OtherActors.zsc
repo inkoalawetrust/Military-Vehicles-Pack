@@ -83,9 +83,19 @@ Class MVP_PainRay : MVP_BaseTurret
 			MCR3 KL 5;
 			MCR3 L 1
 			{
+				Actor Spark;
+				
 				//May spark sometimes. Maybe add a limit to how many times the destroyed turret can spark ?
-				If (Random[pr_cajump](0,255) < 8)
-					Spawn ("TempSpark",(FRandom (Radius,-Radius),FRandom(Radius,-Radius),FRandom (Pos.Z,Pos.Z+Height)));
+				If (Random[pr_cajump](0,255) < 256) //Debug chance
+				{
+					Spark = Spawn ("TempSpark",Pos);
+					If (Spark)
+					{
+						Spark.Vec3Offset (FRandom (Radius,-Radius),FRandom(Radius*2,-Radius*2),FRandom (Pos.Z,Pos.Z+Height)*8);
+						Spark.Activate(Self);
+						Spark.Destroy();
+					}
+				}
 			}
 			Goto Death+5;
 	}

@@ -1,6 +1,8 @@
 //To do
 //Make the generic big explosion actor, and the army car specific debris actors, who should be able to act as gravity affected projectiles as well.
 //Figure out why all army cars, friendly or hostile, are made aware of the players' presense right after being spawned, even when the player is not in sight.
+//Make the cars (And other vehicles.) keep a greater distance from their target, maybe also make them stop for a bit while firing their turrets.
+//It seems that the car runs away from targets when the conditions are met, even if it can't see that target, I need to fix that.
 
 Class MVP_ArmyCar : MVP_BaseVehicle
 {
@@ -190,7 +192,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
 				A_LookEx (0,0,8192,3072);
 				
-				If (!IsPatrolling() && WaitTimer <= 0)
+				If (!IsPatrolling() && Target && WaitTimer <= 0)
 					SetStateLabel ("See");
 			}
 			Loop;
@@ -261,7 +263,10 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_MOVING);
 				
 				If (Turret)
+				{
+					Turret.SetOrigin ((Turret.Pos.X,Turret.Pos.Y,Pos.Z+Height+2),False);
 					Turret.A_ChangeVelocity (FRandom (12,-12),FRandom (12,-12),FRandom (0,6),CVF_RELATIVE);
+				}
 				
 				//Spawn parts of the vehicle as debris.
 				//A_SpawnItemEx ("MVP_ArmyCarDoor",-8,-Radius,6,FRandom(-0.2,0.2),FRandom (8,14),FRandom (-1,1),flags:SXF_SETTARGET);
@@ -296,7 +301,10 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				}*/
 				
 				If (Turret)
+				{
+					Turret.SetOrigin ((Turret.Pos.X,Turret.Pos.Y,Pos.Z+Height+2),False);
 					Turret.A_ChangeVelocity (FRandom (16,-16),FRandom (16,-16),FRandom (0,32),CVF_RELATIVE);
+				}
 			}
 			MCR1 N -1;
 			Stop;

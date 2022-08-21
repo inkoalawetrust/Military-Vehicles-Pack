@@ -95,7 +95,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		UserVariableDefaults();
 		SpawnVehicleTurret();
 		
-		If (!bFriendly) Species = 'MilitaryHostile';
+		//If (!bFriendly) Species = 'MilitaryHostile';
 	}
 	
 	Override Void Tick()
@@ -182,6 +182,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		
 		If (Master && !(IsDead(Self) && bFallOnDeath))
 			SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,Master.Height+TurretOffsets.Z),True);
+			else a_log ("nope, not doing it");
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
