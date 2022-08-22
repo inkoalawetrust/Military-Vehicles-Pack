@@ -1,8 +1,6 @@
 //To do
 //Make the generic big explosion actor, and the army car specific debris actors, who should be able to act as gravity affected projectiles as well.
-//Figure out why all army cars, friendly or hostile, are made aware of the players' presense right after being spawned, even when the player is not in sight.
 //Make the cars (And other vehicles.) keep a greater distance from their target, maybe also make them stop for a bit while firing their turrets.
-//It seems that the car runs away from targets when the conditions are met, even if it can't see that target, I need to fix that.
 
 Class MVP_ArmyCar : MVP_BaseVehicle
 {
@@ -20,6 +18,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		GibHealth 200;
 		Tag "Army Car";
 		MVP_BaseVehicle.VehicleTurret "MVP_PainRay";
+		DamageFactor "MarineGrenade", 1.25;
 		+MissileEvenMore
 		+MVP_BaseVehicle.Transport;
 	}
@@ -176,6 +175,8 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	Bool User_PainRay; //The car carries a non lethal weapon that pain locks enemies, similar to the Active Denial System.
 	Bool User_NoMarines; //The car spawns with no marines in it.
 	Int WaitTimer; //Makes the car stop for a bit after picking up supplies, so you don't have to chase it.
+	Int ChaseTimer; //Makes the car only chase its' target for a certain amount of time after it goes out of sight.
+	Int FearTimer; //Makes the car keep running away from it's target for an additional random amount of time, so the car doesn't play peekaboo with enemies.
 	States
 	{
 		Spawn:
@@ -204,10 +205,24 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				LookExParams ArmyCarSight;
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
+				a_logint (feartimer);
 				
 				If (Target && MarinesDeployed && !User_PainRay || Target && IsPowerful (Target))
 					If (IsVisible(Target, True))
+					{
+						FearTimer = Random (2,64);
 						bFrightened = True;
+					}
+					Else
+						bFrightened = False;
+				Else
+					bFrightened = False;
+				
+				If (FearTimer)
+				{
+					FearTimer--;
+					bFrightened = True;
+				}
 				
 				If (bFrightened)
 					MinMissileChance = bMissileMore = 1;
@@ -219,6 +234,21 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Else
 					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				
+				
+				If (ChaseTimer >= 35*30)
+				{
+					A_ClearTarget();
+					ChaseTimer = 0;
+				}
+				
+				If (Target)
+				{
+					If (!CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
+						ChaseTimer++;
+					Else
+						ChaseTimer = 0;
+				}
+
 				MinMissileChance = Default.MinMissileChance;
 				bFrightened = bMissileMore = False;
 			}
@@ -265,7 +295,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				If (Turret)
 				{
 					Turret.SetOrigin ((Turret.Pos.X,Turret.Pos.Y,Pos.Z+Height+2),False);
-					Turret.A_ChangeVelocity (FRandom (12,-12),FRandom (12,-12),FRandom (0,6),CVF_RELATIVE);
+					Turret.A_ChangeVelocity (FRandom (6,-6),FRandom (6,-6),FRandom (0,2),CVF_RELATIVE);
 				}
 				
 				//Spawn parts of the vehicle as debris.
@@ -303,7 +333,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				If (Turret)
 				{
 					Turret.SetOrigin ((Turret.Pos.X,Turret.Pos.Y,Pos.Z+Height+2),False);
-					Turret.A_ChangeVelocity (FRandom (16,-16),FRandom (16,-16),FRandom (0,32),CVF_RELATIVE);
+					Turret.A_ChangeVelocity (FRandom (12,-12),FRandom (12,-12),FRandom (16,32),CVF_RELATIVE);
 				}
 			}
 			MCR1 N -1;

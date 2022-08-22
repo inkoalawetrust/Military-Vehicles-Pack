@@ -54,7 +54,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.8;
 		DamageFactor "MarineGrenade", 0.7;
-		DamageFactor "MarineRifle", 0.5;
+		DamageFactor "MarineRifle", 0.65;
 	}
 	
 	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
@@ -109,7 +109,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
-		If (Turret) Turret.Die (Source, Inflictor, DmgFlags, MeansOfDeath); //When dead, kill the turret the same way as the vehicle died.
+		If (Turret) Turret.DamageMobj (Inflictor, Source, Turret.Health, MeansOfDeath, DMG_FORCED); //When dead, kill the turret the same way as the vehicle died.
 		
 		bShootable = bNotAutoaimed = True; //Destroyed vehicles stay shootable and non-autoaimable unless specified otherwise.
 		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
@@ -174,15 +174,16 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Override Void PostBeginPlay ()
 	{
 		Actor.PostBeginPlay ();
+		If (!bFriendly) Species = 'MilitaryHostile';
 	}
 	
 	Override Void Tick()
 	{
 		Actor.Tick();
 		
-		If (Master && !(IsDead(Self) && bFallOnDeath))
-			SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,Master.Height+TurretOffsets.Z),True);
-			else a_log ("nope, not doing it");
+		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
+		
+		SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,Master.Height+TurretOffsets.Z),True);
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
@@ -235,5 +236,57 @@ Class MVP_Headlight : DynamicLight
 	{
 		Super.PostBeginPlay();
 		Deactivate(Self); //Off by default.
+	}
+}
+
+//The actor that warns marines around a specified area to run away from the zone in question, it uses the following properties and flags:
+//MaxTargetRange: Determines the exact size of the warning zone.
+//HarmFriends: Gives the warning to marines that are on the same side as the warning zone too, for stuff like indiscriminate AOE attacks. Use CopyFriendliness to make the zone share the allegience of its' creator.
+//Also, figure out why the marines keep fucking running in place when warned by this zone.
+Class SmartMarineWarningZone : Actor
+{
+	Default
+	{
+		MaxTargetRange 256;
+		+Friendly; //To get your grenade-type warning to work with the marines the Friendly flag is NEEDED, because otherwise friendly marines will sometimes end up running in place for some ungodly reason.
+	}
+	
+	Const TheMarine = "SmartMarine";
+	Const WarningToken = "SM_ImInDanger";
+	Inventory Token;
+	
+	Override Void Tick ()
+	{
+		//Can be used to attach the zone to an actor.
+		If (Master)
+			SetOrigin (Master.Pos,True);
+		
+		BlockThingsIterator MarineFinder = BlockThingsIterator.Create (Self,MaxTargetRange);
+		
+		Actor Mobj;
+		
+		While (MarineFinder.Next())
+		{
+			Mobj = MarineFinder.Thing;
+			
+			//Don't warn marines on the same side as the warning zone.
+			If (!bHarmFriends)
+			{
+				If (Mobj.GetClassName() == TheMarine && Mobj.Health > 0 && !Mobj.bDormant && !IsFriend (Mobj) && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
+				{
+					Token = Mobj.GiveInventoryType (WarningToken);
+					If (Token) Token.Master = Self;
+				}
+			}
+			//Warn all marines in the vicinity.
+			Else
+			{
+				If (Mobj.GetClassName() == TheMarine && Mobj.Health > 0 && !Mobj.bDormant && Distance3DSquared(Mobj) <= Speed*Speed)
+				{
+					Token = Mobj.GiveInventoryType (WarningToken);
+					If (Token) Token.Master = Self;
+				}
+			}
+		}
 	}
 }

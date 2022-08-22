@@ -56,6 +56,7 @@ Extend Class MVP_BaseVehicle
 			Return False;
 	}
 	
+	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
 	Actor SpawnMarine (Vector2 Position = (0,0), Bool SetMaster = False)
 	{
 		Name CustomMarine = 'SmartMarine';
@@ -81,6 +82,7 @@ Extend Class MVP_BaseVehicle
 		Return Spawnee;
 	}
 	
+	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)
 	{
 		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
@@ -92,6 +94,20 @@ Extend Class MVP_BaseVehicle
 			Return True;
 		
 		Return False;
+	}
+	
+	//Spawns a warning zone for smart marines that gives them a token, which tells them to run away from the warning zone.
+	Actor WarnMarines (Double Range = 256, Bool AlliesToo = False, Bool StickToTarget = True)
+	{
+		Actor WarnZone = Spawn ("SmartMarineWarningZone",Target.Pos);
+		
+		WarnZone.CopyFriendliness (Self,False);
+		WarnZone.MaxTargetRange = Range;
+		WarnZone.bHarmFriends = AlliesToo;
+		If (StickToTarget)
+			WarnZone.Master = Target;
+		
+		Return WarnZone;
 	}
 	
 	//=====|Vehicle behaviors|=====\\

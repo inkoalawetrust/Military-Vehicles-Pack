@@ -1,7 +1,6 @@
 //To do:
-//I should probably make the turret give up on its' target after losing sight of it for long enough or something.
-//Have the pain ray drop a warning zone when it begins charging up, that can alert the marines to runn away.
-//Make the pain ray affect the player by slowing them down.
+//Have the pain ray drop a warning zone when it begins charging up, that can alert the marines to run away.
+//Make the destructible and destroyed army car props.
 
 Class MVP_PainRay : MVP_BaseTurret
 {
@@ -13,8 +12,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		Height 64;
 		DeathHeight 16;
 		Radius 24;
-		DefThreshold 500; //Sticks to targets longer.
-		MaxTargetRange 1024;
+		MaxTargetRange 1536;
 		DamageFactor "Electric", 1.2;
 		Obituary "%o was killed by a non-lethal weapon, somehow";
 		Tag "Pain Ray";
@@ -23,6 +21,14 @@ Class MVP_PainRay : MVP_BaseTurret
 		+MVP_BaseTurret.FallOnDeath;
 	}
 	Int Patience;
+	Actor WarningZone;
+	
+	Override Void OnDestroy()
+	{
+		Super.OnDestroy();
+		
+		If (WarningZone) WarningZone.Destroy();
+	}
 	States
 	{
 		Spawn:
@@ -62,9 +68,14 @@ Class MVP_PainRay : MVP_BaseTurret
 			}
 			Loop;
 		ChargeUp:
-			MCR3 H 0 A_StartSound ("Vehicle/ArmyCar/PainRay/On",CHAN_VOICE,0,1,0.5);
+			MCR3 H 0
+			{
+				A_StartSound ("Vehicle/ArmyCar/PainRay/On",CHAN_VOICE,0,1,0.5);
+				WarningZone = WarnMarines (512); //Warn the marines of the pain ray attack.
+			}
 			MCR3 HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH 1 A_FaceTarget (5,5,FAF_MIDDLE);
-		PainAttack: //Maybe LookForPlayers could be infrequently called to have the ray change targets sometimes.
+		PainAttack:
+			TNT1 A 0 {If (WarningZone) WarningZone.Destroy();} //Stop warning them.
 			MCR3 H Random (2,8)
 			{
 				A_StartSound ("Vehicle/ArmyCar/PainRay/Active",CHAN_VOICE,CHANF_LOOPING,1,0.5);
@@ -80,18 +91,22 @@ Class MVP_PainRay : MVP_BaseTurret
 					If (Victim.Health >= 400 || (IsInState ("Pain") || IsInState ("Pain.Microwave"))) Continue;
 					
 					//Ignore yourself, non-monsters, dormant monsters, allies, or actors that are just too far away.
-					If (Victim == Self || !Victim.bIsMonster || Victim.bDormant || !IsHostile(Victim)|| Distance3DSquared (Victim) >= 512*512) Continue;
+					If (Victim == Self || !(Victim.bIsMonster || Victim.Player) || Victim.bDormant || !IsHostile(Victim)|| Distance3DSquared (Victim) >= 512*512) Continue;
 					
 					//And finally, ignore actors that cannot feel pain in the first place.
 					If (Victim.bNoPain || (Victim.bInvulnerable && !(Victim.bCausePain && Victim.bAllowPain))) Continue;
 					
 					Victim.TriggerPainChance ('Microwave', False);
+					If (Victim.Player)
+						Victim.GiveInventory ("MVP_PlayerPain",5);
 				}
 			}
 			MCR3 H 0
 			{
+				A_FaceTarget (20,20,FAF_MIDDLE);
+				
 				LookExParams PainRaySight;
-				PainRaySight.MaxDist = 1024;
+				PainRaySight.MaxDist = 1536;
 				
 				//Target is out of sight.
 				If (!IsVisible(Target,True,PainRaySight) || IsDead (Target))
@@ -106,13 +121,22 @@ Class MVP_PainRay : MVP_BaseTurret
 				
 				Return State (Null);
 			}
-			Loop;
+			Goto PainAttack+1;
 		ChargeDown:
 			MCR3 H 0 A_StartSound ("Vehicle/ArmyCar/PainRay/Off",CHAN_VOICE,0,1,0.5);
 			MCR3 HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH 1;
 			Goto See;
 		Death:
-			TNT1 A 0 A_StartSound ("Vehicle/ArmyCar/PainRay/Break",CHAN_VOICE);
+			TNT1 A 0
+			{
+				A_StartSound ("Vehicle/ArmyCar/PainRay/Break",CHAN_VOICE);
+				
+				//The pain ray is dead, mark it as such on the army car.
+				If (Master && Master Is "MVP_ArmyCar")
+					MVP_ArmyCar(Master).User_PainRay = False;
+				
+				If (WarningZone) WarningZone.Destroy(); //Remove the warning zone around the pain rays' target, if there was any.
+			}
 			MCR3 IJ 10;
 			MCR3 KL 5;
 			MCR3 L 1
@@ -132,6 +156,51 @@ Class MVP_PainRay : MVP_BaseTurret
 				}
 			}
 			Goto Death+5;
+	}
+}
+
+Class MVP_PlayerPain : Inventory
+{
+	Default
+	{
+		Inventory.MaxAmount 35;
+		Inventory.Amount 1;
+		+Inventory.Undroppable;
+		+Inventory.Unclearable;
+		+Inventory.HubPower;
+		+Inventory.PersistentPower;
+		+Inventory.Untossable;
+		+Inventory.NoScreenFlash;
+	}
+	
+	Double OriginalSpeed;
+	
+	Override Void AttachToOwner (Actor Other)
+	{
+		Super.AttachToOwner (Other);
+		
+		If (Other && Other.Player)
+		{
+			OriginalSpeed = Other.Speed; //Store current speed.
+			Other.Speed /= 128; //Slow down the player.
+		}
+		Else
+			GoAwayAndDie ();
+	}
+	
+	Override Void DoEffect ()
+	{
+		Super.DoEffect();
+		console.printf ("%f",owner.speed);
+		console.printf ("got %d tokens",countinv ("mvp_playerpain"));
+		
+		If (CountInv("MVP_PlayerPain") == 0)
+		{
+			Owner.Speed = OriginalSpeed; //Restore original speed.
+			GoAwayAndDie(); //https://www.youtube.com/watch?v=gzthb6gqLDY
+		}
+		Else
+			Owner.TakeInventory ("MVP_PlayerPain",1);
 	}
 }
 
