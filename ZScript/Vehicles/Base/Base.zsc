@@ -21,7 +21,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		//Flags
 		Monster;
 		+NoForwardFall; //Doesn't make sense for a tank or some shit to slide forward after dying.
-		+AvoidMelee;
+		//+AvoidMelee;
 		+AvoidHazards;
 		+SeeFriendlyMonsters; //Of course this is on for enemy vehicles.
 		+Telestomp;
@@ -59,7 +59,10 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
 	because it allows default user variable values to be set for actors that are spawned in-game as well, not just ones placed in UDB*/
-	Virtual Void UserVariableDefaults () {}
+	Virtual Void UserVariableDefaults ()
+	{
+		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
+	}
 	
 	//Handles spawning each vehicles turret, if they have any.
 	Virtual Void SpawnVehicleTurret ()
@@ -145,6 +148,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	//Generic user variables
 	Bool User_NoHeadLights;
+	Double User_RetreatDistance;
 }
 
 Class MVP_BaseTurret : MVP_BaseVehicle Abstract
@@ -242,13 +246,19 @@ Class MVP_Headlight : DynamicLight
 //The actor that warns marines around a specified area to run away from the zone in question, it uses the following properties and flags:
 //MaxTargetRange: Determines the exact size of the warning zone.
 //HarmFriends: Gives the warning to marines that are on the same side as the warning zone too, for stuff like indiscriminate AOE attacks. Use CopyFriendliness to make the zone share the allegience of its' creator.
-//Also, figure out why the marines keep fucking running in place when warned by this zone.
 Class SmartMarineWarningZone : Actor
 {
 	Default
 	{
+		Radius 0.1; Height 0;
 		MaxTargetRange 256;
 		+Friendly; //To get your grenade-type warning to work with the marines the Friendly flag is NEEDED, because otherwise friendly marines will sometimes end up running in place for some ungodly reason.
+		+Shootable; //This will hopefully stop marines running from these warnings from ever getting stuck and running in place.
+		+NotAutoaimed
+		+NoBlood;
+		+NoDamage;
+		+NoInteraction;
+		+NoGravity;
 	}
 	
 	Const TheMarine = "SmartMarine";

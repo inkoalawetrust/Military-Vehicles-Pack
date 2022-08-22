@@ -20,6 +20,12 @@ Extend Class MVP_BaseVehicle
 		Return (InStateSequence(CurState,ResolveState (CheckFor)));
 	}
 	
+	Bool CanBeTargeted (Actor Other)
+	{
+		If (!Other) Return False;
+		Return (!Other.bNoTarget && !Other.bNeverTarget && !(Other.Player && Other.Player.Cheats & CF_NOTARGET));
+	}
+	
 	//Add a function that determines if the vehicles' target is a VERY powerful enemy.
 	Bool IsPowerful (Actor Other)
 	{
@@ -155,6 +161,41 @@ Extend Class MVP_BaseVehicle
 		}
 		
 		Return Chance;
+	}
+	
+	//Does exactly what it says, finds the nearest enemy that can be targeted and is visible, and returns a pointer to it.
+	Actor FindNearestEnemy (Double Range = 256)
+	{
+		Array <Actor> NearbyEnemies;
+		Double NearestDistance = INT.MAX;
+		
+		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Self,Range);
+		
+		While (FindEnemies.Next())
+		{
+			Actor Mobj = FindEnemies.Thing;
+			
+			//Skip this actor if it's dead, cannot be targeted, is not a monster nor a player, or is not even an enemy.
+			If (!Mobj || IsDead (Mobj) || !CanBeTargeted (Mobj) || !(Mobj.bIsMonster || Mobj.Player) || !IsHostile (Mobj)) Continue;
+			
+			NearbyEnemies.Push(Mobj); //Add it to the list.
+		}
+		
+		Actor NearestEnemy;
+		
+		//Now check through the enemies found in range.
+		For (Int I = NearbyEnemies.Size()-1; I >= 0; I--)
+		{
+			//Whittle them down to the enemy that is the closest to the vehicle, and that is visible.
+			Double CurrentDistance = Distance3DSquared (NearbyEnemies[I]);
+			If (NearestDistance > CurrentDistance && CheckSight (NearbyEnemies[I]))
+			{
+				NearestDistance = CurrentDistance;
+				NearestEnemy = NearbyEnemies[I];
+			}
+		}
+		
+		Return NearestEnemy;
 	}
 	
 		//=====|Headlight functions|=====\\

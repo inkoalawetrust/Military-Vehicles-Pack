@@ -1,6 +1,5 @@
 //To do
 //Make the generic big explosion actor, and the army car specific debris actors, who should be able to act as gravity affected projectiles as well.
-//Make the cars (And other vehicles.) keep a greater distance from their target, maybe also make them stop for a bit while firing their turrets.
 
 Class MVP_ArmyCar : MVP_BaseVehicle
 {
@@ -169,11 +168,13 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	String User_SupplyType; //Maybe I could make friendly cars carrying supplies follow the player around after dropping off their marines.
 	Int User_SupplyAmount; //The amount of times a player can use a car carrying supplies before it runs out. 5 is the default.
-	
-	Actor[4] Marines; //Keeps track of the marines the car deployed.
-	Bool MarinesDeployed; //Has the car already dropped its' marines ?
 	Bool User_PainRay; //The car carries a non lethal weapon that pain locks enemies, similar to the Active Denial System.
 	Bool User_NoMarines; //The car spawns with no marines in it.
+	
+	Actor[4] Marines; //Keeps track of the marines the car deployed.
+	Actor NearestEnemy; //The enemy closest to the car, if any.
+	Bool MarinesDeployed; //Has the car already dropped its' marines ?
+	Bool AlreadyRetreating; //The car is already running away from something that doesn't involve the enemy avoiding code, so don't call the enemy avoiding code.
 	Int WaitTimer; //Makes the car stop for a bit after picking up supplies, so you don't have to chase it.
 	Int ChaseTimer; //Makes the car only chase its' target for a certain amount of time after it goes out of sight.
 	Int FearTimer; //Makes the car keep running away from it's target for an additional random amount of time, so the car doesn't play peekaboo with enemies.
@@ -205,13 +206,12 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				LookExParams ArmyCarSight;
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
-				a_logint (feartimer);
 				
 				If (Target && MarinesDeployed && !User_PainRay || Target && IsPowerful (Target))
 					If (IsVisible(Target, True))
 					{
 						FearTimer = Random (2,64);
-						bFrightened = True;
+						bFrightened = AlreadyRetreating = True;
 					}
 					Else
 						bFrightened = False;
@@ -221,21 +221,46 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				If (FearTimer)
 				{
 					FearTimer--;
-					bFrightened = True;
+					bFrightened = AlreadyRetreating = True;
 				}
+				
 				
 				If (bFrightened)
 					MinMissileChance = bMissileMore = 1;
 				
 				FollowPlayerControl();
 				
-				If (!MarinesDeployed)
-					A_Chase (Null,"DeployMarines",CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
-				Else
+				Actor OldTarget;
+				NearestEnemy = FindNearestEnemy (User_RetreatDistance);
+				If (!NearestEnemy)
+				{	A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));a_log ("moving normally");}
+				Else If (NearestEnemy && !AlreadyRetreating)
+				{a_log ("stranger danger");
+					OldTarget = Target;
+					Target = NearestEnemy;console.printf ("the nearest enemy is %s",nearestenemy.getclassname());spawn ("tempspark",nearestenemy.pos+(0,0,64));
+					bFrightened = True;
+					FearTimer = Random (2,48);
 					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
+					Target = OldTarget;
+				}
+				Else
+				{	A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));a_log ("take the third option");}
+				console.printf ("the fear timer is %d",feartimer);
+				/*//If you have dropped your marines and still have a turret. And the RNG is on your side.
+				If (MarinesDeployed && User_PainRay && Random[pr_cajump](0,255) < 24)
+				{a_log ("lets see if i can take a break");
+					//Then check if you are far enough from your nearest enemy or target.
+					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= User_RetreatDistance*User_RetreatDistance)
+					|| (Target && Distance3DSquared (Target) >= User_RetreatDistance*User_RetreatDistance))
+						Return ResolveState ("StickAround");
+				}*/
 				
+				OldTarget = NearestEnemy = Null;
 				
-				If (ChaseTimer >= 35*30)
+				If (!MarinesDeployed && CheckMissileRange())
+					Return ResolveState ("DeployMarines");
+				
+				If (ChaseTimer >= (35/2)*30)
 				{
 					A_ClearTarget();
 					ChaseTimer = 0;
@@ -250,7 +275,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				}
 
 				MinMissileChance = Default.MinMissileChance;
-				bFrightened = bMissileMore = False;
+				bFrightened = bMissileMore = AlreadyRetreating = False;
+				
+				Return State (Null);
 			}
 			Loop;
 		DeployMarines:

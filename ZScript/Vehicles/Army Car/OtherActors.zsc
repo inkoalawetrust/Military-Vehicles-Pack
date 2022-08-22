@@ -1,5 +1,4 @@
 //To do:
-//Have the pain ray drop a warning zone when it begins charging up, that can alert the marines to run away.
 //Make the destructible and destroyed army car props.
 
 Class MVP_PainRay : MVP_BaseTurret
@@ -52,6 +51,10 @@ Class MVP_PainRay : MVP_BaseTurret
 				
 				If (Target)
 				{
+					//If the army car has no target anymore, then set the pain rays' current target as such.
+					If (Master && !Master.Target)
+						Master.Target = Target;
+					
 					Int AttackChance = Random (0,256);
 					If (CheckMissileRange() && AttackByQuantity (384)+AttackChance < 224)
 					{
@@ -87,14 +90,14 @@ Class MVP_PainRay : MVP_BaseTurret
 				{
 					Victim = ItBurnsItBurns.Thing;
 					
-					//Don't painlock actors with a lot of health. Or who are already in pain, to avoid breaking states. This last one needs to be added later.
+					//Don't painlock actors with a lot of health. Or who are already in pain, to avoid breaking states.
 					If (Victim.Health >= 400 || (IsInState ("Pain") || IsInState ("Pain.Microwave"))) Continue;
 					
 					//Ignore yourself, non-monsters, dormant monsters, allies, or actors that are just too far away.
-					If (Victim == Self || !(Victim.bIsMonster || Victim.Player) || Victim.bDormant || !IsHostile(Victim)|| Distance3DSquared (Victim) >= 512*512) Continue;
+					If (Victim == Self || !(Victim.bIsMonster || Victim.Player) || Victim.bDormant || !IsHostile(Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;
 					
-					//And finally, ignore actors that cannot feel pain in the first place.
-					If (Victim.bNoPain || (Victim.bInvulnerable && !(Victim.bCausePain && Victim.bAllowPain))) Continue;
+					//And finally, check to see if the actor can even be targeted.
+					If (!CanBeTargeted (Victim)) Continue;
 					
 					Victim.TriggerPainChance ('Microwave', False);
 					If (Victim.Player)
