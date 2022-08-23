@@ -149,6 +149,24 @@ Class MVP_BaseVehicle : Actor Abstract
 	//Generic user variables
 	Bool User_NoHeadLights;
 	Double User_RetreatDistance;
+	
+	States
+	{
+		StickAround: //Generic state shared by all vehicles, for when they are far enough from any enemies to be able to just sit and let their turrets do the work.
+			#### # 0
+			{a_log ("stick around");
+				A_StopSound (CHAN_MOVING);
+				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
+				//Face sideways from your target, if any.
+				A_FaceTarget ();
+				If (Target)
+					Angle += RandomPick (75,80,85,90,95,10,105);
+			}
+			#### # 4 A_JumpIf (FindNearestEnemy (User_RetreatDistance/1.4),"See"); //If an enemy has gotten too close, begin moving again.
+			#### # 0 A_Jump (8,"See"); //Eventualy, go back to the See state.
+			Goto StickAround+1;
+
+	}
 }
 
 Class MVP_BaseTurret : MVP_BaseVehicle Abstract
@@ -260,13 +278,12 @@ Class SmartMarineWarningZone : Actor
 		+NoInteraction;
 		+NoGravity;
 	}
-	
-	Const TheMarine = "SmartMarine";
-	Const WarningToken = "SM_ImInDanger";
 	Inventory Token;
 	
 	Override Void Tick ()
 	{
+		String TheMarine = "SmartMarine";
+		String WarningToken = "SM_ImInDanger";
 		//Can be used to attach the zone to an actor.
 		If (Master)
 			SetOrigin (Master.Pos,True);

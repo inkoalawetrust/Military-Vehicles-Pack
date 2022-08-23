@@ -4,6 +4,7 @@ Version "4.8.2"
 #Include "ZScript/Vehicles/Base/Base.zsc"
 #Include "ZScript/Vehicles/Base/BaseProp.zsc"
 #Include "ZScript/Vehicles/Base/CommonFunctions.zsc"
+#Include "ZScript/SFX.zsc"
 
 //=====|The vehicles|=====\\
 	//Army Car

@@ -15,6 +15,7 @@ All vehicle sprites are entirelymade by me (Inkoalawetrust) unless otherwise spe
 =====<SFX>=====
 Fire sprites (F1RE and F2RE) are from Duke Nukem 3D, ripped from Project Brutality.
 Large explosion (MCR3A0-MCR3G0) made by Inkoalawetrust.
+Spark sprites (SPKYA-SPKYF) made by Tormentor667 and Solarsnowfall.
 
 |==============|Sprites|==============|
 
@@ -37,6 +38,8 @@ Army car handle sound (CarHandle.ogg) by RutgerMuller https://freesound.org/peop
 Army car door slam sound (CarSlam.ogg) by Frederick_Sunne https://freesound.org/people/Frederik_Sunne/sounds/324138/
 Army car crate open sound (CrateOpen.ogg) is from the 2020 GDC sound library, "Wav Junction Sound Effects - Doors"
 |==============|Sounds|==============|
+
+
 
 
 |==============|TOOLS USED|==============|

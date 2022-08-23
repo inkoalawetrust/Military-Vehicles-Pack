@@ -46,3 +46,63 @@ Object MVP_ArmyCar
 	Frame MCR1K {Light CarDeath4}
 	Frame MCR1L {Light CarDeath5}
 }
+
+PointLight BigExplosion1
+{
+	Color 0.97 0.89 0.57
+	Size 96
+	Attenuate 1
+}
+
+PointLight BigExplosion2
+{
+	Color 0.97 0.89 0.57
+	Size 192
+	Attenuate 1
+}
+
+PointLight BigExplosion3
+{
+	Color 0.97 0.89 0.57
+	Size 256
+	Attenuate 1
+}
+
+PointLight BigExplosion4
+{
+	Color 0.97 0.89 0.57
+	Size 384
+	Attenuate 1
+}
+
+PointLight BigExplosion5
+{
+	Color 0.97 0.89 0.57
+	Size 400
+	Attenuate 1
+}
+
+PointLight BigExplosion6
+{
+	Color 0.97 0.89 0.57
+	Size 96
+	Attenuate 1
+}
+
+PointLight BigExplosion7
+{
+	Color 0.97 0.89 0.57
+	Size 48
+	Attenuate 1
+}
+
+Object MVP_BigExplosion
+{
+	Frame MCR3A {Light BigExplosion1}
+	Frame MCR3B {Light BigExplosion2}
+	Frame MCR3C {Light BigExplosion3}
+	Frame MCR4D {Light BigExplosion4}
+	Frame MCR5E {Light BigExplosion5}
+	Frame MCR5F {Light BigExplosion6}
+	Frame MCR5G {Light BigExplosion7}
+}

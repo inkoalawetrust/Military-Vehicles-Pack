@@ -105,6 +105,7 @@ Extend Class MVP_BaseVehicle
 	//Spawns a warning zone for smart marines that gives them a token, which tells them to run away from the warning zone.
 	Actor WarnMarines (Double Range = 256, Bool AlliesToo = False, Bool StickToTarget = True)
 	{
+		If (!CustomMarinesAvailable()) Return Null;
 		Actor WarnZone = Spawn ("SmartMarineWarningZone",Target.Pos);
 		
 		WarnZone.CopyFriendliness (Self,False);
@@ -241,4 +242,9 @@ Extend Class MVP_BaseVehicle
 				}
 			}
 		}
-	}
+	
+    clearscope Vector2 Rotate(Vector2 vec, double angle)
+    {
+        return (vec.x * Cos(angle) - vec.y * Sin(angle), vec.x * Sin(angle) + vec.y * Cos(angle));
+    }
+}

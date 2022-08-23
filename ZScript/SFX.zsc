@@ -1,0 +1,94 @@
+//Common effects used by most or all vehicles.
+
+Class MVP_BigExplosion : Actor
+{
+	Default
+	{
+		RenderStyle "Add";
+		+NeverTarget;
+		+NotAutoaimed;
+		+Bright;
+	}
+	States
+	{
+		Spawn:
+			MCR3 A 3 NoDelay
+			{
+				A_Explode (256,256,XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,96,damagetype:'Explosion');
+				A_QuakeEx (2,2,2,35*5,0,640,flags:QF_SCALEDOWN|QF_3D);
+				A_StartSound ("SFX/BigExplosion",CHAN_AUTO,attenuation:0.2);
+			}
+			MCR3 BC 3;
+			MCR3 DE 5;
+			MCR3 FG 8;
+			Stop;
+	}
+}
+
+//The reactin time property is used as the lifespan in tics.
+Class MVP_Flame : Actor
+{
+	Default
+	{
+		RenderStyle "Add";
+		ReactionTime (35*20);
+		Scale 0.75;
+		DamageType "Fire";
+		+NeverTarget;
+		+NotAutoaimed;
+		+NoDamageThrust;
+		+Bright;
+	}
+	
+	Vector3 Offsets;
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		console.printf ("the offsets are %d %d %d",Offsets.X,Offsets.Y,Offsets.Z);
+		//Stick to you master, if any.
+		If (Master)
+		{	SetOrigin (Master.Vec3Offset(Offsets.X,Offsets.Y,Offsets.Z),True);a_log ("moving");}
+		
+		If (!InStateSequence(CurState,ResolveState ("Death")))
+		{
+			If (!(ReactionTime == 0) && GetAge() >= ReactionTime)
+				SetStateLabel ("Death");
+			
+			If (GetAge() % 16 == 0)
+				A_Explode (Random (2,6),48,XF_HURTSOURCE|XF_NOTMISSILE,False,24);
+		}
+	}
+	
+	States
+	{
+		Spawn:
+			F1RE A 0 NoDelay
+			{
+				bXFlip = Random (0,1);
+				
+				A_StartSound ("SFX/Fire",CHAN_BODY,flags:CHANF_LOOPING,0.5);
+				A_AttachLight ('Fire',DynamicLight.FlickerLight,"EBDB57",48,40,param:0.25);
+			}
+			#### ABCDEFGH 4;
+			Goto Spawn+1;
+		Death:
+			#### A 4;
+			#### B 4 A_SoundVolume (CHAN_BODY,0.8);
+			#### # 0 {Scale -= (.15,.15);}
+			#### C 4 A_SoundVolume (CHAN_BODY,0.6);
+			#### # 0 {Scale -= (.15,.15);}
+			#### D 4 A_SoundVolume (CHAN_BODY,0.4);
+			#### # 0 {Scale -= (.15,.15);}
+			#### E 4 A_SoundVolume (CHAN_BODY,0.2);
+			#### # 0 {Scale -= (.15,.15);}
+			TNT1 A 0 A_RemoveLight ('Fire');
+			Stop;
+		Sprites:
+			F1RE ABCDEFGH 0;
+			F2RE ABCDEFGH 0;
+			Stop;
+	}
+}
