@@ -47,10 +47,10 @@ Class MVP_Flame : Actor
 		Super.Tick();
 		
 		If (IsFrozen()) Return;
-		console.printf ("the offsets are %d %d %d",Offsets.X,Offsets.Y,Offsets.Z);
+		
 		//Stick to you master, if any.
 		If (Master)
-		{	SetOrigin (Master.Vec3Offset(Offsets.X,Offsets.Y,Offsets.Z),True);a_log ("moving");}
+			SetOrigin (Master.Vec3Offset(Offsets.X,Offsets.Y,Offsets.Z),True);
 		
 		If (!InStateSequence(CurState,ResolveState ("Death")))
 		{
