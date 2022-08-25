@@ -1,0 +1,63 @@
+Class MVP_BaseProp : MVP_BaseVehicle Abstract
+{
+	Default
+	{
+		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
+		+NotAutoaimed;
+		-CountKill;
+		-ActivateMCross;
+		-IsMonster;
+		-CanPushWalls;
+		-CanUseWalls;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay ();
+		
+		If (!User_Destructible)
+		{
+			bNoDamage = True;
+			If (Turret)
+				Turret.bNoDamage = True;
+		}
+		Else
+		{
+			bNoDamage = False;
+			If (Turret)
+				Turret.bNoDamage = False;
+		}
+	}
+	
+	Override Void Tick()
+	{
+		Actor.Tick();
+		
+		//Props don't move, so just let mappers be able to manually turn the lights on or off per prop.
+		If (!User_NoHeadlights)
+			HeadlightsOn = True;
+		Else
+			HeadlightsOn = False;
+		
+		If (HeadLightsOn)
+			TurnHeadlightsOn();
+		Else
+			TurnHeadlightsOff();
+	}
+	
+	Bool User_Destructible; //Is the prop destroyable ?
+}
+
+Class MVP_BaseTurretProp : MVP_BaseTurret
+{
+	Default
+	{
+		Tag "Military Vehicle Turret Prop Base (You really shouldn't be seeing this in-game)";
+		+NotAutoaimed;
+		-CountKill;
+		-ActivateMCross;
+		-IsMonster;
+		-CanPushWalls;
+		-CanUseWalls;
+	}
+}

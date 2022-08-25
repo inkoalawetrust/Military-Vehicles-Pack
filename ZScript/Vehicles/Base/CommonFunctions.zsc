@@ -41,11 +41,11 @@ Extend Class MVP_BaseVehicle
 		&& (Other Is CustomMarine && MarineIsOnTurret (Other)
 		|| Other Is CustomTurretMarine
 		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon))
-			{a_log ("say hello to my little friend");Return True;}
+			Return True;
 		
 		//Does the actor have 2500 health or more, is sufficiently large, or can reflect projectiles ?
 		If (Other.SpawnHealth() >= 2500 || (Other.Height >= 80 && Other.Radius >= 72) || Other.bReflective)
-			{a_log ("spooky scary demons");Return True;}
+			Return True;
 		
 		Return False;
 	}
@@ -103,7 +103,7 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//Spawns a warning zone for smart marines that gives them a token, which tells them to run away from the warning zone.
-	Actor WarnMarines (Double Range = 256, Bool AlliesToo = False, Bool StickToTarget = True)
+	Actor WarnMarines (Double Range = 256, Bool AlliesToo = False, Bool StickToTarget = True, Bool PainOnly = False)
 	{
 		If (!CustomMarinesAvailable()) Return Null;
 		Actor WarnZone = Spawn ("SmartMarineWarningZone",Target.Pos);
@@ -243,8 +243,36 @@ Extend Class MVP_BaseVehicle
 			}
 		}
 	
-    clearscope Vector2 Rotate(Vector2 vec, double angle)
-    {
-        return (vec.x * Cos(angle) - vec.y * Sin(angle), vec.x * Sin(angle) + vec.y * Cos(angle));
-    }
+	//Vehicle specific functions
+	Void SpawnArmyCarHeadlights ()
+	{
+		//Initialize headlights
+			//Front left headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[0].Offset = (64,28,8);
+			Headlights[0].Master = Self;
+			//Front right headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[1].Offset = (64,-28,8);
+			Headlights[1].Master = Self;
+			
+			//Back left headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[2].Offset = (40,28,8);
+			Headlights[2].Master = Self;
+			HeadLights[2].IsBacklight = True;
+			HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
+			HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+			HeadLights[2].SpotInnerAngle = 40;
+			Headlights[2].SpotOuterAngle = 80;
+			//Back right headlight
+			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+			HeadLights[3].Offset = (40,-28,8);
+			Headlights[3].Master = Self;
+			HeadLights[3].IsBacklight = True;
+			HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
+			HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+			HeadLights[3].SpotInnerAngle = 40;
+			Headlights[3].SpotOuterAngle = 80;
+	}
 }

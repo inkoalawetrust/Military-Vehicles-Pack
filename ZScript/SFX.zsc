@@ -31,7 +31,7 @@ Class MVP_Flame : Actor
 	Default
 	{
 		RenderStyle "Add";
-		ReactionTime (35*20);
+		ReactionTime (35*30);
 		Scale 0.75;
 		DamageType "Fire";
 		+NeverTarget;

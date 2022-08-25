@@ -45,7 +45,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		DamageFactor "Electric", 0.2;
 		DamageFactor "ExplosiveImpact", 0.75;
 		DamageFactor "Explosion", 0.75;
-		DamageFactor "HitScan", 0.5; //The generic damage type of hitscan attacks.
+		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
 		DamageFactor "Fire", 0.8;
 		DamageFactor "Crush", 1.5;
 		DamageFactor "Disintegrate", 1.5;
@@ -54,7 +54,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.8;
 		DamageFactor "MarineGrenade", 0.7;
-		DamageFactor "MarineRifle", 0.65;
+		DamageFactor "MarineRifle", 0.7;
 	}
 	
 	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
@@ -85,7 +85,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Super.BeginPlay();
 		
-		If (GetClassName() == "MVP_BaseVehicle" || GetClassName() == "MVP_BaseTurret")
+		If (GetClassName() == "MVP_BaseVehicle" || GetClassName() == "MVP_BaseTurret" || GetClassName() == "MVP_BaseProp" || GetClassName() == "MVP_BaseTurretProp")
 		{
 			Console.Printf ("How the fuck did you spawn this in ?");
 			Destroy();
@@ -107,6 +107,11 @@ Class MVP_BaseVehicle : Actor Abstract
 		
 		If (!User_NoHeadlights)
 			HeadLightsOn = (CurSector && CurSector.LightLevel <= 104);
+		
+		If (HeadLightsOn)
+			TurnHeadlightsOn();
+		Else
+			TurnHeadlightsOff();
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
@@ -154,7 +159,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		StickAround: //Generic state shared by all vehicles, for when they are far enough from any enemies to be able to just sit and let their turrets do the work.
 			#### # 0
-			{a_log ("stick around");
+			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
 				//Face sideways from your target, if any.
@@ -236,12 +241,7 @@ Class MVP_Headlight : DynamicLight
 	Override Void Tick()
 	{
 		If (Master && MVP_BaseVehicle(Master).HeadlightsOn)
-		{
-			If (!IsBacklight)
-				Warp (Master,Offset.Y,Offset.X,Offset.Z);
-			Else
-				Warp (Master,Offset.Y,Offset.X,Offset.Z,180);
-		}
+			Warp (Master,Offset.X,Offset.Y,Offset.Z,IsBacklight ? 180 : 0);
 	}
 	
 	Override Void BeginPlay()
@@ -264,6 +264,7 @@ Class MVP_Headlight : DynamicLight
 //The actor that warns marines around a specified area to run away from the zone in question, it uses the following properties and flags:
 //MaxTargetRange: Determines the exact size of the warning zone.
 //HarmFriends: Gives the warning to marines that are on the same side as the warning zone too, for stuff like indiscriminate AOE attacks. Use CopyFriendliness to make the zone share the allegience of its' creator.
+//CausePain: Specifies to marines that the AOE attack just causes pain, so they won't run away if on a turret, where they don't feel pain to begin with. This is basically only here because of the Army Car's pain ray.
 Class SmartMarineWarningZone : Actor
 {
 	Default
@@ -279,6 +280,20 @@ Class SmartMarineWarningZone : Actor
 		+NoGravity;
 	}
 	Inventory Token;
+	
+	//Cool code duplication because the warning zone isn't a vehicle of any kind.
+	Bool MarineIsOnTurret (Actor Other)
+	{
+		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		If (!IsOnTurret)
+			Return False;
+		
+		If (IsOnTurret.GetInt("",ObjectArg:Other))
+			Return True;
+		
+		Return False;
+	}
 	
 	Override Void Tick ()
 	{
@@ -301,8 +316,11 @@ Class SmartMarineWarningZone : Actor
 			{
 				If (Mobj.GetClassName() == TheMarine && Mobj.Health > 0 && !Mobj.bDormant && !IsFriend (Mobj) && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
 				{
-					Token = Mobj.GiveInventoryType (WarningToken);
-					If (Token) Token.Master = Self;
+					If (bCausePain && !MarineIsOnTurret(Mobj))
+					{
+						Token = Mobj.GiveInventoryType (WarningToken);
+						If (Token) Token.Master = Self;
+					}
 				}
 			}
 			//Warn all marines in the vicinity.
@@ -310,8 +328,11 @@ Class SmartMarineWarningZone : Actor
 			{
 				If (Mobj.GetClassName() == TheMarine && Mobj.Health > 0 && !Mobj.bDormant && Distance3DSquared(Mobj) <= Speed*Speed)
 				{
-					Token = Mobj.GiveInventoryType (WarningToken);
-					If (Token) Token.Master = Self;
+					If (bCausePain && !MarineIsOnTurret(Mobj))
+					{
+						Token = Mobj.GiveInventoryType (WarningToken);
+						If (Token) Token.Master = Self;
+					}
 				}
 			}
 		}

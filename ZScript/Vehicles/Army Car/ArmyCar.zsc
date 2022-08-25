@@ -1,12 +1,9 @@
-//To do
-//Make the generic big explosion actor, and the army car specific debris actors, who should be able to act as gravity affected projectiles as well.
-
 Class MVP_ArmyCar : MVP_BaseVehicle
 {
 	Default
 	{
 		//$Title Army Car
-		//$Category Vehicles
+		//$Category Vehicles/Army Car
 		//$Sprite MCR1A1
 		//Most of the actors' properties are basically the default properties for the base class.
 		Speed 12;
@@ -30,39 +27,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		MarinesDeployed = User_NoMarines;
 		If (HasSupplies()) SetTag ("Army Car (Open Trunk)");
 		
-		//Initialize headlights
-			//Front left headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[0].Offset = (28,12,8);
-			Headlights[0].Master = Self;
-			//Front right headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[1].Offset = (-28,12,8);
-			Headlights[1].Master = Self;
-			
-			//Back left headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[2].Offset = (28,40,8);
-			Headlights[2].Master = Self;
-			HeadLights[2].IsBacklight = True;
-			HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
-			HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-			HeadLights[2].SpotInnerAngle = 40;
-			Headlights[2].SpotOuterAngle = 80;
-			//Back right headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[3].Offset = (-28,40,8);
-			Headlights[3].Master = Self;
-			HeadLights[3].IsBacklight = True;
-			HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
-			HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-			HeadLights[3].SpotInnerAngle = 40;
-			Headlights[3].SpotOuterAngle = 80;
-		
-		If (CustomMarinesAvailable())
-			Console.Printf ("It's marinatin' time.");
-		Else
-			Console.Printf ("Forever alone.");
+		SpawnArmyCarHeadlights();
 	}
 	
 	Override Void Tick()
@@ -74,11 +39,6 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		If (Turret && !IsDead (Turret) && !Turret.Target) Turret.Angle = Self.Angle;
 		
 		If (WaitTimer) WaitTimer--;
-		
-		If (HeadLightsOn)
-			TurnHeadlightsOn();
-		Else
-			TurnHeadlightsOff();
 	}
 	
 	Override Void SpawnVehicleTurret ()
@@ -98,6 +58,8 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	you can change what kind of items each supply type uses by adding more User.GiveInventory lines for each type, or replace the existing ones.
 	For example, if you mod adds a rocker launcher with custom "SmartRocketAmmo" and "SmartRocketBox" ammo types, that's how you can make cars
 	with User_SupplyType set to Ammo give those smart rockets to the player, instead of the vanilla ones.
+	Oh yes, I also had to copy and paste this code for the prop version of the car, so you will need to copy this Used() override here.
+	Then go to ZScript/Vehicles/Army Car/OtherActors.zsc, and replace the Used() virtual of MVP_ArmyCarProp as well.
 	==============*/
 	Override Bool Used (Actor User)
 	{
@@ -120,7 +82,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				User_SupplyAmount--;
 				//Only go back to spawn and wait there if the car ISN'T already stopped to drop troops.
 				If (!IsInState ("DeployMarines") && !IsInState ("Spawn") && !IsPatrolling())
-				{a_log ("going to spawn");
+				{
 					WaitTimer = 35*2;
 					SetStateLabel ("Spawn");
 				}
@@ -167,7 +129,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Return (User_SupplyType && !(User_SupplyType ~== "" || User_SupplyType ~== "None"));
 	}
 	
-	String User_SupplyType; //Maybe I could make friendly cars carrying supplies follow the player around after dropping off their marines.
+	String User_SupplyType; //What type of supplies the car carries, if any. Maybe I could make friendly cars carrying supplies follow the player around after dropping off their marines.
 	Int User_SupplyAmount; //The amount of times a player can use a car carrying supplies before it runs out. 5 is the default.
 	Bool User_PainRay; //The car carries a non lethal weapon that pain locks enemies, similar to the Active Denial System.
 	Bool User_NoMarines; //The car spawns with no marines in it.
@@ -193,7 +155,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
-				A_LookEx (0,0,8192,3072);
+				If (WaitTimer <= 0) A_LookEx (0,0,8192,3072);
 				
 				If (!IsPatrolling() && Target && WaitTimer <= 0)
 					SetStateLabel ("See");
@@ -231,22 +193,21 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				FollowPlayerControl();
 				
-				Actor OldTarget;a_logint (User_RetreatDistance);
+				Actor OldTarget;
 				NearestEnemy = FindNearestEnemy (User_RetreatDistance);
 				If (!NearestEnemy)
-				{	A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));a_log ("moving normally");}
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				Else If (NearestEnemy && !AlreadyRetreating)
-				{a_log ("stranger danger");
+				{
 					OldTarget = Target;
-					Target = NearestEnemy;console.printf ("the nearest enemy is %s",nearestenemy.getclassname());
+					Target = NearestEnemy;
 					bFrightened = True;
 					FearTimer = Random (2,48);
 					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 					Target = OldTarget;
 				}
 				Else
-				{	A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));a_log ("take the third option");}
-				console.printf ("the fear timer is %d",feartimer);
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				
 				If (!MarinesDeployed && CheckMissileRange())
 					Return ResolveState ("DeployMarines");
@@ -267,7 +228,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 
 				//If you have dropped your marines and still have a turret. And the RNG is on your side.
 				If (MarinesDeployed && User_PainRay && Random[pr_cajump](0,255) < 4)
-				{a_log ("lets see if i can take a break");
+				{
 					//Then check if you are far enough from your nearest enemy or target.
 					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
 					&& (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
@@ -354,14 +315,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				{
 					SpawnPos = (FRandom (-Radius*2,Radius*2),FRandom (-Radius*2,Radius*2),0);
 					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
-					console.printf ("the spawn pos is %d %d %d",spawnpos.x,spawnpos.y,spawnpos.z);
+					
 					If (Flame)
 					{
 						If (!Level.IsPointInLevel (Flame.Pos))
 							Flame.Destroy();
 						
 						If (Flame)
-						{a_log ("setting up flame");
+						{
 							Flame.Master = Self;
 							MVP_Flame(Flame).Offsets = SpawnPos;
 							Flame.ReactionTime *= FRandom (0.5,2.5);

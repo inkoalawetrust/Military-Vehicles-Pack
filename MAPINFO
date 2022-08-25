@@ -5,5 +5,10 @@ GameInfo
 
 DoomEdNums
 {
-	17000 = MVP_ArmyCar
+	//Army car
+		17000 = MVP_ArmyCar
+		17001 = MVP_ArmyCarProp
+		17002 = MVP_ArmyCarWreck
+		17003 = MVP_PainRayWreck
+		17004 = MVP_ArmyCarRuin
 }
