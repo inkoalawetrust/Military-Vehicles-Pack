@@ -119,7 +119,7 @@ Extend Class MVP_BaseVehicle
 	
 	//=====|Vehicle behaviors|=====\\
 	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
-	Void FollowPlayerControl (Double MaxDist = 284)
+	Void FollowPlayerControl (Double MaxDist = 384)
 	{
 		If (!PlayerInGame[FriendPlayer])
 			Return;
