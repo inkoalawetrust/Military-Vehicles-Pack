@@ -6,8 +6,8 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		//$Category Vehicles/Army Car
 		//$Sprite MCR1A1
 		//Most of the actors' properties are basically the default properties for the base class.
-		Speed 12;
-		FastSpeed 18;
+		Speed 16;
+		FastSpeed 24;
 		XScale 0.65;
 		YScale 0.541666; //0.65 / 1.2
 		Health 800;

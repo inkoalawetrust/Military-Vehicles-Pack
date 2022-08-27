@@ -24,7 +24,6 @@ Class SM_MarineChecker : EventHandler
 		While (FindMarines.Next())
 			Return True;
 		
-		Console.Printf ("No marines found :pepesad:");
 		Return False;
 	}
 	
