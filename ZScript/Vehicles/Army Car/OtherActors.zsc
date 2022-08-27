@@ -280,8 +280,8 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 	{
 		Super.Used (User);
 		
-		//Non-existent users, cars with no supplies, used up cars, and dead cars GTFO.
-		If (!User || !HasSupplies() || User_SupplyAmount <= 0 || IsDead (Self))
+		//NPCs, cars with no supplies, used up cars, and dead cars GTFO.
+		If (!(User && User.Player) || !HasSupplies() || User_SupplyAmount <= 0 || IsDead (Self))
 			Return False;
 		
 		//Ammo drops.
@@ -298,7 +298,7 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 		Else If (User_SupplyType ~== "Health" || User_SupplyType ~== "First Aid" || User_SupplyType ~== "FirstAid")
 		{
 			//Dont waste uses if the player has 100+ health already.
-			If (User.Player && User.Player.Health < 100)
+			If (User.Player.Health < 100-1)
 			{
 				A_StartSound ("Vehicle/ArmyCar/Crate");
 				User.GiveBody (25,100); //Basically acts like the vanilla Medikit.
@@ -327,19 +327,25 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 	Int User_SupplyAmount; 
 	Bool User_PainRay; //Spawn the prop pain ray.
 	Bool User_IdleSound; //Does the prop car play its' idle sound too ?
+	Bool User_OpenDoors; //Does the prop car have its' doors open ?
 	Double User_TurretAngle; //Change the exact angle the turret faces at, a value of -1 randomizes the turrets' angle relative to the car.
 	
 	States
 	{
 		Spawn:
 			MCR1 A 0; //Has to exist to shut GZDoom up.
-			#### A 1
+			#### # 1
 			{
 				//If the car is carrying supplies, change all of its' non-death sprites to have an open trunk.
 				If (HasSupplies())
 					Sprite = GetSpriteIndex ("MCR2");
 				Else
 					Sprite = GetSpriteIndex ("MCR1");
+				
+				If (User_OpenDoors)
+					Frame = 6; //Frame G
+				Else
+					Frame = 0; //Frame A
 				
 				If (User_IdleSound)
 					A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
@@ -503,18 +509,22 @@ Class MVP_PainRayWreck : MVP_PainRayProp
 	Override Void Tick() {Actor.Tick();}
 	Override Void OnDestroy() {Actor.OnDestroy();}
 	Override Bool Used(Actor User) {Actor.Used(User); Return Actor.Used(User);}
+	Bool User_NoSparks;
 	
 	States
 	{
 		Spawn:
 			MCR3 L 1
 			{
-				Actor Spark;
-				Vector3 SpawnPos = Vec3Offset (FRandom (Radius*0.05,-Radius*0.05),FRandom(Radius*1.75,-Radius*1.75),FRandom (0,DeathHeight));
-				
-				//May spark sometimes. Maybe add a limit to how many times the destroyed turret can spark ?
-				If (Random[pr_cajump](0,255) < 6)
-					Spark = Spawn ("MVP_Spark",SpawnPos);
+				If (!User_NoSparks)
+				{
+					Actor Spark;
+					Vector3 SpawnPos = Vec3Offset (FRandom (Radius*0.05,-Radius*0.05),FRandom(Radius*1.75,-Radius*1.75),FRandom (0,DeathHeight));
+					
+					//May spark sometimes. Maybe add a limit to how many times the destroyed turret can spark ?
+					If (Random[pr_cajump](0,255) < 6)
+						Spark = Spawn ("MVP_Spark",SpawnPos);
+				}
 			}
 			Loop;
 	}
@@ -529,6 +539,38 @@ Class MVP_ArmyCarRuin : MVP_ArmyCarWreck
 		//$Sprite MCR1N1
 		Height 34;
 		Tag "Army Car (Ruin)";
+	}
+	
+	Bool User_SpawnFlames; //Should the wreck spawn flames ?
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay ();
+		
+		If (User_SpawnFlames)
+		{
+			Int RandomFlames; RandomFlames = Random (2,6);
+			Actor Flame;
+			Vector3 SpawnPos;
+			For (Int I = 0; I < RandomFlames; I++)
+			{
+				SpawnPos = (FRandom (-Radius*2,Radius*2),FRandom (-Radius*2,Radius*2),0);
+				Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
+				
+				If (Flame)
+				{
+					If (!Level.IsPointInLevel (Flame.Pos))
+						Flame.Destroy();
+					
+					If (Flame)
+					{
+						Flame.Master = Self;
+						MVP_Flame(Flame).Offsets = SpawnPos;
+						Flame.ReactionTime = INT.MAX; //Stay around forever, or rather, a really long time.
+					}
+				}
+			}
+		}
 	}
 	
 	States

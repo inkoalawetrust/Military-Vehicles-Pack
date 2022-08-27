@@ -24,7 +24,6 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		TurretOffsets = (0,0,1.25);
 		Super.PostBeginPlay();
 		
-		MarinesDeployed = User_NoMarines;
 		If (HasSupplies()) SetTag ("Army Car (Open Trunk)");
 		
 		SpawnArmyCarHeadlights();
@@ -65,8 +64,8 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	{
 		Super.Used (User);
 		
-		//Non-existent users, cars with no supplies, used up cars, hostile cars, and dead cars GTFO.
-		If (!User || !HasSupplies() || User_SupplyAmount <= 0 || !bFriendly || IsDead (Self))
+		//NPCs, cars with no supplies, used up cars, hostile cars, and dead cars GTFO.
+		If (!(User && User.Player) || !HasSupplies() || User_SupplyAmount <= 0 || !bFriendly || IsDead (Self))
 			Return False;
 		
 		//If the car is friendly and not in deathmatch, or if in deathmatch and the player that used the car is its' friend.
@@ -92,7 +91,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			Else If (User_SupplyType ~== "Health" || User_SupplyType ~== "First Aid" || User_SupplyType ~== "FirstAid")
 			{
 				//Dont waste uses if the player has 100+ health already.
-				If (User.Player && User.Player.Health < 100)
+				If (User.Player.Health < 100-1)
 				{
 					A_StartSound ("Vehicle/ArmyCar/Crate");
 					User.GiveBody (25,100); //Basically acts like the vanilla Medikit.
@@ -136,7 +135,6 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Actor[4] Marines; //Keeps track of the marines the car deployed.
 	Actor NearestEnemy; //The enemy closest to the car, if any.
-	Bool MarinesDeployed; //Has the car already dropped its' marines ?
 	Bool AlreadyRetreating; //The car is already running away from something that doesn't involve the enemy avoiding code, so don't call the enemy avoiding code.
 	Int WaitTimer; //Makes the car stop for a bit after picking up supplies, so you don't have to chase it.
 	Int ChaseTimer; //Makes the car only chase its' target for a certain amount of time after it goes out of sight.
@@ -170,7 +168,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				LookExParams ArmyCarSight;
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
 				
-				If (Target && MarinesDeployed && !User_PainRay || Target && IsPowerful (Target))
+				If (Target && User_NoMarines && !User_PainRay || Target && IsPowerful (Target))
 					If (IsVisible(Target, True))
 					{
 						FearTimer = Random (2,64);
@@ -196,20 +194,20 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Actor OldTarget;
 				NearestEnemy = FindNearestEnemy (User_RetreatDistance);
 				If (!NearestEnemy)
-					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_NoMarines) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				Else If (NearestEnemy && !AlreadyRetreating)
 				{
 					OldTarget = Target;
 					Target = NearestEnemy;
 					bFrightened = True;
 					FearTimer = Random (2,48);
-					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_NoMarines) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 					Target = OldTarget;
 				}
 				Else
-					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !MarinesDeployed) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_NoMarines) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				
-				If (!MarinesDeployed && CheckMissileRange())
+				If (!User_NoMarines && CheckMissileRange())
 					Return ResolveState ("DeployMarines");
 				
 				If (ChaseTimer >= (35/2)*30)
@@ -227,7 +225,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				}
 
 				//If you have dropped your marines and still have a turret. And the RNG is on your side.
-				If (MarinesDeployed && User_PainRay && Random[pr_cajump](0,255) < 4)
+				If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4)
 				{
 					//Then check if you are far enough from your nearest enemy or target.
 					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
@@ -243,7 +241,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			}
 			Loop;
 		DeployMarines:
-			#### A 0 A_JumpIf (MarinesDeployed,"See"); //Abort the attack if you are supposed to be empty.
+			#### A 0 A_JumpIf (User_NoMarines,"See"); //Abort the attack if you are supposed to be empty.
 			#### A 0 //Temporarily make the car bigger, to see if any of the marines would get stuck anywhere.
 			{
 				A_SetSize (Radius*1.75);
@@ -267,7 +265,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Marines[0] = SpawnMarine ((Default.Radius*0.70,48),True); //Front left door.
 				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-48),True); //Back right door.
 				Marines[2] = SpawnMarine ((-Default.Radius*0.75,48),True); //Back left door.
-				MarinesDeployed = True;
+				User_NoMarines = True;
 			}
 			#### G 12 A_StartSound ("Vehicle/ArmyCar/DoorHandle",flags:CHANF_OVERLAP);
 			#### F 8;
