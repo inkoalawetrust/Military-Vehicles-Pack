@@ -6,6 +6,7 @@ Any mention of marines from now on will be about my own marine NPCs from now on.
 ![](https://i.imgur.com/OcBtUzo.png)
 
 (This is the banner, not very busy since I've only made the car so far, but more will be added in due time <sub>when I stop being lazy and get back to work</sub>.)
+
 [(Renders of the vehicles.)](https://imgur.com/a/KUhbDRZ)
 
 # Military-Vehicles-Pack
