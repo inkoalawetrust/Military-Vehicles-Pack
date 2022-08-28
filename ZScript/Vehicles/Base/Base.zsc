@@ -189,6 +189,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		+DontThrust;
 		+StandStill;
 		+DontFollowPlayers;
+		+NoSpriteShadow;
 		-AvoidHazards;
 		-AvoidMelee;
 		-CanBlast; //Turrets are attached to their vehicle.

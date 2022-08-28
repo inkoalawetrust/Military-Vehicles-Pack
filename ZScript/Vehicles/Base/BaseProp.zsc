@@ -4,6 +4,7 @@ Class MVP_BaseProp : MVP_BaseVehicle Abstract
 	{
 		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
 		+NotAutoaimed;
+		+CastSpriteShadow
 		-CountKill;
 		-ActivateMCross;
 		-IsMonster;
@@ -54,6 +55,7 @@ Class MVP_BaseTurretProp : MVP_BaseTurret
 	{
 		Tag "Military Vehicle Turret Prop Base (You really shouldn't be seeing this in-game)";
 		+NotAutoaimed;
+		+NoSpriteShadow;
 		-CountKill;
 		-ActivateMCross;
 		-IsMonster;
