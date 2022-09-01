@@ -79,7 +79,10 @@ Extend Class MVP_BaseVehicle
 		//[b,Spawnee] = A_SpawnItemEx (WhatToSpawn,Position.X,Position.Y,GetZAt (Position.X,Position.Y),flags:SXF_NOCHECKPOSITION);
 		//Position = Vec2Offset (Position.X * Cos (Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle));
 		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X,Position.Y,GetZAt (Position.X,Position.Y)));
-		Spawnee.CopyFriendliness (Self,True);
+		If (Target != Goal)
+			Spawnee.CopyFriendliness (Self,True);
+		Else
+			Spawnee.CopyFriendliness (Self,False);
 		Spawnee.bSummonedMonster = True;
 		Spawnee.Angle = Self.Angle;
 		If (SetMaster)
@@ -91,10 +94,11 @@ Extend Class MVP_BaseVehicle
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)
 	{
+		String MGMarine = "TurretMarine";
 		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
 		
-		If (!IsOnTurret)
-			Return False;
+		If (Other.GetClassName() == MGMarine)
+			Return True;
 		
 		If (IsOnTurret.GetInt("",ObjectArg:Other))
 			Return True;
@@ -167,6 +171,8 @@ Extend Class MVP_BaseVehicle
 	//Does exactly what it says, finds the nearest enemy that can be targeted and is visible, and returns a pointer to it.
 	Actor FindNearestEnemy (Double Range = 256)
 	{
+		If (Range <= -1) Return Null; //Return nothing at negative ranges.
+		
 		Array <Actor> NearbyEnemies;
 		Double NearestDistance = INT.MAX;
 		

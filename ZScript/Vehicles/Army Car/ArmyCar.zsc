@@ -15,7 +15,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Tag "Army Car";
 		MVP_BaseVehicle.VehicleTurret "MVP_PainRay";
 		DamageFactor "MarineGrenade", 1.25;
-		+MissileEvenMore
+		//+MissileEvenMore
 		+MVP_BaseVehicle.Transport;
 	}
 	
@@ -193,7 +193,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				Actor OldTarget;
 				NearestEnemy = FindNearestEnemy (User_RetreatDistance);
-				If (!NearestEnemy)
+				If (!NearestEnemy || IsPatrolling())
 					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_NoMarines) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				Else If (NearestEnemy && !AlreadyRetreating)
 				{
@@ -207,7 +207,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Else
 					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_NoMarines) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				
-				If (!User_NoMarines && CheckMissileRange())
+				If (!User_NoMarines && CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
 					Return ResolveState ("DeployMarines");
 				
 				If (ChaseTimer >= (35/2)*30)
@@ -216,7 +216,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 					ChaseTimer = 0;
 				}
 				
-				If (Target)
+				If (Target && !IsPatrolling())
 				{
 					If (!CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
 						ChaseTimer++;
@@ -262,9 +262,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			#### G 17
 			{
 				//Store the marines spawned in an array, just in case they need to be kept track of.
-				Marines[0] = SpawnMarine ((Default.Radius*0.70,48),True); //Front left door.
-				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-48),True); //Back right door.
-				Marines[2] = SpawnMarine ((-Default.Radius*0.75,48),True); //Back left door.
+				Marines[0] = SpawnMarine ((Default.Radius*0.70,-48),True); //Front left door.
+				Marines[1] = SpawnMarine ((-Default.Radius*0.75,48),True); //Back right door.
+				Marines[2] = SpawnMarine ((-Default.Radius*0.75,-48),True); //Back left door.
 				User_NoMarines = True;
 			}
 			#### G 12 A_StartSound ("Vehicle/ArmyCar/DoorHandle",flags:CHANF_OVERLAP);

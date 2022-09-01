@@ -168,7 +168,7 @@ Class MVP_BaseVehicle : Actor Abstract
 					Angle += RandomPick (75,80,85,90,95,10,105);
 			}
 			#### # 4 A_JumpIf (FindNearestEnemy (User_RetreatDistance/1.4),"See"); //If an enemy has gotten too close, begin moving again.
-			#### # 0 A_Jump (8,"See"); //Eventualy, go back to the See state.
+			#### # 0 A_Jump (6,"See"); //Eventualy, go back to the See state.
 			Goto StickAround+1;
 
 	}
@@ -299,6 +299,7 @@ Class SmartMarineWarningZone : Actor
 	Override Void Tick ()
 	{
 		String TheMarine = "SmartMarine";
+		String TheOtherMarine = "TurretMarine";
 		String WarningToken = "SM_ImInDanger";
 		//Can be used to attach the zone to an actor.
 		If (Master)
@@ -312,12 +313,14 @@ Class SmartMarineWarningZone : Actor
 		{
 			Mobj = MarineFinder.Thing;
 			
+			If (!(Mobj.GetClassName() == TheMarine || Mobj.GetClassName() == TheOtherMarine)) Continue;
+			
 			//Don't warn marines on the same side as the warning zone.
 			If (!bHarmFriends)
 			{
-				If (Mobj.GetClassName() == TheMarine && Mobj.Health > 0 && !Mobj.bDormant && !IsFriend (Mobj) && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
+				If (Mobj.Health > 0 && !Mobj.bDormant && IsHostile (Mobj) && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
 				{
-					If (bCausePain && !MarineIsOnTurret(Mobj))
+					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
 						If (Token) Token.Master = Self;
@@ -327,9 +330,9 @@ Class SmartMarineWarningZone : Actor
 			//Warn all marines in the vicinity.
 			Else
 			{
-				If (Mobj.GetClassName() == TheMarine && Mobj.Health > 0 && !Mobj.bDormant && Distance3DSquared(Mobj) <= Speed*Speed)
+				If (Mobj.Health > 0 && !Mobj.bDormant && Distance3DSquared(Mobj) <= Speed*Speed)
 				{
-					If (bCausePain && !MarineIsOnTurret(Mobj))
+					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
 						If (Token) Token.Master = Self;

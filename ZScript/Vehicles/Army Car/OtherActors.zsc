@@ -50,7 +50,7 @@ Class MVP_PainRay : MVP_BaseTurret
 				If (Target && !Target.bNoPain)
 				{
 					//If the army car has no target anymore, then set the pain rays' current target as such.
-					If (Master && !Master.Target)
+					If (Master && !Master.Target && !MVP_BaseVehicle(Master).IsPatrolling())
 						Master.Target = Target;
 					
 					Int AttackChance = Random (0,256);
@@ -65,10 +65,10 @@ Class MVP_PainRay : MVP_BaseTurret
 						Patience++;
 				}
 				//Ignore targets that can't even feel pain.
-				Else If (Target && !Target.bNoPain)
+				Else If (Target && Target.bNoPain)
 				{
 					//But do alert the car of their presense.
-					If (Master && !Master.Target)
+					If (Master && !Master.Target && !MVP_BaseVehicle(Master).IsPatrolling())
 						Master.Target = Target;
 					A_ClearTarget();
 				}
