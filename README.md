@@ -15,6 +15,11 @@ A GZDoom mod that contains a pack of military vehicle NPCs and props, for use in
 ## What is this ?
 Exactly what the description says, a GZDoom mod that contains a pack of military vehicles, that can be used as full fledged NPCs and decorations for your projects, full documentation for the mod is also included on the [releases](https://github.com/inkoalawetrust/Military-Vehicles-Pack/releases) section. The vehicle sprites and models are all made by me unless otherwise specified.
 
+## Showcase videos
+The below videos serve as showcases and overviews of each of the vehicles that are part of the pack.
+
+### Army Car: TBD
+
 ## What can they do ? (Overview)
 
 ### In general (Shared by all vehicles)
