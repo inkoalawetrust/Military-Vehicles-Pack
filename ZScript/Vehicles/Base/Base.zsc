@@ -4,7 +4,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		//Properties, in essense most of these are just the properties for the army car, which is the weakest vehicle.
 		YScale 0.833334; //Negate the effect of aspect ratio correction on the sprites.
-		Radius 32;
+		Radius 40;
 		Height 54;
 		DeathHeight 54;
 		CameraHeight 48;

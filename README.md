@@ -3,9 +3,7 @@
 
 Any mention of marines from now on will be about my own marine NPCs from now on.
 
-![](https://i.imgur.com/OcBtUzo.png)
-
-(This is the banner, not very busy since I've only made the car so far, but more will be added in due time <sub>when I stop being lazy and get back to work</sub>.)
+![](https://i.imgur.com/0gp5Wz0.png)
 
 [(Renders of the vehicles.)](https://imgur.com/a/KUhbDRZ)
 
@@ -19,6 +17,7 @@ Exactly what the description says, a GZDoom mod that contains a pack of military
 The below videos serve as showcases and overviews of each of the vehicles that are part of the pack.
 
 ### Army Car: https://youtu.be/1droRFw7LEo
+### Army Truck: TBD
 
 ## What can they do ? (Overview)
 
@@ -32,3 +31,7 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 - Drops down 3 marines (Except the driver.), that can then attack on behalf of the cars' side, and otherwise act like normal marines.
 - Can carry different types of supplies that players on the cars' side can use, using the cars' supplies while it is moving will cause it to stop for a bit, so you don't need to chase it around to get more ammounition/health/armor.
 - Includes multiple different prop versions of the car, from different versions of the car when it is destroyed, to a configurable prop of the normal, non-destroyed car.
+
+### The Army Truck
+![](https://i.imgur.com/MOu9Xatm.png)
+(TBD)

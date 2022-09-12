@@ -1,0 +1,25 @@
+//This is currently a big time placeholder. It just plays the trucks' animations on a loop;
+
+Class MVP_ArmyTruck : actor
+{
+	Default
+	{
+		//$Title Army Truck
+		//$Category Vehicles/Army Truck
+		//$Sprite TRK1A1
+		//These are probably the final hitbox dimensions.
+		Height 106;
+		Radius 80;
+		+Solid;
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
+	}
+	States
+	{
+		Spawn:
+			TRK1 ABCDEFG 16;
+			TRK1 HIJKLM 8 Bright; //The duration of the Death state should be roughly this long, as this amount of delay between frames make the animation look best.
+			TRK1 N 70;
+			Loop;
+	}
+}

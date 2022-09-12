@@ -10,6 +10,8 @@ Version "4.8.2"
 	//Army Car
 	#Include "ZScript/Vehicles/Army Car/ArmyCar.zsc"
 	#Include "ZScript/Vehicles/Army Car/OtherActors.zsc"
+	//Army Truck
+	#Include "ZScript/Vehicles/Army Truck/ArmyTruck.zsc"
 
 
 //Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.

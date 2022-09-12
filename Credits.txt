@@ -10,10 +10,10 @@ Any code not written by me (Inkoalawetrust) will be specified here.
 |==============|Sprites|==============|
 
 =====<Vehicles>=====
-All vehicle sprites are entirelymade by me (Inkoalawetrust) unless otherwise specified.
+All vehicle sprites are entirely made by me (Inkoalawetrust) unless otherwise specified.
 
 =====<SFX>=====
-Fire sprites (F1RE and F2RE) are from Duke Nukem 3D, ripped from Project Brutality.
+Fire sprites (F1RE) are from Duke Nukem 3D, ripped from Project Brutality.
 Large explosion (MCR3A0-MCR3G0) made by Inkoalawetrust.
 Spark sprites (SPKYA-SPKYF) made by Tormentor667 and Solarsnowfall.
 
