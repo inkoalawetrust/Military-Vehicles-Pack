@@ -213,18 +213,23 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				If (!User_NoMarines && CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
 					Return ResolveState ("DeployMarines");
 				
-				If (ChaseTimer >= (35/2)*30)
+				//Code that makes the car eventually stop chasing its' target.
+				If (User_ChaseTime > 0)
 				{
-					A_ClearTarget();
-					ChaseTimer = 0;
-				}
-				
-				If (Target && !IsPatrolling())
-				{
-					If (!CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
-						ChaseTimer++;
-					Else
+					If (ChaseTimer >= User_ChaseTime)
+					{
+						A_ClearTarget();
 						ChaseTimer = 0;
+					}
+					
+					If (Target && !IsPatrolling())
+					{
+						If (!CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
+							ChaseTimer++;
+						//Target is visible again, reset the timer.
+						Else
+							ChaseTimer = 0;
+					}
 				}
 
 				//If you have dropped your marines and still have a turret. And the RNG is on your side.

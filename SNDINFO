@@ -32,3 +32,16 @@ $Limit SFX/WheelHit 0
 	$Limit Vehicle/ArmyCar/PainRay/Active 0
 	$Limit Vehicle/ArmyCar/PainRay/Off 0
 	$Limit Vehicle/ArmyCar/PainRay/Break 0
+	//Army truck
+	Vehicle/ArmyTruck/Idle "Sounds/Vehicles/Army Truck/TruckIdle.ogg"
+	Vehicle/ArmyTruck/Moving "Sounds/Vehicles/Army Truck/TruckMove.ogg"
+	Vehicle/ArmyTruck/BackOpen "Sounds/Vehicles/Army Truck/TruckOpen.ogg"
+	Vehicle/ArmyTruck/BackSlam "Sounds/Vehicles/Army Truck/TruckSlam.ogg"
+	Vehicle/ArmyTruck/Brake "Sounds/Vehicles/Army Truck/TruckBrake.ogg"
+	Vehicle/ArmyTruck/Crash "Sounds/Vehicles/Army Truck/TruckCrash.ogg"
+	$Limit Vehicle/ArmyTruck/Idle 0
+	$Limit Vehicle/ArmyTruck/Moving 0
+	$Limit Vehicle/ArmyTruck/BackOpen 0
+	$Limit Vehicle/ArmyTruck/BackSlam 0
+	$Limit Vehicle/ArmyTruck/Brake 0
+	$Limit Vehicle/ArmyTruck/Crash 0

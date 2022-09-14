@@ -1,25 +1,405 @@
 //This is currently a big time placeholder. It just plays the trucks' animations on a loop;
+//To do:
+/*I should probably make a custom A_Chase() wrapper function, to reduce code duplication and consolidate the code for:
+- Vehicles running away from powerful enemies.
+- Vehicles running away from ANY enemy that gets too close.
+- Vehicles not chasing their target after it goes out of sight for long enough.
+*/
+//Find a better moving sound, this one sucks.
 
-Class MVP_ArmyTruck : actor
+Class MVP_ArmyTruck : MVP_BaseVehicle
 {
 	Default
 	{
 		//$Title Army Truck
 		//$Category Vehicles/Army Truck
 		//$Sprite TRK1A1
-		//These are probably the final hitbox dimensions.
-		Height 106;
-		Radius 80;
-		+Solid;
+		Health 700;
 		XScale 0.65;
 		YScale 0.541666; //0.65 / 1.2
+		Height 96;
+		Radius 72;
+		DeathHeight 70.5;
+		Mass 22000;
+		Speed 12;
+		FastSpeed 18;
+		RipLevelMin 2;
+		
+		Obituary "%o was ran over by a truck.";
+		Tag "Army Truck";
+		DamageFactor "Melee", 0.4;
+		DamageFactor "Electric", 0.3;
+		DamageFactor "ExplosiveImpact", 0.9;
+		DamageFactor "Explosion", 0.9;
+		DamageFactor "HitScan", 1.0; //The generic damage type of hitscan attacks.
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.9;
+		DamageFactor "MarineGrenade", 1.5;
+		DamageFactor "MarineRifle", 0.75;
+		
+		+MVP_BaseVehicle.Transport; //Carries soldiers.
+		+NoExtremeDeath; //The ramming does a lot of damage, so don't gib enemies with it.
 	}
+	
+	Override Void UserVariableDefaults()
+	{
+		If (User_MarineAmount == 0) User_MarineAmount = 14;
+		If (User_RetreatDistance == 0) User_RetreatDistance = 1024;
+		Super.UserVariableDefaults();
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick ();
+		
+		If (IsFrozen()) Return;
+		
+		If (DeployTimer) DeployTimer--;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		SpawnArmyTruckHeadlights();
+	}
+	
+	Bool CanAttack()
+	{
+		Return (User_MarineAmount > 0 || User_Ramming);
+	}
+	
+	Bool ChargePathClear ()
+	{
+		FLineTraceData Result;
+		Actor Mobj;
+		Double OldPitch = Pitch;
+		Double OldAngle = Angle;
+		A_FaceTarget(0,0,flags:FAF_MIDDLE);
+		
+		LineTrace (Angle,MaxTargetRange,Pitch,TRF_THRUHITSCAN|TRF_SOLIDACTORS,Height/2,data:Result);
+		Mobj = Result.HitActor;
+		
+		Pitch = OldPitch;
+		Angle = OldAngle;
+		
+		If (Result.HitLine || !Mobj) {a_log ("hit a line");Return False;} //A line is in the way, or this attempted charge won't even hit any actor.
+		
+		If (!IsIndestructible (Mobj) && IsInanimateObject (Mobj) && Mobj.Health <= 400) {a_log ("prop hunt 2");Return True;} //Calling this means the truck is already aimed at a target, and if only a (Relatively) weak destructible prop is in the way, then charge anyway.
+		
+		If (IsHostile (Mobj)) {a_log ("hit enemy, good");Return True;} //Enemy in the way.
+		
+		If (IsIndestructible (Mobj)) {a_log ("movable object versus stoppable force");Return False;} //Hit an unpushable object, or rather, one that shouldn't be flung around.
+		
+		a_log ("ramming anyway");
+		Return True;
+	}
+	
+	Bool FlingPathClear (Actor Other)
+	{
+		FLineTraceData Result;
+		
+		LineTrace (AngleTo (Other),MaxTargetRange,PitchTo (Other),TRF_THRUHITSCAN|TRF_SOLIDACTORS,Height/2,data:Result);
+		
+		If (Result.HitActor && Result.HitActor == Other) Return True;
+		
+		Return False;
+	}
+	
+	//Checks if the specified object is already in the HitThings array, meaning that the truck has already hit it before, this prevents the vehicle from counting multiple hits on the same actor.
+	Bool HasBeenHitBefore (Actor Other)
+	{
+		If (!Other) {a_log ("is THIS causing the bug ?");Return False;}
+		
+		For (Int I = HitThings.Size()-1; 0 <= I; I--)
+			If (HitThings[I] == Other)
+				{Return True;a_log ("been there, done that");} //This actor is already in the list.
+		a_log ("this is a new one");
+		Return False;
+	}
+	
+	Int User_MarineAmount; //The amount of marines still in the truck.
+	Bool User_Ramming; //Should the truck run shit over ?
+	
+	Actor NearestEnemy; //The enemy closest to the truck, if any.
+	Bool AlreadyRetreating; //The truck is already running away from something that doesn't involve the enemy avoiding code, so don't call the enemy avoiding code.
+	Int FearTimer; //Makes the truck keep running away from it's target for an additional random amount of time, so the truck doesn't play peekaboo with enemies.
+	Int ChaseTimer; //Makes the truck only chase its' target for a certain amount of time after it goes out of sight.
+	Int MarinesToSpawn; //How many marines the truck should drop this time that it opened up.
+	Int DeployTimer; //Adds a delay until the next time the truck is able to drop marines again.
+	Array <Actor> HitThings; //How many things the truck has hit before stoping. Should probably replace this with a counter that adds the combine mas of everything the truck has hit.
+	Int TotalMassHit; //Adds up the mass of everything the truck has hit, causing it to stop ramming once this value has reached a certain threshold.
 	States
 	{
 		Spawn:
-			TRK1 ABCDEFG 16;
-			TRK1 HIJKLM 8 Bright; //The duration of the Death state should be roughly this long, as this amount of delay between frames make the animation look best.
-			TRK1 N 70;
+			TRK1 A 4
+			{
+				A_StopSound (CHAN_MOVING);
+				A_StartSound("Vehicle/ArmyTruck/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
+				A_LookEx (0,0,8192,3072);
+			}
 			Loop;
+		See:
+			TRK1 AABBCCDD 2
+			{
+				A_StopSound (CHAN_IDLING);
+				A_StartSound ("Vehicle/ArmyTruck/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
+				
+				//Defenseless, or the target is powerful.
+				If (Target && !CanAttack() || Target && IsPowerful (Target))
+					If (IsVisible(Target, True))
+					{a_log ("bring my brown pants");
+						FearTimer = Random (2,64);
+						bFrightened = AlreadyRetreating = True;
+					}
+					Else
+						bFrightened = False;
+				Else
+					bFrightened = False;
+				
+				If (FearTimer)
+				{
+					FearTimer--;
+					bFrightened = AlreadyRetreating = True;
+				}
+				
+				FollowPlayerControl(512);
+				
+				Actor OldTarget;
+				NearestEnemy = FindNearestEnemy (!CanAttack() ? User_RetreatDistance : User_RetreatDistance*0.75);
+				If (!NearestEnemy || IsPatrolling())
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_MarineAmount) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
+				//Run away from the nearest enemy, unless you were already running away before.
+				Else If (NearestEnemy && !AlreadyRetreating)
+				{
+					OldTarget = Target;
+					Target = NearestEnemy;
+					bFrightened = True;
+					FearTimer = Random (2,48);a_log ("run away");
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_MarineAmount) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
+					Target = OldTarget;
+				}
+				Else
+					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_MarineAmount) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
+				
+				If (Health <= SpawnHealth()/4)
+					bMissileMore = bMissileEvenMore = True;
+				
+				If (CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
+				{
+					If (User_MarineAmount > 0 && DeployTimer <= 0)
+						Return ResolveState ("DeployMarines");
+					
+					//Ramming decision code.
+					If (User_Ramming && ChargePathClear())
+					{
+						//If your health is very low and you have no marines left inside.
+						If (Health <= SpawnHealth()/4 && User_MarineAmount <= 0)
+						{
+							If (Random[pr_cajump](0,255) < 64) //Then be a lot more likely to ram enemies.
+								Return ResolveState ("Charge");
+						}
+						//If your health isn't critically low but you still have no marines inside.
+						Else If (!(Health <= SpawnHealth()/4))
+						{
+							If (Random[pr_cajump](0,255) < 24) //Then be a more likely to ram enemies.
+								Return ResolveState ("Charge");
+						}
+						//If your health isn't critical, and you still have marines.
+						Else
+						{
+							If (Random[pr_cajump](0,255) < 4) //Then only rarely ram enemies.
+								Return ResolveState ("Charge");
+						}
+					}
+				}
+				
+				//Code that makes the truck eventually stop chasing its' target.
+				If (User_ChaseTime > 0)
+				{
+					If (ChaseTimer >= User_ChaseTime)
+					{
+						A_ClearTarget();
+						ChaseTimer = 0;
+					}
+					
+					If (Target && !IsPatrolling())
+					{
+						If (!CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
+							ChaseTimer++;
+						//Target is visible again, reset the timer.
+						Else
+							ChaseTimer = 0;
+					}
+				}
+				
+				bFrightened = AlreadyRetreating = bMissileMore = bMissileEvenMore = False;
+				OldTarget = NearestEnemy = Null;
+				
+				Return State (Null);
+			}
+			Loop;
+		//The trucks' marine deploying loop.
+		DeployMarines:
+			TNT1 A 0 A_JumpIf (User_MarineAmount <= 0,"See"); //No marines to drop.
+			TNT1 A 0 //Temporarily make the truck bigger, to see if any of the marines would get stuck anywhere.
+			{
+				A_SetSize (Radius*1.25);
+				
+				If (!TestMobjLocation()) //If they would be stuck, cancel the drop.
+				{a_log ("spawn check");
+					A_SetSize (Default.Radius);
+					Return ResolveState ("See");
+				}
+				
+				A_SetSize (Default.Radius);
+				
+				Return State (Null);
+			}
+			TRK1 E Random (10,16) A_StartSound ("Vehicle/ArmyTruck/BackOpen",attenuation:0.8);
+			TRK1 F 6;
+			TRK1 G 4 A_StartSound ("Vehicle/ArmyTruck/BackSlam",attenuation:0.8);
+			TRK1 G Random (8,12) {MarinesToSpawn = Random (3,5);}
+			SpawnLoop:
+				TRK1 G 0 A_JumpIf (User_MarineAmount <= 0,"EndDeploy");
+				TRK1 G 0 A_JumpIf (MarinesToSpawn <= 0,"EndDeploy");
+				TRK1 G 35 {If (Health <= SpawnHealth()/4) Tics = 35/2;} //Smaller spawn interval when about to die.
+				TRK1 G 0
+				{
+					Actor Marine;
+					a_log ("spawning a marine");a_logint (marinestospawn);
+					Marine = SpawnMarine ((-128, FRandom (16,-16)));
+					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
+					WarnSpecificMarine (Marine);
+					MarinesToSpawn--;
+					User_MarineAmount--;
+				}
+				Loop;
+			EndDeploy:
+				TRK1 G 12 A_StartSound ("Vehicle/ArmyTruck/BackOpen",attenuation:0.8);
+				TRK1 F 6;
+				TRK1 E 4 A_StartSound ("Vehicle/ArmyTruck/BackSlam",attenuation:0.8);
+				TRK1 E 0
+				{
+					If (!(Health <= SpawnHealth()/4))
+						DeployTimer = Random (2,7)*35;
+					Else
+						DeployTimer = Random (1,3)*35; //Have a smaller delay if about to die, and you still have troops.
+				}
+				Goto See;
+		//Maybe instead of making the truck go back to See, have it go into a breaking state ? Also, make the damage the truck disses be based on how fast it's going.
+		Charge:
+			TRK1 A 0
+			{
+				//Go back to see if the path to the target is covered, or there is no target. This is here in case the state is entered using a scripted ACS event.
+				If (!ChargePathClear() || !Target)
+				{	a_log ("the coast isn't clear");Return ResolveState ("See");}
+					
+				A_FaceTarget ();
+				ChaseTimer = 0; //Just in case.
+				
+				Return State (Null);
+			}
+			TRK1 AAABBBCCCDDD 1
+			{
+				//You no longer have a target to ram, or it has gone out of sight or died.
+				If (!Target || Target && IsDead (Target))
+				{
+					ChaseTimer = 0;
+					A_ClearTarget();
+					LookForPlayers(False); //Look for a new target.
+				}
+				
+				//Look for a new target if the current one has gone out of sight for half a second.
+				If (Target)
+				{
+					If (!CheckSight (Target))
+						ChaseTimer++;
+					Else
+						ChaseTimer = 0;
+					
+					If (ChaseTimer >= 35/3)
+					{
+						ChaseTimer = 0;
+						A_ClearTarget();
+						LookForPlayers(False); //Look for a new target.
+					}
+				}
+				
+				Vector3 OldVel = Vel; //Store the previous velocity for later.
+				
+				A_Recoil (-2.0);
+				//Speed limit.
+				If (Vel.XY.Length() >= 12.0)
+					Vel.XY = Vel.XY.Unit() * Clamp (Vel.XY.Length(),0.0,12.0);
+				A_FaceTarget (2.75);
+				
+				//You've hit enough mass worth of objects. Or you have no target even after the search above.
+				If (TotalMassHit >= 25000 || !Target)
+				{a_log ("hit all the things");
+					HitThings.Clear();
+					TotalMassHit = 0;
+					Return ResolveState ("See");
+				}
+				
+				//Collided with an enemy, or an inanimate object.
+				If (BlockingMobj && BlockingMobj.bShootable && !BlockingMobj.bMissile && (IsHostile(BlockingMobj) || IsInanimateObject (BlockingMobj)))
+				{
+					BlockingMobj.DamageMobj (Self,Self,Random (300,400),'Melee'); //Isekai the enemy.
+					FlingActor (BlockingMobj,15,True);console.printf ("i have hit a %s",blockingmobj.getclassname());
+					Vel = OldVel * (BlockingMobj.Mass / 11);
+					
+					BlockThingsIterator EnemyFinder = BlockThingsIterator.Create (BlockingMobj,Radius*0.75);
+					
+					While (EnemyFinder.Next())
+					{
+						Actor Mobj = EnemyFinder.Thing;
+						
+						//Fling away all thrustable objects and enemies around the target.
+						If (Mobj && Mobj.bShootable && (IsHostile(Mobj) || IsInanimateObject (Mobj) && !IsIndestructible (Mobj)) && FlingPathClear (Mobj))
+						{
+							FlingActor (Mobj,15,False);
+							If (!HasBeenHitBefore(Mobj))
+							{console.printf ("i have thrust a %s",mobj.getclassname());
+								HitThings.Push (Mobj);
+								TotalMassHit += Mobj.Mass; //Also count things caught near the actor that was hit.
+								console.printf ("total mass is now %d",totalmasshit);
+							}
+						}
+					}
+					
+					//Stop ramming if you've hit a powerful enemy,  or one that shouldn't be pushed.
+					If (IsPowerful (BlockingMobj) || IsIndestructible (BlockingMobj))
+					{
+						HitThings.Clear();
+						TotalMassHit = 0;
+						Return ResolveState ("See");
+					}
+					
+					//Add the object you've hit to the counter IF IT ISN'T IN ALREADY !
+					If (!HasBeenHitBefore(BlockingMobj))
+					{
+						HitThings.Push (BlockingMobj);
+						TotalMassHit += BlockingMobj.Mass;console.printf ("total mass is now %d",totalmasshit);
+						//a_log ("this is a new and unique smacking experience");
+					}
+				}
+				
+				//The truck hit level geometry instead.
+				If (!CheckMove (Vec2Angle (Vel.Length()*2,Angle),PCM_NOACTORS))
+				{a_log ("incoming level geometry");
+					If (BlockingLine)
+					{
+						//No idea if this even works as intended, can't even playtest it, since destructible geometry is totally undocumented lol.
+						Destructible.DamageLinedef (BlockingLine,Self,Random (300,400),'Melee',0,Pos,False);
+					}
+					HitThings.Clear();
+					Return ResolveState ("See");
+				}
+				
+				
+				Return State (Null);
+			}
+			Goto Charge+1;
 	}
 }

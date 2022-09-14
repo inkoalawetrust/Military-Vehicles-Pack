@@ -14,6 +14,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		FastSpeed 16;
 		FriendlySeeBlocks 32;
 		MaxStepHeight 32;
+		MaxTargetRange 8192;
 		Species "Military";
 		Obituary "%o managed to be killed by an abstract class, congratulations %o, we are all very proud of you. Or maybe a modder forgot to define a custom obituary.";
 		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
@@ -62,6 +63,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Virtual Void UserVariableDefaults ()
 	{
 		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
+		If (User_ChaseTime == 0) User_ChaseTime = (35/2)*30; //This is 35/2, because it assumes that the default see state on the vehicles has 2 tic long states.
 	}
 	
 	//Handles spawning each vehicles turret, if they have any.
@@ -140,20 +142,21 @@ Class MVP_BaseVehicle : Actor Abstract
 	}
 	
 	//Internal variables
-	Array <MVP_Headlight> Headlights;
-	Bool HeadlightsOn;
-	MVP_BaseTurret Turret;
-	Vector3 TurretOffsets;
+	Array <MVP_Headlight> Headlights; //Pointers to each headlight the vehicle has.
+	Bool HeadlightsOn; //Should the headlights be on ?
+	MVP_BaseTurret Turret; //The turret the vehicle has, used to actually spawn said turret.
+	Vector3 TurretOffsets; //The offsets of the turret relative to the vehicle.
 	
 	//Flag variables
 	Private Int VehicleFlags;
 	FlagDef Transport : VehicleFlags, 0; //The vehicle is marked as being able to transport soldiers.
-	Class<MVP_BaseTurret> VehicleTurret;
+	Class<MVP_BaseTurret> VehicleTurret; //The pointer to the vehicles' turret, if any.
 	Property VehicleTurret : VehicleTurret;
 	
 	//Generic user variables
-	Bool User_NoHeadLights;
-	Double User_RetreatDistance;
+	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
+	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
+	Int User_ChaseTime; //How much time the vehicle spends looking for it's out-of-sight target before giving up.
 	
 	States
 	{

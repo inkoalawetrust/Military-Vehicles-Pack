@@ -34,4 +34,4 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 
 ### The Army Truck
 ![](https://i.imgur.com/MOu9Xatm.png)
-(TBD)
+-(TBD)

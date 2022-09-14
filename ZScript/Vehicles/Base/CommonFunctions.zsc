@@ -10,6 +10,16 @@ Extend Class MVP_BaseVehicle
 		Return (Other.Health <= 0);
 	}
 	
+	Bool IsIndestructible (Actor Other)
+	{
+		Return (Other.bInvulnerable || Other.bNoDamage/* || (!Other.bShootable)*/);
+	}
+	
+	Bool IsInanimateObject (Actor Other)
+	{
+		Return (!Other.bIsMonster && !Other.Player);
+	}
+	
 	Bool IsPatrolling ()
 	{
 		Return (Goal || Target Is "PatrolPoint");
@@ -24,6 +34,18 @@ Extend Class MVP_BaseVehicle
 	{
 		If (!Other) Return False;
 		Return (!Other.bNoTarget && !Other.bNeverTarget && !(Other.Player && Other.Player.Cheats & CF_NOTARGET));
+	}
+	
+	//Written by Boondorl.
+	Double PitchTo (Actor Other)
+	{
+		Vector3 Diff = Vec3To(Other);
+		Double L = Diff.Length();
+		If (L <= 0)
+			Return 0;
+
+		Diff /= l;
+		Return -ASin(Diff.Z);
 	}
 	
 	//Add a function that determines if the vehicles' target is a VERY powerful enemy.
@@ -76,9 +98,9 @@ Extend Class MVP_BaseVehicle
 		Else
 			WhatToSpawn = "MarineChaingun";
 		
-		//[b,Spawnee] = A_SpawnItemEx (WhatToSpawn,Position.X,Position.Y,GetZAt (Position.X,Position.Y),flags:SXF_NOCHECKPOSITION);
+		//[b,Spawnee] = A_SpawnItemEx (WhatToSpawn,Position.X,Position.Y,GetZAt (Position.X,Position.Y),flags:SXF_NOCHECKPOSITION | SetMaster ? SXF_SETMASTER : 0);
 		//Position = Vec2Offset (Position.X * Cos (Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle));
-		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X,Position.Y,GetZAt (Position.X,Position.Y)));
+		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X * Cos(Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle),GetZAt (Position.X,Position.Y)));
 		If (Target != Goal)
 			Spawnee.CopyFriendliness (Self,True);
 		Else
@@ -118,7 +140,26 @@ Extend Class MVP_BaseVehicle
 		If (StickToTarget)
 			WarnZone.Master = Target;
 		
-		Return WarnZone;
+		Return WarnZone; //Return a pointer to the created warn zone.
+	}
+	
+	//Only warn a specific marine, and return if the warning token was successfully given to them.
+	Bool WarnSpecificMarine (Actor Marine)
+	{
+		String WarningToken = "SM_ImInDanger";
+		Inventory Token;
+		
+		If (!Marine) //No marine to warn.
+			{a_log ("404");Return False;}
+		
+		Token = Marine.GiveInventoryType (WarningToken); //Give the token to the marine.
+		If (Token)
+			Token.Master = Self;
+		
+		If (!(Marine.FindInventory (WarningToken)) || !(Marine.CountInv (WarningToken) <= 0)) //The marine didn't get a token.
+			{a_log ("no tokens ?");Return False;}
+		a_log ("epic win");
+		Return True;
 	}
 	
 	//=====|Vehicle behaviors|=====\\
@@ -205,6 +246,34 @@ Extend Class MVP_BaseVehicle
 		Return NearestEnemy;
 	}
 	
+	//Throws actors away from the caller, the code is mostly copied from BlastActor.
+	Void FlingActor (Actor Victim, Double Speed, Bool Harmless, Bool PushImmovables = False)
+	{
+		If ((IsIndestructible(Victim) && !PushImmovables) || Victim.bDontThrust || IsDead (Victim)) //Don't thrust immovable or dead stuff.
+			Return;
+		
+		Double Ang = AngleTo(Victim);
+		Vector2 Move = AngleToVector(Ang, Speed);
+		
+		Victim.Vel.XY = Move;
+		Victim.Vel.Z = 1000. / Victim.Mass;
+		
+		If (Victim.Player)
+		{
+			// Players handled automatically
+		}
+		Else If (!Harmless)
+		{
+			Victim.bBlasted = True;
+		}
+		
+		If (Victim.bTouchy) // Touchy objects die when blasted
+		{
+			Victim.bArmed = False; // Disarm
+			Victim.DamageMobj(Self, Self, Victim.Health, 'Melee', DMG_FORCED|DMG_EXPLOSION);
+		}
+	}
+	
 		//=====|Headlight functions|=====\\
 		//Turn the vehicles' headlights on.
 		Void TurnHeadlightsOn()
@@ -249,36 +318,68 @@ Extend Class MVP_BaseVehicle
 			}
 		}
 	
-	//Vehicle specific functions
+	//Vehicle specific functions, the headlight spawn spots have been made into generic functions, so that they are accesible by the prop versions of each vehicle.
 	Void SpawnArmyCarHeadlights ()
 	{
-		//Initialize headlights
-			//Front left headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[0].Offset = (64,28,8);
-			Headlights[0].Master = Self;
-			//Front right headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[1].Offset = (64,-28,8);
-			Headlights[1].Master = Self;
-			
-			//Back left headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[2].Offset = (40,28,8);
-			Headlights[2].Master = Self;
-			HeadLights[2].IsBacklight = True;
-			HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
-			HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-			HeadLights[2].SpotInnerAngle = 40;
-			Headlights[2].SpotOuterAngle = 80;
-			//Back right headlight
-			Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-			HeadLights[3].Offset = (40,-28,8);
-			Headlights[3].Master = Self;
-			HeadLights[3].IsBacklight = True;
-			HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
-			HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-			HeadLights[3].SpotInnerAngle = 40;
-			Headlights[3].SpotOuterAngle = 80;
+		//Front left headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[0].Offset = (64,28,8);
+		Headlights[0].Master = Self;
+		//Front right headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[1].Offset = (64,-28,8);
+		Headlights[1].Master = Self;
+		
+		//Back left headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[2].Offset = (40,28,8);
+		Headlights[2].Master = Self;
+		HeadLights[2].IsBacklight = True;
+		HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
+		HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+		HeadLights[2].SpotInnerAngle = 40;
+		Headlights[2].SpotOuterAngle = 80;
+		//Back right headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[3].Offset = (40,-28,8);
+		Headlights[3].Master = Self;
+		HeadLights[3].IsBacklight = True;
+		HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
+		HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+		HeadLights[3].SpotInnerAngle = 40;
+		Headlights[3].SpotOuterAngle = 80;
+	}
+	
+	Void SpawnArmyTruckHeadlights ()
+	{
+		//Front left headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[0].Offset = (128,28,8);
+		Headlights[0].Master = Self;
+		HeadLights[0].Args[DynamicLight.LIGHT_INTENSITY] = 384;
+		//Front right headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[1].Offset = (128,-28,8);
+		Headlights[1].Master = Self;
+		HeadLights[1].Args[DynamicLight.LIGHT_INTENSITY] = 384;
+		
+		//Back left headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[2].Offset = (128,28,8);
+		Headlights[2].Master = Self;
+		HeadLights[2].IsBacklight = True;
+		HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
+		HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+		HeadLights[2].SpotInnerAngle = 40;
+		Headlights[2].SpotOuterAngle = 80;
+		//Back right headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[3].Offset = (128,-28,8);
+		Headlights[3].Master = Self;
+		HeadLights[3].IsBacklight = True;
+		HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
+		HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+		HeadLights[3].SpotInnerAngle = 40;
+		Headlights[3].SpotOuterAngle = 80;
 	}
 }
