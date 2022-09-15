@@ -270,9 +270,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			#### G 17
 			{
 				//Store the marines spawned in an array, just in case they need to be kept track of.
-				Marines[0] = SpawnMarine ((Default.Radius*0.70,-48),True); //Front left door.
-				Marines[1] = SpawnMarine ((-Default.Radius*0.75,48),True); //Back right door.
-				Marines[2] = SpawnMarine ((-Default.Radius*0.75,-48),True); //Back left door.
+				Marines[0] = SpawnMarine ((Default.Radius*0.70,56),True); //Front left door.
+				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-56),True); //Back right door.
+				Marines[2] = SpawnMarine ((-Default.Radius*0.75,56),True); //Back left door.
 				User_NoMarines = True;
 			}
 			#### G 12 A_StartSound ("Vehicle/ArmyCar/DoorHandle",flags:CHANF_OVERLAP);
@@ -320,6 +320,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				For (Int I = 0; I < RandomFlames; I++)
 				{
 					SpawnPos = (FRandom (-Radius*2,Radius*2),FRandom (-Radius*2,Radius*2),0);
+					SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
 					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
 					
 					If (Flame)

@@ -1,10 +1,14 @@
 //Common effects used by most or all vehicles.
 
+//Customizable explosion actor.
 Class MVP_BigExplosion : Actor
 {
 	Default
 	{
 		RenderStyle "Add";
+		MaxTargetRange 256; //The maximum range of the explosion.
+		MeleeRange 96; //The range around the explosion in which actors take it's full damage.
+		Damage 256; //The damage of the explosion, this property can only be changed with the SetDamage() function.
 		+NeverTarget;
 		+NotAutoaimed;
 		+Bright;
@@ -14,7 +18,7 @@ Class MVP_BigExplosion : Actor
 		Spawn:
 			MCR3 A 3 NoDelay
 			{
-				A_Explode (256,256,XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,96,damagetype:'Explosion');
+				A_Explode (MaxTargetRange,Damage,XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,MeleeRange,damagetype:'Explosion');
 				A_QuakeEx (2,2,2,35*5,0,640,flags:QF_SCALEDOWN|QF_3D);
 				A_StartSound ("SFX/BigExplosion",CHAN_AUTO,attenuation:0.2);
 			}

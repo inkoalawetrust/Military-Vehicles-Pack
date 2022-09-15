@@ -1,0 +1,126 @@
+//Truck debris
+Class MVP_ArmyTruckPipe : Actor
+{
+	Default
+	{
+		Radius 11;
+		Height 40;
+		XScale 0.65;
+		YScale 0.541666;
+		Speed 36;
+		Mass 140;
+		Gravity 1;
+		ProjectileKickback 12;
+		ReactionTime 2;
+		DamageFunction (Random (24,32));
+		DamageType "Melee";
+		Projectile;
+		-NoBlockmap;
+		-NoGravity;
+		+BloodlessImpact;
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen ()) Return;
+		//Slow down the spinning over time.
+		If (ReactionTime <= 24 && GetAge() % 2 == 0)
+			ReactionTime++;
+	}
+	
+	States
+	{
+		Spawn:
+			TRK2 ABC 2 A_SetTics (ReactionTime);
+			Loop;
+		Death:
+			TRK2 D 0 A_StartSound ("SFX/MetalHit",volume:0.6);
+			TRK2 D -1;
+			Stop;
+	}
+}
+
+Class MVP_ArmyTruckWheel : MVP_ArmyTruckPipe
+{
+	Default
+	{
+		Radius 20;
+		Height 40;
+		Speed 36;
+		Mass 130;
+		ProjectileKickback 22;
+		DamageFunction (Random (16,24));
+		BounceType "Hexen";
+		BounceFactor 0.7;
+		BounceSound "SFX/WheelHit";
+		+CanBounceWater;
+		+DontBounceOnSky;
+		+BounceOnActors;
+	}
+	
+	Override Void Tick()
+	{
+		Actor.Tick();
+		
+		If (IsFrozen() || InStateSequence(CurState,ResolveState ("Death"))) Return;
+		
+		//Slow down the spinning over time.
+		If (ReactionTime <= 32 && GetAge() % 16 == 0)
+			ReactionTime++;
+		
+		//Stop moving if too slow.
+		If (Vel.Length() >= 2)
+			BounceSound = Default.BounceSound;
+		Else
+		{
+			BounceSound = "";
+			ExplodeMissile(); //Hit the ground.
+		}
+	}
+	States
+	{
+		Spawn:
+			TRK2 EFG 1 A_SetTics (ReactionTime);
+			Loop;
+		Death:
+			TRK2 H -1;
+			Stop;
+	}
+}
+
+Class MVP_ArmyTruckBackDoor : MVP_ArmyTruckPipe
+{
+	Default
+	{
+		Height 16;
+		Radius 32;
+		Speed 24;
+		Mass 250;
+		ProjectileKickback 48;
+		DamageFunction (Random (48,64));
+	}
+	States
+	{
+		Spawn:
+			TRK2 IJK 2 A_SetTics (ReactionTime);
+			Loop;
+		Death:
+			TRK2 L 0 A_StartSound ("SFX/MetalHit",volume:0.8);
+			TRK2 L -1;
+			Stop;
+	}
+}
+
+Class MVP_TruckWheelSmoke : BulletPuff
+{
+	Override Void BeginPlay()
+	{
+		Vel.Z = FRandom (1.5,5.0);
+		
+		Super.BeginPlay();
+		
+		Scale *= FRandom (1.5,2.5);
+	}
+}

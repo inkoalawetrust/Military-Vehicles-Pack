@@ -3,7 +3,7 @@ PointLight CarDeath1
 	Color 0.89 0.77 0.56
 	Size 192
 	Offset 0 0 -12
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight CarDeath2
@@ -11,7 +11,7 @@ PointLight CarDeath2
 	Color 0.89 0.77 0.56
 	Size 160
 	Offset 0 0 -12
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight CarDeath3
@@ -19,7 +19,7 @@ PointLight CarDeath3
 	Color 0.89 0.77 0.56
 	Size 128
 	Offset 0 0 -12
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight CarDeath4
@@ -27,7 +27,7 @@ PointLight CarDeath4
 	Color 0.89 0.77 0.56
 	Size 96
 	Offset 0 0 -12
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight CarDeath5
@@ -35,7 +35,7 @@ PointLight CarDeath5
 	Color 0.89 0.77 0.56
 	Size 64
 	Offset 0 0 -12
-	Attenuate 1
+	//Attenuate 1
 }
 
 Object MVP_ArmyCar
@@ -47,53 +47,102 @@ Object MVP_ArmyCar
 	Frame MCR1L {Light CarDeath5}
 }
 
+PointLight TruckDeath1
+{
+	Color 0.89 0.77 0.56
+	Size 140
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath2
+{
+	Color 0.89 0.77 0.56
+	Size 384
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath3
+{
+	Color 0.89 0.77 0.56
+	Size 512
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath4
+{
+	Color 0.89 0.77 0.56
+	Size 256
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath5
+{
+	Color 0.89 0.77 0.56
+	Size 128
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+Object MVP_ArmyTruck
+{
+	Frame TRK1H {Light TruckDeath1}
+	Frame TRK1I {Light TruckDeath2}
+	Frame TRK1J {Light TruckDeath3}
+	Frame TRK1K {Light TruckDeath4}
+	Frame TRK1L {Light TruckDeath5}
+}
+
 PointLight BigExplosion1
 {
 	Color 0.97 0.89 0.57
 	Size 96
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight BigExplosion2
 {
 	Color 0.97 0.89 0.57
 	Size 192
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight BigExplosion3
 {
 	Color 0.97 0.89 0.57
 	Size 256
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight BigExplosion4
 {
 	Color 0.97 0.89 0.57
 	Size 384
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight BigExplosion5
 {
 	Color 0.97 0.89 0.57
 	Size 400
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight BigExplosion6
 {
 	Color 0.97 0.89 0.57
 	Size 96
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight BigExplosion7
 {
 	Color 0.97 0.89 0.57
 	Size 48
-	Attenuate 1
+	//Attenuate 1
 }
 
 Object MVP_BigExplosion

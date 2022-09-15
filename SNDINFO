@@ -1,14 +1,14 @@
 //Generic sound effects
 
 SFX/BigExplosion "Sounds/SFX/BigExplosion.ogg"
-SFX/Explosion "Sounds/SFX/Explosion.ogg"
+SFX/Explosion "Sounds/SFX/Explosion.ogg" //Maybe get more explosion sounds, and turn SFX/Explosion into a random sound ?
 SFX/Fire "Sounds/SFX/Fire.ogg"
 SFX/MetalHit "Sounds/SFX/MetalImpact.ogg"
 SFX/WheelHit "Sounds/SFX/WheelImpact.ogg"
 
 $Limit SFX/BigExplosion 0
 $Limit SFX/Explosion 0
-$Limit SFX/Fire 0
+$Limit SFX/Fire 1
 $Limit SFX/MetalHit 0
 $Limit SFX/WheelHit 0
 

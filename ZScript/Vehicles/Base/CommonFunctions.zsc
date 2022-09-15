@@ -1,6 +1,13 @@
 //Vehicle functions
 Extend Class MVP_BaseVehicle
 {
+	//=====|Talking in tongues|=====\\
+	//What does this do ? I have no fucking idea, Agent_Ash gave it to me to fix how much the truck slows down based on the mass of the object it hit while ramming.
+	Clearscope Double LinearMap (Double Val, Double O_Min, Double O_Max, Double N_Min, Double N_Max) 
+	{
+		Return (Val - O_Min) * (N_Max - N_Min) / (O_Max - O_Min) + N_Min;
+	}
+	
 	//=====|Status checks|=====\\
 	
 	Bool IsDead (Actor Other)
@@ -274,6 +281,7 @@ Extend Class MVP_BaseVehicle
 		}
 	}
 	
+	
 		//=====|Headlight functions|=====\\
 		//Turn the vehicles' headlights on.
 		Void TurnHeadlightsOn()
@@ -317,69 +325,4 @@ Extend Class MVP_BaseVehicle
 				}
 			}
 		}
-	
-	//Vehicle specific functions, the headlight spawn spots have been made into generic functions, so that they are accesible by the prop versions of each vehicle.
-	Void SpawnArmyCarHeadlights ()
-	{
-		//Front left headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[0].Offset = (64,28,8);
-		Headlights[0].Master = Self;
-		//Front right headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[1].Offset = (64,-28,8);
-		Headlights[1].Master = Self;
-		
-		//Back left headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[2].Offset = (40,28,8);
-		Headlights[2].Master = Self;
-		HeadLights[2].IsBacklight = True;
-		HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
-		HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-		HeadLights[2].SpotInnerAngle = 40;
-		Headlights[2].SpotOuterAngle = 80;
-		//Back right headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[3].Offset = (40,-28,8);
-		Headlights[3].Master = Self;
-		HeadLights[3].IsBacklight = True;
-		HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
-		HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-		HeadLights[3].SpotInnerAngle = 40;
-		Headlights[3].SpotOuterAngle = 80;
-	}
-	
-	Void SpawnArmyTruckHeadlights ()
-	{
-		//Front left headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[0].Offset = (128,28,8);
-		Headlights[0].Master = Self;
-		HeadLights[0].Args[DynamicLight.LIGHT_INTENSITY] = 384;
-		//Front right headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[1].Offset = (128,-28,8);
-		Headlights[1].Master = Self;
-		HeadLights[1].Args[DynamicLight.LIGHT_INTENSITY] = 384;
-		
-		//Back left headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[2].Offset = (128,28,8);
-		Headlights[2].Master = Self;
-		HeadLights[2].IsBacklight = True;
-		HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
-		HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-		HeadLights[2].SpotInnerAngle = 40;
-		Headlights[2].SpotOuterAngle = 80;
-		//Back right headlight
-		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
-		HeadLights[3].Offset = (128,-28,8);
-		Headlights[3].Master = Self;
-		HeadLights[3].IsBacklight = True;
-		HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
-		HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
-		HeadLights[3].SpotInnerAngle = 40;
-		Headlights[3].SpotOuterAngle = 80;
-	}
 }
