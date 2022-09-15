@@ -17,16 +17,6 @@ Extend Class MVP_BaseVehicle
 		Return (Other.Health <= 0);
 	}
 	
-	Bool IsIndestructible (Actor Other)
-	{
-		Return (Other.bInvulnerable || Other.bNoDamage/* || (!Other.bShootable)*/);
-	}
-	
-	Bool IsInanimateObject (Actor Other)
-	{
-		Return (!Other.bIsMonster && !Other.Player);
-	}
-	
 	Bool IsPatrolling ()
 	{
 		Return (Goal || Target Is "PatrolPoint");
