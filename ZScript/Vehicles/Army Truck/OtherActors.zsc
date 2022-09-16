@@ -1,3 +1,195 @@
+//Truck props
+Class MVP_ArmyTruckProp : MVP_BaseProp
+{
+	Default
+	{
+		//$Title Army Truck (Prop)
+		//$Category Vehicles/Army Truck
+		//$Sprite TRK1A1
+		Health 700;
+		GibHealth 300;
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
+		Height 96;
+		Radius 72;
+		DeathHeight 88;
+		Mass 22000;
+		RipLevelMin 2;
+		
+		Tag "Army Truck (Prop)";
+		DamageFactor "Melee", 0.4;
+		DamageFactor "Electric", 0.3;
+		DamageFactor "ExplosiveImpact", 0.9;
+		DamageFactor "Explosion", 0.9;
+		DamageFactor "HitScan", 0.9; //The generic damage type of hitscan attacks.
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.9;
+		DamageFactor "MarineGrenade", 1.5;
+		DamageFactor "MarineRifle", 0.75;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		SpawnArmyTruckHeadlights();
+	}
+	
+	Bool User_OpenBackDoor;
+	
+	States
+	{
+		Spawn:
+			TRK1 A 0;
+			TRK1 # 1
+			{
+				If (User_OpenBackDoor)
+					Frame = 6; //Frame G
+				Else
+					Frame = 0; //Frame A
+				
+				If (User_IdleSound)
+					A_StartSound("Vehicle/ArmyTruck/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
+				Else
+					A_StopSound (CHAN_IDLING);
+			}
+			Loop;
+		Death:
+			TRK1 H 7 Bright
+			{
+				A_Explode (384,256,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
+				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.5);
+				A_StopSound (CHAN_IDLING);
+				A_StopSound (CHAN_MOVING);
+				
+				A_SpawnItemEx ("MVP_ArmyTruckPipe",72,-16,60,FRandom (6,-6),FRandom (6,-6),FRandom (24,32));
+				A_SpawnItemEx ("MVP_ArmyTruckWheel",72,8,60,FRandom (8,-8),FRandom (8,-8),FRandom (24,32));
+				A_SpawnItemEx ("MVP_ArmyTruckBackDoor",-136,0,48,FRandom (-16,-32),FRandom (4,-4),FRandom (-2,16));
+			}
+			TRK1 IJ 7 Bright;
+			TRK1 KL 7 Bright;
+			TRK1 M -1;
+			Stop;
+		XDeath:
+			TRK1 N 0
+			{
+				Int RandomFlames; RandomFlames = Random (5,12);
+				Actor Flame;
+				Actor Boom;
+				Vector3 SpawnPos;
+				
+				Height = 70;
+				
+				Boom = Spawn ("MVP_BigExplosion",Pos);
+				Boom.MaxTargetRange = 384;
+				Boom.MeleeRange = 128;
+				Boom.SetDamage(384);
+				Boom.A_SetScale (2.0);
+				
+				A_QuakeEx (1,1,1,35*2,0,1024,flags:QF_3D|QF_SCALEDOWN);
+				//Spawn a random amount of flames around the truck wreck.
+				For (Int I = 0; I < RandomFlames; I++)
+				{
+					SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
+					SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
+					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
+					
+					If (Flame)
+					{
+						If (!Level.IsPointInLevel (Flame.Pos))
+							Flame.Destroy();
+						
+						If (Flame)
+						{
+							Flame.Master = Self;
+							MVP_Flame(Flame).Offsets = SpawnPos;
+							Flame.ReactionTime *= FRandom (0.8,3.5);
+						}
+					}
+				}
+			}
+			TRK1 N -1;
+			Stop;
+	}
+}
+
+Class MVP_ArmyTruckWreck : MVP_ArmyTruckProp
+{
+	Default
+	{
+		//$Title Army Truck (Wreck)
+		//$Category Vehicles/Army Truck
+		//$Sprite TRK1M1
+		
+		Height 88;
+		+NoDamage;
+		Tag "Army Truck (Wreck)";
+	}
+	
+	Override Void PostBeginPlay() {Actor.PostBeginPlay();}
+	Override Void Tick() {Actor.Tick();}
+	
+	States
+	{
+		Spawn:
+			TRK1 M -1;
+			Stop;
+	}
+}
+
+Class MVP_ArmyTruckRuin : MVP_ArmyTruckWreck
+{
+	Default
+	{
+		//$Title Army Truck (Ruin)
+		//$Category Vehicles/Army Truck
+		//$Sprite TRK1N1
+		Height 70;
+		Tag "Army Truck (Ruin)";
+	}
+	
+	Bool User_SpawnFlames; //Should the wreck spawn flames ?
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay ();
+		
+		If (User_SpawnFlames)
+		{
+			Int RandomFlames; RandomFlames = Random (5,12);
+			Actor Flame;
+			Vector3 SpawnPos;
+			
+			For (Int I = 0; I < RandomFlames; I++)
+			{
+				SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
+				SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
+				Flame = Spawn ("MVP_Flame",SpawnPos);
+				
+				If (Flame)
+				{
+					If (!Level.IsPointInLevel (Flame.Pos))
+						Flame.Destroy();
+					
+					If (Flame)
+					{
+						Flame.Master = Self;
+						MVP_Flame(Flame).Offsets = SpawnPos;
+						Flame.ReactionTime = INT.MAX; //Stay around forever, or rather, a really long time.
+					}
+				}
+			}
+		}
+	}
+	
+	States
+	{
+		Spawn:
+			TRK1 N -1;
+			Stop;
+	}
+}
+
 //Truck debris
 Class MVP_ArmyTruckPipe : Actor
 {

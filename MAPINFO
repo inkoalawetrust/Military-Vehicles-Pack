@@ -13,4 +13,7 @@ DoomEdNums
 		17004 = MVP_ArmyCarRuin
 	//Army truck (WIP)
 		17005 = MVP_ArmyTruck
+		17006 = MVP_ArmyTruckProp
+		17007 = MVP_ArmyTruckWreck
+		17008 = MVP_ArmyTruckRuin
 }

@@ -326,7 +326,6 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 	String User_SupplyType; //Yep you can take supplies from prop car as well, hence the necessary code doplication above.
 	Int User_SupplyAmount; 
 	Bool User_PainRay; //Spawn the prop pain ray.
-	Bool User_IdleSound; //Does the prop car play its' idle sound too ?
 	Bool User_OpenDoors; //Does the prop car have its' doors open ?
 	Double User_TurretAngle; //Change the exact angle the turret faces at, a value of -1 randomizes the turrets' angle relative to the car.
 	
@@ -349,6 +348,8 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 				
 				If (User_IdleSound)
 					A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
+				Else
+					A_StopSound (CHAN_IDLING);
 			}
 			Loop;
 		//These states are almost ripped wholesale from the primary NPC version of the car, jesus christ, why do I even bother with the base prop class ?

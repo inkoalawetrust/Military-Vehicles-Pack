@@ -243,35 +243,6 @@ Extend Class MVP_BaseVehicle
 		Return NearestEnemy;
 	}
 	
-	//Throws actors away from the caller, the code is mostly copied from BlastActor.
-	Void FlingActor (Actor Victim, Double Speed, Bool Harmless, Bool PushImmovables = False)
-	{
-		If ((IsIndestructible(Victim) && !PushImmovables) || Victim.bDontThrust || IsDead (Victim)) //Don't thrust immovable or dead stuff.
-			Return;
-		
-		Double Ang = AngleTo(Victim);
-		Vector2 Move = AngleToVector(Ang, Speed);
-		
-		Victim.Vel.XY = Move;
-		Victim.Vel.Z = 1000. / Victim.Mass;
-		
-		If (Victim.Player)
-		{
-			// Players handled automatically
-		}
-		Else If (!Harmless)
-		{
-			Victim.bBlasted = True;
-		}
-		
-		If (Victim.bTouchy) // Touchy objects die when blasted
-		{
-			Victim.bArmed = False; // Disarm
-			Victim.DamageMobj(Self, Self, Victim.Health, 'Melee', DMG_FORCED|DMG_EXPLOSION);
-		}
-	}
-	
-	
 		//=====|Headlight functions|=====\\
 		//Turn the vehicles' headlights on.
 		Void TurnHeadlightsOn()

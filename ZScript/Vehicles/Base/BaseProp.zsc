@@ -47,6 +47,7 @@ Class MVP_BaseProp : MVP_BaseVehicle Abstract
 	}
 	
 	Bool User_Destructible; //Is the prop destroyable ?
+	Bool User_IdleSound; //Does this prop vehicle play the idle sound that its' NPC version plays in its' Spawn state ?
 }
 
 Class MVP_BaseTurretProp : MVP_BaseTurret

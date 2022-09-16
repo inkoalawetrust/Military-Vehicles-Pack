@@ -172,7 +172,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
 				
 				If (Target && User_NoMarines && !User_PainRay || Target && IsPowerful (Target))
-					If (IsVisible(Target, True))
+					If (!IsDead (Target) && IsVisible(Target, True))
 					{
 						FearTimer = Random (2,64);
 						bFrightened = AlreadyRetreating = True;
