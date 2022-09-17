@@ -17,6 +17,16 @@ Extend Class MVP_BaseVehicle
 		Return (Other.Health <= 0);
 	}
 	
+	Bool IsIndestructible (Actor Other)
+	{
+		Return (Other.bInvulnerable || Other.bNoDamage/* || (!Other.bShootable)*/);
+	}
+	
+	Bool IsInanimateObject (Actor Other)
+	{
+		Return (!Other.bIsMonster && !Other.Player);
+	}
+	
 	Bool IsPatrolling ()
 	{
 		Return (Goal || Target Is "PatrolPoint");
@@ -241,6 +251,31 @@ Extend Class MVP_BaseVehicle
 		}
 		
 		Return NearestEnemy;
+	}
+	
+	//Throws actors away from the caller, the code is mostly copied from BlastActor.
+	Void FlingActor (Actor Victim, Double Speed, Bool Harmless, Bool PushImmovables = False)
+	{
+		Double Ang = AngleTo(Victim);
+		Vector2 Move = AngleToVector(Ang, Speed);
+		
+		Victim.Vel.XY = Move;
+		Victim.Vel.Z = 500. / Victim.Mass;
+		
+		If (Victim.Player)
+		{
+			// Players handled automatically
+		}
+		Else If (!Harmless)
+		{
+			Victim.bBlasted = True;
+		}
+		
+		If (Victim.bTouchy) // Touchy objects die when blasted
+		{
+			Victim.bArmed = False; // Disarm
+			Victim.DamageMobj(Self, Self, Victim.Health, 'Melee', DMG_FORCED|DMG_EXPLOSION);
+		}
 	}
 	
 		//=====|Headlight functions|=====\\

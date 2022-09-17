@@ -1,3 +1,13 @@
+//To do:
+/*I should probably make a custom A_Chase() wrapper function, to reduce code duplication and consolidate the code for:
+- Vehicles running away from powerful enemies.
+- Vehicles running away from ANY enemy that gets too close.
+- Vehicles not chasing their target after it goes out of sight for long enough.
+*/
+/*Maybe also genericize the code that spawns flames on the vehicles' gib deaths, it could also allow me to put the flames in an array.
+So that I can also spawn warning zones to make the marines avoid the flaming wrecks, only removing the warning zone once every flame
+is gone.*/
+
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -35,7 +45,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		+NoBlood; //https://www.youtube.com/watch?v=K63AVSCPcSI
 		+NoPain;
 		+FloorClip;
-		+AddLightLevel;
+		+AddLightLevel; //Used for the headlight system.
+		-CanUseWalls; //Vehicles shouldn't be able to use walls, well, not the large ones anyway.
 		
 		//Damage factors that act as the vehicles "armor".
 		DamageFactor 0.9; //Generic damage factor for all damage.
@@ -66,7 +77,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		If (User_ChaseTime == 0) User_ChaseTime = (35/2)*30; //This is 35/2, because it assumes that the default see state on the vehicles has 2 tic long states.
 	}
 	
-	//Handles spawning each vehicles turret, if they have any.
+	//Handles spawning each vehicles' turret, if they have any.
 	Virtual Void SpawnVehicleTurret ()
 	{
 		If (VehicleTurret)
@@ -114,6 +125,15 @@ Class MVP_BaseVehicle : Actor Abstract
 			TurnHeadlightsOn();
 		Else
 			TurnHeadlightsOff();
+	}
+	
+	Override Bool CanCollideWith (Actor Other, Bool Passive)
+	{
+		//Stops the turret from preventing vehicles from going up slopes and steps due to the turret getting in the way.
+		If (!Passive && Other && Other == Turret && !IsDead (Turret))
+			Return False;
+		
+		Return Super.CanCollideWith (Other, Passive);
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
@@ -333,7 +353,7 @@ Class SmartMarineWarningZone : Actor
 			//Warn all marines in the vicinity.
 			Else
 			{
-				If (Mobj.Health > 0 && !Mobj.bDormant && Distance3DSquared(Mobj) <= Speed*Speed)
+				If (Mobj.Health > 0 && !Mobj.bDormant && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
 				{
 					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
 					{
