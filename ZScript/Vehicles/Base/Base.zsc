@@ -161,6 +161,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		CHAN_MOVING = 23501
 	}
 	
+	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
+	
 	//Internal variables
 	Array <MVP_Headlight> Headlights; //Pointers to each headlight the vehicle has.
 	Bool HeadlightsOn; //Should the headlights be on ?

@@ -248,6 +248,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 	Int ChaseTimer; //Makes the truck only chase its' target for a certain amount of time after it goes out of sight.
 	Int MarinesToSpawn; //How many marines the truck should drop this time that it opened up.
 	Int DeployTimer; //Adds a delay until the next time the truck is able to drop marines again.
+	Int Recursions; //Keeps track of how many times the vehicle tried spawning a marine in an invalid spot, to stop infinite recursions.
 	
 	//Variables relating to the ramming attack.
 	Array <Actor> HitThings; //How many things the truck has hit before stoping. Should probably replace this with a counter that adds the combine mas of everything the truck has hit.
@@ -320,7 +321,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				If (CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
 				{
 					If (User_MarineAmount > 0 && DeployTimer <= 0)
-						Return ResolveState ("DeployMarines");
+					{	a_log ("i will now freeze the game");Return ResolveState ("DeployMarines");}
 					
 					//Ramming decision code.
 					If (User_Ramming && ChargePathClear())
@@ -376,15 +377,18 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			TNT1 A 0 A_JumpIf (User_MarineAmount <= 0,"See"); //No marines to drop.
 			TNT1 A 0 //Temporarily make the truck bigger, to see if any of the marines would get stuck anywhere.
 			{
-				A_SetSize (Radius*1.25);
-				
-				If (!TestMobjLocation()) //If they would be stuck, cancel the drop.
-				{a_log ("spawn check");
-					A_SetSize (Default.Radius);
+				If (Recursions >= MARINE_RECURSIONS)
+				{a_log ("recursion check");
+					DeployTimer = 35;
 					Return ResolveState ("See");
 				}
 				
-				A_SetSize (Default.Radius);
+				If (!ValidPositionAt( (-128,0) ) ) //If they would be stuck, cancel the drop.
+				{a_log ("spawn check");
+					Recursions++;
+					console.printf ("i now have %d recursions",recursions);
+					Return ResolveState ("See");
+				}
 				
 				Return State (Null);
 			}

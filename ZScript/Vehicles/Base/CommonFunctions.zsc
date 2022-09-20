@@ -14,7 +14,7 @@ Extend Class MVP_BaseVehicle
 	{
 		If (!Other) Return False;
 		
-		Return (Other.Health <= 0);
+		Return (Other.Player ? Other.Player.PlayerState == PST_DEAD : Other.Health <= 0);
 	}
 	
 	Bool IsIndestructible (Actor Other)
@@ -41,6 +41,27 @@ Extend Class MVP_BaseVehicle
 	{
 		If (!Other) Return False;
 		Return (!Other.bNoTarget && !Other.bNeverTarget && !(Other.Player && Other.Player.Cheats & CF_NOTARGET));
+	}
+	
+	/*Used to check if marines can spawn in the specified position, the radius and height parameters are for vehicles like the truck,
+	that- ugh, nevermind, I can't put into words what this does.*/
+	Bool ValidPositionAt (Vector2 Offset = (0,0), Double TempRadius = 32, Double TempHeight = 56)
+	{
+		Bool Ok;
+		//Store the previous position and dimensions of the vehicle.
+		Vector3 PrevPos; PrevPos = Pos;
+		Double PrevRadius; PrevRadius = Radius;
+		Double PrevHeight; PrevHeight = Height;
+		
+		A_SetSize (TempRadius,TempHeight);
+		SetXYZ (Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle), Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Pos.Z)); //The same formula used to spawn marines.
+		
+		Ok = CheckPosition (Pos.XY);
+		
+		A_SetSize (PrevRadius,PrevHeight);
+		SetXYZ (PrevPos);
+		
+		Return Ok;
 	}
 	
 	//Written by Boondorl.
