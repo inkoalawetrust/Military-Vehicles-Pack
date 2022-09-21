@@ -1,7 +1,7 @@
 # NOTE:
 ***It is HIGHLY RECOMMENDED that you use this mod with my [Smart Marine](https://github.com/inkoalawetrust/Smart-Marines/) mod, if you don't, the MVP will fall back to spawning [the default crappy ZDoom marines](https://zdoom.org/wiki/Classes:ScriptedMarine) instead for vehicles that drop soldiers. I am not liable for any frustrating and moronic behavior they (ZDoom marines) exhibit, and DO NOT REPORT ANY BUGS UNLESS THE SMART MARINES ARE ALSO INCLUDED OR LOADED ALONGSIDE YOUR PROJECT !***
 
-Any mention of marines from now on will be about my own marine NPCs from now on.
+Any mention of marines from now on will be about my own marine NPCs.
 
 ![](https://i.imgur.com/0gp5Wz0.png)
 
@@ -11,7 +11,7 @@ Any mention of marines from now on will be about my own marine NPCs from now on.
 A GZDoom mod that contains a pack of military vehicle NPCs and props, for use in mods and maps.
 
 ## What is this ?
-Exactly what the description says, a GZDoom mod that contains a pack of military vehicles, that can be used as full fledged NPCs and decorations for your projects, full documentation for the mod is also included on the [releases](https://github.com/inkoalawetrust/Military-Vehicles-Pack/releases) section. The vehicle sprites and models are all made by me unless otherwise specified.
+Exactly what the description says, a GZDoom mod that contains a pack of military vehicles, that can be used as full fledged NPCs and/or decorations for your projects, full documentation for the mod is also included on the [releases](https://github.com/inkoalawetrust/Military-Vehicles-Pack/releases) section. The vehicle sprites and models are all made by me unless otherwise specified.
 
 ## Showcase videos
 The below videos serve as showcases and overviews of each of the vehicles that are part of the pack.
@@ -34,4 +34,7 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 
 ### The Army Truck
 ![](https://i.imgur.com/MOu9Xatm.png)
--(TBD)
+- Has 100 more health than the Army Car, however, it's overall more fragile than the Car, and is especially more vulnerable to the "Explosion" "ExplosiveImpact" and "MarineGrenade" damage tyoes. 
+- Has no weapons of its' own, not even a non-lethal one like the Army Car. However, it can deploy up to 14 marines (Or more if you want it to.). This allows it to be much more potentially dangerous than the Army Car (Or several of them.).
+- Has the (Optional) ability to ram enemies, causing a ton of melee damage based on the speed at which it hits. The truck only rams enemies once it has no marines left inside. And if it hits any ally, it simply pushes them out of the way, all marines will try to run away from the truck while it's ramming.
+- Includes multiple different prop versions of the truck, from different versions of the truck when it is destroyed, to a configurable prop of the normal, non-destroyed truck.
