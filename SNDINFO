@@ -39,9 +39,13 @@ $Limit SFX/WheelHit 0
 	Vehicle/ArmyTruck/BackSlam "Sounds/Vehicles/Army Truck/TruckSlam.ogg"
 	Vehicle/ArmyTruck/Brake "Sounds/Vehicles/Army Truck/TruckBrake.ogg"
 	Vehicle/ArmyTruck/Crash "Sounds/Vehicles/Army Truck/TruckCrash.ogg"
+	Vehicle/ArmyTruck/HitCreature "Sounds/Vehicles/Army Truck/TruckHitLiving.ogg"
+	Vehicle/ArmyTruck/HitObject "Sounds/Vehicles/Army Truck/TruckHitObject.ogg"
 	$Limit Vehicle/ArmyTruck/Idle 0
 	$Limit Vehicle/ArmyTruck/Moving 0
 	$Limit Vehicle/ArmyTruck/BackOpen 0
 	$Limit Vehicle/ArmyTruck/BackSlam 0
 	$Limit Vehicle/ArmyTruck/Brake 0
 	$Limit Vehicle/ArmyTruck/Crash 0
+	$Limit Vehicle/ArmyTruck/HitCreature 0
+	$Limit Vehicle/ArmyTruck/HitObject 0

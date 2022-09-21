@@ -47,16 +47,15 @@ Extend Class MVP_BaseVehicle
 	that- ugh, nevermind, I can't put into words what this does.*/
 	Bool ValidPositionAt (Vector2 Offset = (0,0), Double TempRadius = 32, Double TempHeight = 56)
 	{
-		Bool Ok;
 		//Store the previous position and dimensions of the vehicle.
-		Vector3 PrevPos; PrevPos = Pos;
-		Double PrevRadius; PrevRadius = Radius;
-		Double PrevHeight; PrevHeight = Height;
+		Vector3 PrevPos = Pos;
+		Double PrevRadius = Radius;
+		Double PrevHeight = Height;
 		
 		A_SetSize (TempRadius,TempHeight);
 		SetXYZ (Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle), Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Pos.Z)); //The same formula used to spawn marines.
 		
-		Ok = CheckPosition (Pos.XY);
+		Bool Ok = CheckPosition (Pos.XY);
 		
 		A_SetSize (PrevRadius,PrevHeight);
 		SetXYZ (PrevPos);

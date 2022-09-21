@@ -5,8 +5,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		//$Title Army Truck
 		//$Category Vehicles/Army Truck
 		//$Sprite TRK1A1
-		Health 1000;
-		GibHealth 300;
+		Health 900;
+		GibHealth 250;
 		XScale 0.65;
 		YScale 0.541666; //0.65 / 1.2
 		Height 96;
@@ -21,8 +21,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		Tag "Army Truck";
 		DamageFactor "Melee", 0.4;
 		DamageFactor "Electric", 0.3;
-		DamageFactor "ExplosiveImpact", 0.9;
-		DamageFactor "Explosion", 0.9;
+		DamageFactor "ExplosiveImpact", 1.25;
+		DamageFactor "Explosion", 1.25;
 		DamageFactor "HitScan", 0.9; //The generic damage type of hitscan attacks.
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.9;
@@ -111,6 +111,11 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			//Add the object you've hit to the counter IF IT ISN'T IN ALREADY !
 			If (!HasBeenHitBefore(Victim))
 			{
+				If (Victim.bNoBlood)
+					A_StartSound ("Vehicle/ArmyTruck/HitObject",CHAN_BODY,CHANF_OVERLAP|CHANF_NOSTOP,1.0,0.75);
+				Else
+					A_StartSound ("Vehicle/ArmyTruck/HitCreature",CHAN_BODY,CHANF_OVERLAP|CHANF_NOSTOP,1.0,0.75);
+				
 				TotalMassHit += Victim.Mass;console.printf ("total mass is now %d",totalmasshit);
 				If (Random (0,512) < 2 && !(Victim.Player || Victim Is "PlayerPawn"))
 				{
@@ -299,7 +304,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				FollowPlayerControl(512);
 				
 				Actor OldTarget;
-				NearestEnemy = FindNearestEnemy (!CanAttack() ? User_RetreatDistance : User_RetreatDistance*0.75);
+				NearestEnemy = FindNearestEnemy (User_RetreatDistance);
 				If (!NearestEnemy || IsPatrolling())
 					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_MarineAmount) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 				//Run away from the nearest enemy, unless you were already running away before.

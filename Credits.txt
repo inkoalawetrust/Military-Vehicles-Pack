@@ -44,6 +44,7 @@ Army truck back door sound (TruckOpen.ogg) by sforsman https://freesound.org/peo
 Army truck back door slam sound (TruckSlam.ogg) by primeval_polypod https://freesound.org/people/primeval_polypod/sounds/160612/
 Army truck braking sound (TruckBrake.ogg) is from freesfx.co.uk
 Army truck creature hitting sound (TruckHitLiving.ogg) is from the 2018 GDC sound library, "Gamemaster Audio - Punch and Combat Sounds"
+Army truck object hitting sound (TruckHitObject.ogg) is from freesfx.co.uk
 |==============|Sounds|==============|
 
 
