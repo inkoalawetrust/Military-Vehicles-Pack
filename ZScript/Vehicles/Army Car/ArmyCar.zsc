@@ -1,6 +1,3 @@
-//To do:
-//Might re-render the MCAR sprites, to fix the weird inconsistent lighting on the wheels.
-
 Class MVP_ArmyCar : MVP_BaseVehicle
 {
 	Default
