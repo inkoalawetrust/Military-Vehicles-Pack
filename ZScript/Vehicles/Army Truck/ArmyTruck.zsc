@@ -86,22 +86,21 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		//Allows both friends and enemies to be pushed out of the way, while only damaging enemies.
 		If (IsThrustable (Victim))
-			FlingActor (Victim,Vel.XY.Length(),True);console.printf ("i have hit a %s",Victim.getclassname());
+			FlingActor (Victim,Vel.XY.Length(),True);
 		
 		If ((IsHostile(Victim) || IsInanimateObject (Victim)))
 		{
 			Victim.DamageMobj (Self,Self,Random (30,40)*Clamp(Vel.XY.Length(),0.1,INT.MAX),'Melee',angle:Angle); //Isekai the enemy.
 			
-			console.printf ("vel is %f",vel.length());
 			//Black box, no idea how to alter it to decrease/increase how much the truck is slowed down when ramming.
 			Double Mul = LinearMap(Victim.Mass, 1000, 100, 0.0, 1.0);
 			Mul = Clamp(Mul, 0.0, 1.0);
-			Vel *= Mul;console.printf ("vel is now %f",vel.length());
+			Vel *= Mul;
 			
 			//Stop ramming if you've hit a powerful enemy,  or one that shouldn't be pushed.
 			//Maybe change this in the future to have the truck stop only if it hit a VERY powerful enemy ?
 			If (IsPowerful (Victim) || !IsThrustable (Victim) && IsIndestructible (Victim))
-			{a_log ("i need to stop");
+			{
 				HitThings.Clear();
 				TotalMassHit = 0;
 				CancelCharge = True;
@@ -116,7 +115,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				Else
 					A_StartSound ("Vehicle/ArmyTruck/HitCreature",CHAN_BODY,CHANF_OVERLAP|CHANF_NOSTOP,1.0,0.75);
 				
-				TotalMassHit += Victim.Mass;console.printf ("total mass is now %d",totalmasshit);
+				TotalMassHit += Victim.Mass;
 				If (Random (0,512) < 2 && !(Victim.Player || Victim Is "PlayerPawn"))
 				{
 					Victim.Die (Self,Self,0,'Melee'); //Used to call the actors' specials before they get their own harem.
@@ -125,7 +124,6 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				}
 				Else
 					HitThings.Push (Victim);
-				a_log ("this is a new and unique smacking experience");
 
 				Return True; //Continue ramming.
 			}
@@ -181,24 +179,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 	{
 		FLineTraceData Result;
 		Actor Mobj;
-		/*Bool LeftWall, RightWall; //Don't actually know which one is which lol.
 		
-		//First check if any corner of the hitbox would get stuck in level geometry.
-		LineTrace (AngleTo (Target),256,PitchTo (Target),TRF_BLOCKSELF|TRF_THRUACTORS,Height/2,offsetside:Radius,data:Result);
-		//spawn ("techlamp",result.hitlocation);
-		If (Result.HitType == TRACE_HITWALL)
-			LeftWall = True;
-		
-		LineTrace (AngleTo (Target),256,PitchTo (Target),TRF_BLOCKSELF|TRF_THRUACTORS,Height/2,offsetside:-Radius,data:Result);
-		//spawn ("techlamp",result.hitlocation);
-		If (Result.HitType == TRACE_HITWALL)
-			RightWall = True;
-		
-		//If only one of the walls is blocked and the other isn't, instead of either both or neither of them being blocked.
-		If ((!LeftWall && RightWall) || (LeftWall && !RightWall))
-			Return False; //Then you are probably just about to repeatedly hit a corner, so don't ram.
-		//=========================================================================
-		*/
 		If (!Target) Return False;
 		LineTrace (AngleTo (Target),MaxTargetRange,PitchTo (Target),TRF_THRUHITSCAN|TRF_SOLIDACTORS,Height/2,data:Result);
 		Mobj = Result.HitActor;
@@ -207,17 +188,16 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		If (!(Mobj.Pos.Z + Mobj.Height > Pos.Z && Mobj.Pos.Z + Mobj.Height < Pos.Z + Height)) Return False; //Actor is too high or low from the truck.
 		
-		If (IsHostile (Mobj)) {/*a_log ("hit enemy, good");*/Return True;} //Enemy in the way.
+		If (IsHostile (Mobj)) Return True; //Enemy in the way.
 		
 		If (HostileOnly) Return False;
 		
-		If (Result.HitLine || !Mobj) {a_log ("hit a line");Return False;} //A line is in the way, or this attempted charge won't even hit any actor.
+		If (Result.HitLine || !Mobj) Return False; //A line is in the way, or this attempted charge won't even hit any actor.
 		
-		If (!IsIndestructible (Mobj) && IsInanimateObject (Mobj) && Mobj.Health <= 500 && IsThrustable (Mobj)) {a_log ("prop hunt 2");Return True;} //Calling this means the truck is already aimed at a target, and if only a (Relatively) weak destructible prop is in the way, then charge anyway.
+		If (!IsIndestructible (Mobj) && IsInanimateObject (Mobj) && Mobj.Health <= 500 && IsThrustable (Mobj)) Return True; //Calling this means the truck is already aimed at a target, and if only a (Relatively) weak destructible prop is in the way, then charge anyway.
 		
-		If (IsIndestructible (Mobj) && !IsThrustable (Mobj)) {a_log ("movable object versus stoppable force");Return False;} //Hit an unpushable object, or rather, one that shouldn't be flung around.
+		If (IsIndestructible (Mobj) && !IsThrustable (Mobj)) Return False; //Hit an unpushable object, or rather, one that shouldn't be flung around.
 		
-		a_log ("ramming anyway");
 		Return True;
 	}
 	
@@ -235,12 +215,12 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 	//Checks if the specified object is already in the HitThings array, meaning that the truck has already hit it before, this prevents the vehicle from counting multiple hits on the same actor.
 	Bool HasBeenHitBefore (Actor Other)
 	{
-		If (!Other) {a_log ("is THIS causing the bug ?");Return False;}
+		If (!Other) Return False;
 		
 		For (Int I = HitThings.Size()-1; 0 <= I; I--)
 			If (HitThings[I] == Other)
-				{Return True;a_log ("been there, done that");} //This actor is already in the list.
-		a_log ("this is a new one");
+				Return True; //This actor is already in the list.
+		
 		Return False;
 	}
 	
@@ -273,20 +253,13 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		See:
 			TRK1 AABBCCDD 2
 			{
-				/*//If the truck was prematurely put back to see by hitting an actor (Because that's default SKULLFLY behavior.)
-				If ((TotalMassHit || HitThings.Size()-1) > 0)
-				{
-					bSkullFly = True;
-					Return ResolveState ("ChargeLoop"); //Then go back to ramming.
-				}*/
-				
 				A_StopSound (CHAN_IDLING);
 				A_StartSound ("Vehicle/ArmyTruck/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
 				//Defenseless, or the target is powerful.
 				If (Target && !CanAttack() || Target && IsPowerful (Target))
 					If (!IsDead (Target) && IsVisible(Target, True))
-					{a_log ("bring my brown pants");
+					{
 						FearTimer = Random (2,64);
 						bFrightened = AlreadyRetreating = True;
 					}
@@ -313,7 +286,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 					OldTarget = Target;
 					Target = NearestEnemy;
 					bFrightened = True;
-					FearTimer = Random (2,48);a_log ("run away");
+					FearTimer = Random (2,48);
 					A_Chase (Null,Null,CHF_DONTIDLE | (((!Target || !User_MarineAmount) && !IsPatrolling()) ? CHF_NORANDOMTURN : 0));
 					Target = OldTarget;
 				}
@@ -326,7 +299,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				If (CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
 				{
 					If (User_MarineAmount > 0 && DeployTimer <= 0)
-					{	a_log ("i will now freeze the game");Return ResolveState ("DeployMarines");}
+						Return ResolveState ("DeployMarines");
 					
 					//Ramming decision code.
 					If (User_Ramming && ChargePathClear())
@@ -342,13 +315,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 						{
 							If (Random[pr_cajump](0,255) < 24) //Then be a more likely to ram enemies.
 								Return ResolveState ("Charge");
-						}/*
-						//If your health isn't critical, and you still have marines.
-						Else
-						{
-							If (Random[pr_cajump](0,512) < 2) //Then only rarely ram enemies.
-								Return ResolveState ("Charge");
-						}*/
+						}
 					}
 				}
 				
@@ -380,18 +347,17 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		//The trucks' marine deploying loop.
 		DeployMarines:
 			TNT1 A 0 A_JumpIf (User_MarineAmount <= 0,"See"); //No marines to drop.
-			TNT1 A 0 //Temporarily make the truck bigger, to see if any of the marines would get stuck anywhere.
+			TNT1 A 0
 			{
 				If (Recursions >= MARINE_RECURSIONS)
-				{a_log ("recursion check");
+				{
 					DeployTimer = 35;
 					Return ResolveState ("See");
 				}
 				
-				If (!ValidPositionAt( (-128,0) ) ) //If they would be stuck, cancel the drop.
-				{a_log ("spawn check");
+				If (!ValidPositionAt( (-128,0) ) ) //If they would be stuck by spawning right behind the truck, then cancel the drop.
+				{
 					Recursions++;
-					console.printf ("i now have %d recursions",recursions);
 					Return ResolveState ("See");
 				}
 				
@@ -408,7 +374,6 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				TRK1 G 0
 				{
 					Actor Marine;
-					a_log ("spawning a marine");a_logint (marinestospawn);
 					Marine = SpawnMarine ((-128, FRandom (16,-16)));
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
 					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
@@ -433,7 +398,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			{
 				//Go back to See if the path to the target is covered, or there is no target. This is here in case the state is entered using a scripted ACS event.
 				If (!ChargePathClear() || !Target)
-				{	a_log ("the coast isn't clear");Return ResolveState ("See");}
+					Return ResolveState ("See");
 				
 				bSkullFly = True; //Stupid hack.
 				bSlidesOnWalls = True;
@@ -481,10 +446,10 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				
 				//You've hit enough mass worth of objects. Or you have no target even after the search above.
 				If (TotalMassHit >= 10000 || !Target || CancelCharge)
-				{if (!cancelcharge)a_log ("hit all the things"); else a_log ("no more charging");
+				{
 					HitThings.Clear();
 					TotalMassHit = 0;
-					bSkullFly = bSlidesOnWalls = CancelCharge = False;a_log ("time to take a brake");
+					bSkullFly = bSlidesOnWalls = CancelCharge = False;
 					If (WarningZone)
 						WarningZone.Destroy();
 					Return ResolveState ("Brake");
@@ -504,7 +469,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				
 				//The truck will hit level geometry instead.
 				If (!ChargePathClear (True) && !CheckMove (Vec2Angle (280,Angle),PCM_NOACTORS))
-				{a_log ("incoming level geometry");
+				{
 					HitThings.Clear();
 					TotalMassHit = 0;
 					bSkullFly = bSlidesOnWalls = CancelCharge = False;
@@ -524,9 +489,9 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				
 				If (Pos.Z <= FloorZ) //Only brake (bad) while on the floor.
 					Vel.XY *= 0.98;
-				console.printf ("the speed is now %f",vel.xy.length());
+				
 				If (Vel.XY.Length() <= 4.5) //Go back to see once the velocity is low enough again.
-				{a_log ("im slow enough now");
+				{
 					A_StopSound (CHAN_MOVING);
 					Friction = Default.Friction;
 					Return ResolveState ("See");
