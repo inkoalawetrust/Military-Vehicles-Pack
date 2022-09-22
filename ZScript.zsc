@@ -21,6 +21,20 @@ Class SM_MarineChecker : EventHandler
 {
 	Bool NoCustomMarines;
 	
+	//Debug code used to make all monsters able to see friendly monsters, if they can't already.
+	//It also increases their seeing range from the default 1280 to 4096.
+	//I say this is for debugging, but it's mostly for me to screw around and make NPC battles with
+	//my marines and vehicles VS other monsters.
+	/*Override Void WorldThingSpawned (WorldEvent E)
+	{
+		If (E.Thing && !E.Thing.bSeeFriendlyMonsters)
+		{
+			E.Thing.bSeeFriendlyMonsters = True;
+			//E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
+			E.Thing.FriendlySeeBlocks = 32;
+		}
+	}*/
+	
 	Bool SM_MarinesLoaded()
 	{
 		Let FindMarines = ServiceIterator.Find("SM_SmartMarines");

@@ -177,15 +177,15 @@ Extend Class MVP_BaseVehicle
 		Inventory Token;
 		
 		If (!Marine) //No marine to warn.
-			{a_log ("404");Return False;}
+			Return False;
 		
 		Token = Marine.GiveInventoryType (WarningToken); //Give the token to the marine.
 		If (Token)
 			Token.Master = Self;
 		
 		If (!(Marine.FindInventory (WarningToken)) || !(Marine.CountInv (WarningToken) <= 0)) //The marine didn't get a token.
-			{a_log ("no tokens ?");Return False;}
-		a_log ("epic win");
+			Return False;
+		
 		Return True;
 	}
 	
