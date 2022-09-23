@@ -17,7 +17,7 @@ Exactly what the description says, a GZDoom mod that contains a pack of military
 The below videos serve as showcases and overviews of each of the vehicles that are part of the pack.
 
 ### Army Car: https://youtu.be/1droRFw7LEo
-### Army Truck: TBD
+### Army Truck: https://youtu.be/au_r7aJN9Lw
 
 ## What can they do ? (Overview)
 
