@@ -14,6 +14,8 @@ Version "4.8.2"
 	//Army Truck
 	#Include "ZScript/Vehicles/Army Truck/ArmyTruck.zsc"
 	#Include "ZScript/Vehicles/Army Truck/OtherActors.zsc"
+	//Armored Personnel Carrier
+	#Include "ZScript/Vehicles/APC/APC.zsc"
 
 
 //Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.

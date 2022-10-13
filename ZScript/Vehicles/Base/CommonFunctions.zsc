@@ -190,6 +190,71 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Vehicle behaviors|=====\\
+	//Generic chase function shared by all vehicles.
+	Void MVP_Chase (Bool AttackWhenScared = False, Double FollowDist = 384, Bool NoRandomTurn = False)
+	{
+		//Vehicles get scared if they have a living, visible target, and are either defenseless or the target is too powerful.
+		If (Target && !CanAttack() || Target && IsPowerful (Target))
+			If (!IsDead (Target) && IsVisible(Target, True))
+			{
+				FearTimer = Random (2,64);
+				bFrightened = AlreadyRetreating = True;
+			}
+			Else
+				bFrightened = False;
+		Else
+			bFrightened = False;
+		
+		If (FearTimer)
+		{
+			FearTimer--;
+			bFrightened = AlreadyRetreating = True;
+		}
+		
+		If (AttackWhenScared && bFrightened)
+			MinMissileChance = bMissileMore = 1;
+		
+		FollowPlayerControl (FollowDist);
+		
+		//Vehicles try to stay away from enemies that are too close.
+		Actor OldTarget;
+		NearestEnemy = FindNearestEnemy (User_RetreatDistance);
+		If (!NearestEnemy || IsPatrolling())
+			A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
+		Else If (NearestEnemy && !AlreadyRetreating)
+		{
+			OldTarget = Target;
+			Target = NearestEnemy;
+			bFrightened = True;
+			FearTimer = Random (2,48);
+			A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
+			Target = OldTarget;
+		}
+		Else
+			A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
+		
+		ShouldAttack(); //Run the unique attack decision code of the vehicle.
+		
+		//They also eventually stop chasing their target after it's out of sight for long enough.
+		If (User_ChaseTime > 0)
+		{
+			If (ChaseTimer >= User_ChaseTime)
+			{
+				A_ClearTarget();
+				ChaseTimer = 0;
+			}
+			
+			If (Target && !IsPatrolling())
+			{
+				If (!CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
+					ChaseTimer++;
+				//Target is visible again, reset the timer.
+				Else
+					ChaseTimer = 0;
+			}
+		}
+	}
+	
 	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
 	Void FollowPlayerControl (Double MaxDist = 384)
 	{

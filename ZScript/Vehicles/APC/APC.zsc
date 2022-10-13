@@ -1,0 +1,48 @@
+//To do:
+//First of all, there's A TON of shit I still have to do, but this is just a list of minor things for me to keep in mind once I'm done with the basics.
+//Make the APCs' tag update with what turret it has, for example if it has the autocannon, the tag will be "Armored Personnel Carrier (Autocannon)" until the turret is destroyed.
+//Make the turrets able to visually change their elevation based on their pitch.
+//Add the small off-center MG on top of the autocannon turret, this is a crucial test for future vehicles, and hopefully it doesn't lead to visual oddities.
+/*MAKE SPECIAL HANDLING FOR THE TWO DIFFERENT TURRETS THE APC HAS. Probably by making a User_Turret string variable, whose values are checked at the start of
+PostBeginPlay, to change the turrets' VehicleTurret class appropriately.*/
+
+Class MVP_APC : MVP_BaseVehicle
+{
+	Default
+	{
+		//$Title Armored Personnel Carrier
+		//$Category Vehicles/APC
+		//$Sprite APC1A1
+		Health 1500;
+		GibHealth 500;
+		Speed 12;
+		FastSpeed 16;
+		Height 72;
+		Radius 64;
+		CameraHeight 48; //Hopefully this matches the height of the viewing port.
+		DeathHeight 64; //No height change when killed. Unless gibbed of course.
+		RipLevelMin 5;
+		Mass 28000;
+		MaxStepHeight 48;
+		Tag "Armored Personnel Carrier";
+		
+		//"Armor"
+		DamageFactor 0.75; //Generic damage factor.
+		DamageFactor "ExplosiveImpact", 0.65;
+		DamageFactor "Explosion", 0.65;
+		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.7;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.70;
+		DamageFactor "MarineGrenade", 0.6;
+		DamageFactor "MarineRifle", 0.7;
+		
+		+MVP_BaseVehicle.Transport;
+	}
+	States
+	{
+		Spawn:
+			APC1 A 2;
+			Loop;
+	}
+}

@@ -96,8 +96,14 @@ Class MVP_PainRay : MVP_BaseTurret
 				{
 					Victim = ItBurnsItBurns.Thing;
 					
+					//Don't hurt invulnerable actors.
+					If (Victim.bInvulnerable || Victim.bNoDamage) Continue;
+					
+					//Nor invulnerable players.
+					If (Victim.Player && Victim.Player.Cheats & (CF_GODMODE | CF_GODMODE2)) Continue;
+					
 					//Don't painlock actors with a lot of health. Or who are already in pain, to avoid breaking states.
-					If (Victim.Health > 400 || (IsInState ("Pain") || IsInState ("Pain.Microwave"))) Continue;
+					If (Victim.Health >= 400 || (IsInState ("Pain") || IsInState ("Pain.Microwave"))) Continue;
 					
 					//Ignore yourself, non-monsters, dormant monsters, allies, or actors that are just too far away.
 					If (Victim == Self || !(Victim.bIsMonster || Victim.Player) || Victim.bDormant || !IsHostile(Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;

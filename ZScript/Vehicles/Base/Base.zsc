@@ -1,9 +1,4 @@
 //To do:
-/*I should probably make a custom A_Chase() wrapper function, to reduce code duplication and consolidate the code for:
-- Vehicles running away from powerful enemies.
-- Vehicles running away from ANY enemy that gets too close.
-- Vehicles not chasing their target after it goes out of sight for long enough.
-*/
 /*Maybe also genericize the code that spawns flames on the vehicles' gib deaths, it could also allow me to put the flames in an array.
 So that I can also spawn warning zones to make the marines avoid the flaming wrecks, only removing the warning zone once every flame
 is gone.*/
@@ -13,7 +8,8 @@ Class MVP_BaseVehicle : Actor Abstract
 	Default
 	{
 		//Properties, in essense most of these are just the properties for the army car, which is the weakest vehicle.
-		YScale 0.833334; //Negate the effect of aspect ratio correction on the sprites.
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
 		Radius 40;
 		Height 54;
 		DeathHeight 54;
@@ -94,6 +90,18 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
+	//Used by MVP_Chase to check for all the different methods each vehicles have to attack.
+	Virtual Bool CanAttack()
+	{
+		Return False; //Vehicles have no attacks by default, of course.
+	}
+	
+	//Called in the middle of MVP_Chase to handle the unique attack decision code of each vehicle.
+	Virtual Void ShouldAttack()
+	{
+		Return;
+	}
+	
 	Override Void BeginPlay()
 	{
 		Super.BeginPlay();
@@ -139,8 +147,13 @@ Class MVP_BaseVehicle : Actor Abstract
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
-		If (Turret) Turret.DamageMobj (Inflictor, Source, Turret.Health, MeansOfDeath, DMG_FORCED); //When dead, kill the turret the same way as the vehicle died.
-		
+		If (Turret) //When dead, kill the turret the same way as the vehicle died.
+		{
+			If (Health < GetGibHealth()) //Same check Die() uses internally to check if an actor was gibbed. 
+				Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth()), MeansOfDeath, DMG_FORCED);
+			Else
+				Turret.DamageMobj (Inflictor, Source, Turret.Health, MeansOfDeath, DMG_FORCED);
+		}
 		bShootable = bNotAutoaimed = True; //Destroyed vehicles stay shootable and non-autoaimable unless specified otherwise.
 		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
 		HeadlightsOn = False;
@@ -162,6 +175,13 @@ Class MVP_BaseVehicle : Actor Abstract
 	}
 	
 	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
+	
+	//AI variables
+	Actor NearestEnemy; //The enemy closest to the vehicle, if any.
+	Bool AlreadyRetreating; //The vehicle is already running away from something that doesn't involve the enemy avoiding code, so don't both to run from nearby enemies.
+	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight.
+	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
+
 	
 	//Internal variables
 	Array <MVP_Headlight> Headlights; //Pointers to each headlight the vehicle has.
