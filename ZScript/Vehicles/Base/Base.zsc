@@ -97,9 +97,9 @@ Class MVP_BaseVehicle : Actor Abstract
 	}
 	
 	//Called in the middle of MVP_Chase to handle the unique attack decision code of each vehicle.
-	Virtual Void ShouldAttack()
+	Virtual Bool ShouldAttack()
 	{
-		Return;
+		Return False;
 	}
 	
 	Override Void BeginPlay()
@@ -120,6 +120,30 @@ Class MVP_BaseVehicle : Actor Abstract
 		SpawnVehicleTurret();
 		
 		If (!bFriendly) Species = 'MilitaryHostile';
+		
+		//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
+		Array <PlayerPawn> VisibleFriends;
+		//Find all visible players friendly to you.
+		For (Int I = 0; I < MAXPLAYERS; I++)
+		{
+			If (!PlayerInGame[I]) Continue;
+			
+			If (IsFriend (Players[I].Mo) && CheckSight (Players[I].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+				VisibleFriends.Push (Players[I].Mo);
+		}
+		
+		//Found at least one visible friendly player to follow.
+		If (VisibleFriends.Size() - 1 >= 0)
+		{
+			SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
+			CurrentOrder = ORDER_FOLLOW;
+		}
+		//No friendplayer, or they are out of sight
+		Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+		{
+			CurrentOrder = ORDER_WANDER;
+			bDontFollowPlayers = True;
+		}
 	}
 	
 	Override Void Tick()
@@ -174,6 +198,15 @@ Class MVP_BaseVehicle : Actor Abstract
 		CHAN_MOVING = 23501
 	}
 	
+	Enum VehicleCommands
+	{
+		ORDER_NONE = 0, //Null
+		ORDER_FOLLOW = 1, //Follow the player when having no target.
+		ORDER_WANDER = 2, //Wander around when having no target, instead of following the player.
+		ORDER_STAY = 3, //Stay in place until a target appears or you are ordered to start moving again. Then stand around again once the chase timer is out.
+		//ORDER_GOTOPOINT ? Perhaps, but maybe not, since I'm not sure how I could code the vehicles to head to a specified point.
+	};
+	
 	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
 	
 	//AI variables
@@ -181,8 +214,8 @@ Class MVP_BaseVehicle : Actor Abstract
 	Bool AlreadyRetreating; //The vehicle is already running away from something that doesn't involve the enemy avoiding code, so don't both to run from nearby enemies.
 	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight.
 	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
+	Int CurrentOrder; //The current order the vehicle is following.
 
-	
 	//Internal variables
 	Array <MVP_Headlight> Headlights; //Pointers to each headlight the vehicle has.
 	Bool HeadlightsOn; //Should the headlights be on ?
@@ -192,6 +225,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	//Flag variables
 	Private Int VehicleFlags;
 	FlagDef Transport : VehicleFlags, 0; //The vehicle is marked as being able to transport soldiers.
+	FlagDef NoRadio : VehicleFlags, 1; //The vehicle ignores orders given to it by the radio item.
 	Class<MVP_BaseTurret> VehicleTurret; //The pointer to the vehicles' turret, if any.
 	Property VehicleTurret : VehicleTurret;
 	
@@ -235,6 +269,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		+StandStill;
 		+DontFollowPlayers;
 		+NoSpriteShadow;
+		+MVP_BaseVehicle.NoRadio;
 		-AvoidHazards;
 		-AvoidMelee;
 		-CanBlast; //Turrets are attached to their vehicle.

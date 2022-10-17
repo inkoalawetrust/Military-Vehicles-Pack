@@ -6,6 +6,7 @@ Version "4.8.2"
 #Include "ZScript/Vehicles/Base/CommonFunctions.zsc"
 #Include "ZScript/Vehicles/Base/HeadlightDefinitions.zsc"
 #Include "ZScript/SFX.zsc"
+#Include "ZScript/Radio.zsc"
 
 //=====|The vehicles|=====\\
 	//Army Car
@@ -27,7 +28,7 @@ Class SM_MarineChecker : EventHandler
 	//It also increases their seeing range from the default 1280 to 4096.
 	//I say this is for debugging, but it's mostly for me to screw around and make NPC battles with
 	//my marines and vehicles VS other monsters.
-	/*Override Void WorldThingSpawned (WorldEvent E)
+	Override Void WorldThingSpawned (WorldEvent E)
 	{
 		If (E.Thing && !E.Thing.bSeeFriendlyMonsters)
 		{
@@ -35,7 +36,7 @@ Class SM_MarineChecker : EventHandler
 			//E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
 			E.Thing.FriendlySeeBlocks = 32;
 		}
-	}*/
+	}
 	
 	Bool SM_MarinesLoaded()
 	{

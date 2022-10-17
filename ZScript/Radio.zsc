@@ -1,0 +1,290 @@
+//The radio that is used to issue commands to vehicle friendly to the radio operator.
+
+//To do:
+//Should probably make this work for marines too. Though in that case, maybe it would be a good idea to somehow add it on the marine mod too but without code dupl- okay nevermind.
+//See if it would be possible to order vehicles (And even marines (!)) to go to a certain point, if they aren't already patrolling.
+//Finish this first before doing the APC, I need to get this stuff out of the way, so that it's not harder to change or add in the future when I have even more vehicles that would also need updating.
+//I should probably make my own walkie talkie sprites at some point, that way I can also do stuff like make the current order and command type visible on overlays that appear on the radios' screen.
+
+Class MVP_Radio : Weapon
+{
+	Default
+	{
+		//$Title Vehicle Radio
+		//$Category Weapons
+		Scale 0.25;
+		Tag "Handheld Transceiver";
+		Inventory.PickupMessage "You picked up the vehicle radio";
+		Weapon.SelectionOrder 4000;
+		Weapon.SlotNumber 1;
+		+Weapon.Ammo_Optional;
+		+Weapon.NoAutoSwitchTo;
+		+Inventory.InvBar;
+	}
+	
+	Enum VehicleCommands
+	{
+		ORDER_NONE = 0,
+		ORDER_FOLLOW = 1, //Follow the player when having no target.
+		ORDER_WANDER = 2, //Wander around when having no target, instead of following the player.
+		ORDER_STAY = 3, //Stay in place until a target appears or you are ordered to start moving again. Then stand around again once the chase timer is out.
+		ORDER_GOTOPOINT = 4 //Go to the specified patrol point.
+	};
+	
+	Enum OrderType
+	{
+		TYPE_RAYCAST = 1, //Order the vehicle in front of the player.
+		TYPE_RADIUS = 2, //Order all vehicles around the player.
+		TYPE_RAYCASTRADIUS = 3 //Order all vehicles around the impact point of a raycast.
+	};
+	
+	Int CurrentOrder, CurrentType;
+	//Bool SelectedUnits;
+	//Array <Actor> Selection; //The actor(s) that have been selected to be ordered to go to the specified point.
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		//Default settings
+		CurrentOrder = ORDER_STAY;
+		CurrentType = TYPE_RAYCAST;
+		Crosshair = 7; //The default order type requires you to actually aim at the vehicles.
+	}
+	
+	Action Void A_CallRadio()
+	{
+		If (!Invoker.Owner) Return;
+		
+		Name CustomMarine = 'SmartMarine';
+		FLineTraceData VehicleFinder;
+		MVP_BaseVehicle Vehicle;
+		Double FireZ = Height/2 - Floorclip + (PlayerPawn(Invoker.Owner).AttackZOffset * Player.CrouchFactor); //Replicates https://github.com/ZDoom/gzdoom/blob/master/src/playsim/p_map.cpp#L4512
+		Actor Mobj;
+		
+		If (Invoker.CurrentType == TYPE_RAYCAST)
+		{
+			LineTrace (Angle,PLAYERMISSILERANGE,BulletSlope(),0,FireZ,data:VehicleFinder);
+			
+			Mobj = VehicleFinder.HitActor;
+			
+			If (VehicleFinder.HitType == Trace_HitActor && (Mobj Is "MVP_BaseVehicle" || Mobj Is CustomMarine) && IsFriend (Mobj) && Mobj.Health > 0)
+			{
+				//If (Vehicle.CurrentOrder == Invoker.CurrentOrder) Return;
+				
+				Invoker.HandleOrders(Mobj);
+				Return;
+			}
+		}
+		Else If (Invoker.CurrentType == TYPE_RADIUS)
+		{
+			DoRadiusCommand (Self);
+			Return;
+		}
+		Else If (Invoker.CurrentType == TYPE_RAYCASTRADIUS)
+		{
+			LineTrace (Angle,PLAYERMISSILERANGE,BulletSlope(),0,FireZ,data:VehicleFinder);
+			
+			Mobj = Spawn ("BulletPuff",VehicleFinder.HitLocation);
+			
+			DoRadiusCommand (Mobj);
+			
+			Mobj.Destroy();
+			Return;
+		}
+	}
+	
+	Action Void HandleOrders (Actor Other)
+	{
+		Name CustomMarine = 'SmartMarine';
+		MVP_BaseVehicle Vehicle;
+		
+		If (!Other) Return;
+		
+		If (Other.bDormant || MVP_BaseVehicle(Other) && MVP_BaseVehicle(Other).bNoRadio || !MarineFollowsCommands (Other) ) Return;
+		a_log ("on your feet soldier");
+		
+		//You are ordering a Smart Marine, so do the order by remotely calling Used() on the marine, and change CurrentMarineOrder manually.
+		If (Other Is CustomMarine)
+		{console.printf ("current order is %d",invoker.currentorder-1);
+			If (Invoker.CurrentOrder == MarineGetCurrentOrder (Other)+1) Return;
+			SetMarineOrderTo (Other,Invoker.CurrentOrder-1);
+			Other.Used (Self);
+			Return;
+		}
+		
+		If (Other Is "MVP_BaseVehicle") Vehicle = MVP_BaseVehicle(Other);
+		
+		If (Vehicle.CurrentOrder == Invoker.CurrentOrder) Return;
+		
+		Vehicle.CurrentOrder = Invoker.CurrentOrder;
+		
+		If (Invoker.CurrentOrder == ORDER_STAY)
+		{a_log ("stay here");
+			Vehicle.ChaseTimer = 0;
+			If (Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("See")))
+				{Vehicle.SetStateLabel ("Spawn");a_log ("going to spawn");}
+			Return;
+		}
+		Else If (Invoker.CurrentOrder == ORDER_WANDER)
+		{a_log ("wander around");
+			Vehicle.bDontFollowPlayers = True;
+			If (Vehicle.Target == Null)
+				Vehicle.SetStateLabel ("See");
+			Return;
+		}
+		Else If (Invoker.CurrentOrder == ORDER_FOLLOW)
+		{a_log ("follow me");
+			Vehicle.bDontFollowPlayers = False;
+			If (Player)
+				SetFriendPlayer (Player);
+			If (Vehicle.Target == Null)
+			{
+				Vehicle.A_Face (Self);
+				Vehicle.SetStateLabel ("See");
+			}
+			Return;
+		}
+	}
+	
+	Action Void DoRadiusCommand (Actor Origin, Double Range = 1024)
+	{
+		If (!Origin) Return;
+		Name CustomMarine = 'SmartMarine';
+		BlockThingsIterator VehicleFinder = BlockThingsIterator.Create (Origin,Range);
+		Actor Mobj;
+		
+		While (VehicleFinder.Next())
+		{
+			Mobj = VehicleFinder.Thing;
+			If (!Mobj) Continue;
+			
+			If ((Mobj Is "MVP_BaseVehicle" || Mobj Is CustomMarine) && IsFriend(Mobj) && Mobj.Health > 0 && Origin.Distance3DSquared (Mobj) <= 1024*1024)
+				Invoker.HandleOrders(Mobj);
+		}
+	}
+	
+	Action Bool MarineFollowsCommands (Actor Other)
+	{
+		If (!Other) Return False;
+		
+		Let Check = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		Return Check.GetInt ("FollowsOrders",ObjectArg:Other);
+	}
+	
+	Action Void SetMarineOrderTo (Actor Other, Int Order)
+	{
+		If (!Other) Return;
+		
+		Let Command = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		Command.GetInt ("SetCurrentMarineOrder",IntArg:Order,ObjectArg:Other);
+	}
+	
+	Action Int MarineGetCurrentOrder (Actor Other)
+	{
+		If (!Other) Return False;
+		
+		Let Value = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		Return Value.GetInt ("CurrentMarineOrder",ObjectArg:Other);
+	}
+	
+	States
+	{
+		Spawn:
+			RADI Z -1;
+			Stop;
+		Select:
+			//TNT1 A 0 A_Raise ();
+			RADI ABCDEF 2 A_OverlayOffset (); //Use custom raising animation.
+			Goto Ready;
+		Deselect:
+			RADI FEDCBA 2;
+			TNT1 A 0
+			{
+				//Invoker.Selection.Clear();
+				A_Lower (512);
+			}
+			Wait;
+		Ready:
+			RADI F 1 A_WeaponReady (WRF_ALLOWRELOAD);
+			Loop;
+		//Command vehicles.
+		Fire:
+			RADI GHIJ 3;
+			RADI J 8
+			{
+				A_StartSound ("Weapon/RadioCall",CHAN_WEAPON);
+				A_CallRadio();
+			}
+			RADI JIHG 2;
+			Goto Ready;
+		//Change current order.
+		AltFire:
+			RADI F 0 A_StartSound ("Misc/Chat",CHAN_WEAPON);
+			RADI F 5 A_OverlayOffset (wy:8,WOF_ADD);
+			RADI F 0
+			{
+				Invoker.CurrentOrder++;
+				
+				If (Invoker.CurrentOrder > 3) Invoker.CurrentOrder = Invoker.ORDER_FOLLOW; //Don't go out of bounds.
+				
+				//If (Invoker.CurrentOrder != ORDER_GOTOPOINT) Invoker.Selection.Clear();
+				Switch (Invoker.CurrentOrder)
+				{
+					Case ORDER_WANDER:
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Move independently");
+						Break;
+					Case ORDER_FOLLOW:
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Follow player");
+						Break;
+					Case ORDER_STAY:
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Stay in place");
+						Break;
+					Case ORDER_GOTOPOINT:
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Go to specified location");
+					Default:
+						Break;
+				}
+				
+			}
+			RADI F 3 A_OverlayOffset (wy:-8,WOF_ADD);
+			Goto Ready;
+		//Change order method
+		Reload:
+			RADI F 0 A_StartSound ("Misc/Chat",CHAN_WEAPON);
+			RADI F 5 A_OverlayOffset (wy:8,WOF_ADD);
+			RADI F 0
+			{
+				Invoker.CurrentType++;
+				
+				If (Invoker.CurrentType > 3) Invoker.CurrentType = Invoker.TYPE_RAYCAST; //Don't go out of bounds.
+				
+				Switch (Invoker.CurrentType)
+				{
+					Case TYPE_RAYCAST:
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Line of sight");
+						Break;
+					Case TYPE_RADIUS:
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Radius");
+						Break;
+					Case TYPE_RAYCASTRADIUS:
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Radius around line of sight");
+						Break;
+					Default:
+						Break;
+				}
+				
+				If (Invoker.CurrentType == TYPE_RAYCAST || Invoker.CurrentType == TYPE_RAYCASTRADIUS)
+					A_SetCrosshair (7);
+				Else
+					A_SetCrosshair (0);
+			}
+			RADI F 3 A_OverlayOffset (wy:-8,WOF_ADD);
+			Goto Ready;
+	}
+}
+
+Class MVP_MoveToGoal : PatrolPoint{}

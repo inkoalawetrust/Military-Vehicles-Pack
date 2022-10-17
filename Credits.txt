@@ -18,6 +18,9 @@ Fire sprites (F1RE) are from Duke Nukem 3D, ripped from Project Brutality.
 Large explosion (MCR3A0-MCR3G0) made by Inkoalawetrust.
 Spark sprites (SPKYA-SPKYF) made by Tormentor667 and Solarsnowfall.
 
+=====<Other>=====
+Radio/Walkie-talkie sprites (RADI*) made by Doom Nukem. World sprite (RADIZ0) by mark#8218.
+
 |==============|Sprites|==============|
 
 

@@ -143,13 +143,15 @@ Extend Class MVP_BaseVehicle
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)
 	{
+		If (!Other) Return False;
+		
 		String MGMarine = "TurretMarine";
 		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
 		
 		If (Other.GetClassName() == MGMarine)
 			Return True;
 		
-		If (IsOnTurret.GetInt("",ObjectArg:Other))
+		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
 			Return True;
 		
 		Return False;
@@ -233,7 +235,11 @@ Extend Class MVP_BaseVehicle
 		Else
 			A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
 		
-		ShouldAttack(); //Run the unique attack decision code of the vehicle.
+		If (ShouldAttack()) //Run the unique attack decision code of the vehicle.
+		{
+			ChaseTimer = 0;
+			Return; //End the function if the vehicle should attack.
+		}
 		
 		//They also eventually stop chasing their target after it's out of sight for long enough.
 		If (User_ChaseTime > 0)
@@ -242,11 +248,17 @@ Extend Class MVP_BaseVehicle
 			{
 				A_ClearTarget();
 				ChaseTimer = 0;
+				//Vehicles ordered to stay also go back to standing still once the timer runs out.
+				If (CurrentOrder == ORDER_STAY)
+				{a_log ("times up, time to go back to standing around");
+					SetStateLabel ("Spawn");
+					Return;
+				}
 			}
 			
-			If (Target && !IsPatrolling())
+			If (!IsPatrolling())
 			{
-				If (!CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
+				If (!Target || Target && !CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
 					ChaseTimer++;
 				//Target is visible again, reset the timer.
 				Else
@@ -258,7 +270,7 @@ Extend Class MVP_BaseVehicle
 	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
 	Void FollowPlayerControl (Double MaxDist = 384)
 	{
-		If (!PlayerInGame[FriendPlayer])
+		If (!PlayerInGame[FriendPlayer] || CurrentOrder == ORDER_WANDER)
 			Return;
 		
 		If (bFriendly)

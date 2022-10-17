@@ -5,6 +5,7 @@ Class MVP_BaseProp : MVP_BaseVehicle Abstract
 		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
 		+NotAutoaimed;
 		+CastSpriteShadow
+		+MVP_BaseVehicle.NoRadio;
 		-CountKill;
 		-ActivateMCross;
 		-IsMonster;
