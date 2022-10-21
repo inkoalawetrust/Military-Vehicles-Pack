@@ -1,4 +1,4 @@
-//Headlight definitions, separated from CommonFunctions for organization.
+//Headlight definitions, separated from CommonFunctions for organization. This should probably just be turned into a virtual function.
 Extend Class MVP_BaseVehicle
 {
 	//Vehicle specific functions, the headlight spawn spots have been made into generic functions, so that they are accesible by the prop versions of each vehicle.
@@ -62,6 +62,39 @@ Extend Class MVP_BaseVehicle
 		HeadLights[3].IsBacklight = True;
 		HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
 		HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 32;
+		HeadLights[3].SpotInnerAngle = 40;
+		Headlights[3].SpotOuterAngle = 80;
+	}
+	
+	Void SpawnAPCHeadlights()
+	{
+		//Front left headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[0].Offset = (112,20,16);
+		Headlights[0].Master = Self;
+		HeadLights[0].Args[DynamicLight.LIGHT_INTENSITY] = 384;
+		//Front right headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[1].Offset = (112,-20,16);
+		Headlights[1].Master = Self;
+		HeadLights[1].Args[DynamicLight.LIGHT_INTENSITY] = 384;
+		
+		//Back left headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[2].Offset = (128,32,12);
+		Headlights[2].Master = Self;
+		HeadLights[2].IsBacklight = True;
+		HeadLights[2].Args[DynamicLight.LIGHT_GREEN] = HeadLights[2].Args[DynamicLight.LIGHT_BLUE] = 0;
+		HeadLights[2].Args[DynamicLight.LIGHT_INTENSITY] = 48;
+		HeadLights[2].SpotInnerAngle = 40;
+		Headlights[2].SpotOuterAngle = 80;
+		//Back right headlight
+		Headlights.Push(MVP_HeadLight(Spawn("MVP_Headlight",Pos)));
+		HeadLights[3].Offset = (128,-32,12);
+		Headlights[3].Master = Self;
+		HeadLights[3].IsBacklight = True;
+		HeadLights[3].Args[DynamicLight.LIGHT_GREEN] = HeadLights[3].Args[DynamicLight.LIGHT_BLUE] = 0;
+		HeadLights[3].Args[DynamicLight.LIGHT_INTENSITY] = 48;
 		HeadLights[3].SpotInnerAngle = 40;
 		Headlights[3].SpotOuterAngle = 80;
 	}

@@ -10,7 +10,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		DeathHeight 16;
 		Radius 24;
 		MaxTargetRange 1536;
-		DamageFactor "Electric", 1.2;
+		DamageFactor "Electric", 1.25;
 		Obituary "%o was killed by a non-lethal weapon, somehow";
 		Tag "Pain Ray";
 		+MissileMore;

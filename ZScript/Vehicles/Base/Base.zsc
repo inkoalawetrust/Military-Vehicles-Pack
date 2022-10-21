@@ -90,7 +90,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
-	//Used by MVP_Chase to check for all the different methods each vehicles have to attack.
+	//Used by MVP_Chase to check for all the different methods each vehicle has to attack.
 	Virtual Bool CanAttack()
 	{
 		Return False; //Vehicles have no attacks by default, of course.
@@ -249,7 +249,6 @@ Class MVP_BaseVehicle : Actor Abstract
 			#### # 4 A_JumpIf (FindNearestEnemy (User_RetreatDistance/1.4),"See"); //If an enemy has gotten too close, begin moving again.
 			#### # 0 A_Jump (6,"See"); //Eventualy, go back to the See state.
 			Goto StickAround+1;
-
 	}
 }
 
@@ -265,6 +264,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
+		+NoFear;
 		+DontThrust;
 		+StandStill;
 		+DontFollowPlayers;
@@ -279,11 +279,21 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Private Int TurretFlags;
 	FlagDef FallOnDeath : TurretFlags, 0; //Turret stops being attached to its' vehicle after dying.
 	
+	Int LastEnemyDelay; //Used for the turret rotating code, to make it so the turret snaps back to the vehicle after some time of not having a target.
+	
 	Override Void PostBeginPlay ()
 	{
 		Actor.PostBeginPlay ();
 		If (!bFriendly) Species = 'MilitaryHostile';
 	}
+	
+	Override Void UserVariableDefaults ()
+	{
+		User_RetreatDistance = -1; //Turrets can't move or be scared anyway.
+		User_ChaseTime = 30*4;
+	}
+	
+	Override Bool CanAttack() {Return True;} //Yes.
 	
 	Override Void Tick()
 	{
@@ -298,6 +308,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	{
 		Actor.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		bShootable = bNotAutoaimed = True;
+		LastEnemyDelay = 0;
 	}
 	
 	Override Void OnDestroy()

@@ -176,7 +176,10 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		If (CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
 		{
 			If (User_MarineAmount > 0 && DeployTimer <= 0)
+			{
 				SetStateLabel ("DeployMarines");
+				Return True;
+			}
 			
 			//Ramming decision code.
 			If (User_Ramming && ChargePathClear())

@@ -4,6 +4,7 @@ Version "4.8.2"
 #Include "ZScript/Vehicles/Base/Base.zsc"
 #Include "ZScript/Vehicles/Base/BaseProp.zsc"
 #Include "ZScript/Vehicles/Base/CommonFunctions.zsc"
+#Include "ZScript/Vehicles/Base/TurretFunctions.zsc"
 #Include "ZScript/Vehicles/Base/HeadlightDefinitions.zsc"
 #Include "ZScript/SFX.zsc"
 #Include "ZScript/Radio.zsc"
@@ -17,6 +18,7 @@ Version "4.8.2"
 	#Include "ZScript/Vehicles/Army Truck/OtherActors.zsc"
 	//Armored Personnel Carrier
 	#Include "ZScript/Vehicles/APC/APC.zsc"
+	#Include "ZScript/Vehicles/APC/OtherActors.zsc"
 
 
 //Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.

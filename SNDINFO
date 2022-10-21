@@ -34,6 +34,7 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/ArmyCar/PainRay/Active 0
 	$Limit Vehicle/ArmyCar/PainRay/Off 0
 	$Limit Vehicle/ArmyCar/PainRay/Break 0
+	
 	//Army truck
 	Vehicle/ArmyTruck/Idle "Sounds/Vehicles/Army Truck/TruckIdle.ogg"
 	Vehicle/ArmyTruck/Moving "Sounds/Vehicles/Army Truck/TruckMove.ogg"
@@ -51,3 +52,15 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/ArmyTruck/Crash 0
 	$Limit Vehicle/ArmyTruck/HitCreature 0
 	$Limit Vehicle/ArmyTruck/HitObject 0
+	
+	//Armored personnel carrier
+	Vehicle/APC/Idle "Sounds/Vehicles/APC/APCIdle.ogg"
+	Vehicle/APC/Moving "Sounds/Vehicles/APC/APCMove.ogg"
+	Vehicle/APC/MGFire "Sounds/Vehicles/APC/MGFire.ogg"
+	Vehicle/APC/MGImpact "Sounds/Vehicles/APC/MGImpact.ogg"
+	Vehicle/APC/TurretTurn "Sounds/Vehicles/APC/Whirring.ogg"
+	$Limit Vehicle/APC/Idle 0
+	$Limit Vehicle/APC/Moving 0
+	$Limit Vehicle/APC/MGFire 0
+	$Limit Vehicle/APC/MGImpact 0
+	$Limit Vehicle/APC/TurretTurn 1 256

@@ -1,0 +1,65 @@
+//50Cal impact decals
+
+Decal 50CalChip1
+{
+	Pic CHIP1
+	Translucent 0.85
+	Shade "00 00 00"
+	X-Scale 1.00
+	Y-Scale 1.00
+	RandomFlipX
+	RandomFlipY
+}
+
+Decal 50CalChip2
+{
+	Pic CHIP2
+	Translucent 0.85
+	Shade "00 00 00"
+	X-Scale 1.00
+	Y-Scale 1.00
+	RandomFlipX
+	RandomFlipY
+}
+
+Decal 50CalChip3
+{
+	Pic CHIP3
+	Translucent 0.85
+	Shade "00 00 00"
+	X-Scale 1.00
+	Y-Scale 1.00
+	RandomFlipX
+	RandomFlipY
+}
+
+Decal 50CalChip4
+{
+	Pic CHIP4
+	Translucent 0.85
+	Shade "00 00 00"
+	X-Scale 1.00
+	Y-Scale 1.00
+	RandomFlipX
+	RandomFlipY
+}
+
+Decal 50CalChip5
+{
+	Pic CHIP5
+	Translucent 0.85
+	Shade "00 00 00"
+	X-Scale 1.00
+	Y-Scale 1.00
+	RandomFlipX
+	RandomFlipY
+}
+
+DecalGroup 50CalChip
+{
+	50CalChip1	1
+	50CalChip2	1
+	50CalChip3	1
+	50CalChip4	1
+	50CalChip5	1
+}

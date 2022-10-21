@@ -41,6 +41,7 @@ Army car pain ray breaking sound (PainRayBreak.ogg) is from the 2018 GDC Audio L
 Army car handle sound (CarHandle.ogg) by RutgerMuller https://freesound.org/people/RutgerMuller/sounds/50697/
 Army car door slam sound (CarSlam.ogg) by Frederick_Sunne https://freesound.org/people/Frederik_Sunne/sounds/324138/
 Army car crate open sound (CrateOpen.ogg) is from the 2020 GDC sound library, "Wav Junction Sound Effects - Doors"
+
 Army truck idle sound (TruckIdle.ogg) is from the 2020 GDC sound library, "FLYSOUND - URAL 4320 Diesel" (Fitting, the truck is based on the Ural 5323)
 Army truck running sound (TruckMove.ogg) is from freesfx.co.uk
 Army truck back door sound (TruckOpen.ogg) by sforsman https://freesound.org/people/sforsman/sounds/274083/ (Link no longer exists)
@@ -48,6 +49,9 @@ Army truck back door slam sound (TruckSlam.ogg) by primeval_polypod https://free
 Army truck braking sound (TruckBrake.ogg) is from freesfx.co.uk
 Army truck creature hitting sound (TruckHitLiving.ogg) is from the 2018 GDC sound library, "Gamemaster Audio - Punch and Combat Sounds"
 Army truck object hitting sound (TruckHitObject.ogg) is from freesfx.co.uk
+
+APC idle sound (APCIdle.ogg) is from the 2018 GDC sound library, "SoundHolder - Cars In Motion"
+APC machine gun shooting sound is from Call of Duty 2, impact sound is from the 2018 GDC sound library
 |==============|Sounds|==============|
 
 

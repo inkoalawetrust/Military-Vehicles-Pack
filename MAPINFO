@@ -6,6 +6,7 @@ GameInfo
 DoomEdNums
 {
 	18000 = MVP_Radio
+	16900 = MVP_APCMachineGun //DEBUG DEBUG DEBUG DEBUG
 	//Army car
 		17000 = MVP_ArmyCar
 		17001 = MVP_ArmyCarProp

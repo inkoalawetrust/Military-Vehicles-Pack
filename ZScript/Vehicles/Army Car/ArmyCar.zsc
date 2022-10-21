@@ -187,7 +187,6 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 
 				MVP_Chase (NoRandomTurn:NoRandomTurn);
 				
-
 				//If you have dropped your marines and still have a turret. And the RNG is on your side.
 				If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4)
 				{

@@ -1,3 +1,5 @@
+//Army Car death lighting
+
 PointLight CarDeath1
 {
 	Color 0.89 0.77 0.56
@@ -47,6 +49,8 @@ Object MVP_ArmyCar
 	Frame MCR1L {Light CarDeath5}
 }
 
+//Army truck death lighting
+
 PointLight TruckDeath1
 {
 	Color 0.89 0.77 0.56
@@ -95,6 +99,8 @@ Object MVP_ArmyTruck
 	Frame TRK1K {Light TruckDeath4}
 	Frame TRK1L {Light TruckDeath5}
 }
+
+//https://www.youtube.com/watch?v=hwVyXgbaXHs
 
 PointLight BigExplosion1
 {
@@ -154,4 +160,84 @@ Object MVP_BigExplosion
 	Frame MCR5E {Light BigExplosion5}
 	Frame MCR5F {Light BigExplosion6}
 	Frame MCR5G {Light BigExplosion7}
+}
+
+//Normal explosion
+PointLight Explosion1
+{
+	Color 0.97 0.89 0.57
+	Size 8
+	//Attenuate 1
+}
+
+PointLight Explosion2
+{
+	Color 0.97 0.89 0.57
+	Size 16
+	//Attenuate 1
+}
+
+PointLight Explosion3
+{
+	Color 0.97 0.89 0.57
+	Size 48
+	//Attenuate 1
+}
+
+PointLight Explosion4
+{
+	Color 0.97 0.89 0.57
+	Size 64
+	//Attenuate 1
+}
+
+PointLight Explosion5
+{
+	Color 0.97 0.89 0.57
+	Size 48
+	//Attenuate 1
+}
+
+PointLight Explosion6
+{
+	Color 0.97 0.89 0.57
+	Size 12
+	//Attenuate 1
+}
+
+Object MVP_Explosion
+{
+	Frame ZTXPA {Light Explosion1}
+	Frame ZTXPB {Light Explosion1}
+	Frame ZTXPC {Light Explosion2}
+	Frame ZTXPE {Light Explosion2}
+	Frame ZTXPF {Light Explosion2}
+	Frame ZTXPF {Light Explosion3}
+	Frame ZTXPG {Light Explosion3}
+	Frame ZTXPH {Light Explosion3}
+	Frame ZTXPI {Light Explosion4}
+	Frame ZTXPJ {Light Explosion4}
+	Frame ZTXPK {Light Explosion4}
+	Frame ZTXPL {Light Explosion4}
+	Frame ZTXPM {Light Explosion5}
+	Frame ZTXPN {Light Explosion5}
+	Frame ZTXPO {Light Explosion6}
+	Frame ZTXPP {Light Explosion6}
+}
+
+//50Cal round lighting
+PointLight 50CalTracerLight
+{
+	Color 1.00 0.30 0.00
+	Size 48
+	Offset -256 0 0
+	Attenuate 1
+}
+
+PointLight 50CalFiringLight
+{
+	Color 1.00 0.30 0.00
+	Size 192
+	Offset 0 32 0
+	Attenuate 1
 }

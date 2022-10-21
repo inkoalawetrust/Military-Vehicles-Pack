@@ -29,6 +29,34 @@ Class MVP_BigExplosion : Actor
 	}
 }
 
+Class MVP_Explosion : Actor
+{
+	Default
+	{
+		RenderStyle "Add";
+		MaxTargetRange 256; //The maximum range of the explosion.
+		MeleeRange 48; //The range around the explosion in which actors take it's full damage.
+		Damage 128; //The damage of the explosion, this property can only be changed with the SetDamage() function.
+		+NeverTarget;
+		+NotAutoaimed;
+		+Bright;
+	}
+	States
+	{
+		Spawn:
+			ZTXP A 2 NoDelay
+			{
+				//A_AttachLight ('Explosion',DynamicLight.PulseLight,"FFFF8F",256,0,DynamicLight.LF_Attenuate,param:2.857142857142857);
+				A_Explode (MaxTargetRange,Damage,XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,MeleeRange,damagetype:'Explosion');
+				A_StartSound ("SFX/Explosion",CHAN_AUTO,attenuation:0.5);
+			}
+			ZTXP BCDE 2;
+			ZTXP FGHIJKLMNOPQRST 3;
+			//TNT1 A 0 A_RemoveLight ('Explosion');
+			Stop;
+	}
+}
+
 //The reaction time property is used as the lifespan in tics.
 Class MVP_Flame : Actor
 {
