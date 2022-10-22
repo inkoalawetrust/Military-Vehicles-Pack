@@ -273,6 +273,71 @@ Extend Class MVP_BaseVehicle
 		}
 	}
 	
+	//This stupid copy and paste has to literally only exist because P_HitFriend breaks friendly turrets with allies below or above them.
+	//The function is more or less the same as it's native counterpart, give or take the syntax and code comments, and it being slower by being non-native.
+	//Maybe I can add more custom code here, like lowering the distance to make vehicles even more likely to attack, so that I can further justify this thing existing.
+	Bool MVP_CheckMissileRange (Actor Other)
+	{
+		Double Dist;
+		
+		If (CurSector.Flags & Sector.SECF_NOATTACK) Return False;
+		
+		If (!CheckSight (Other, SF_SEEPASTBLOCKEVERYTHING)) Return False;
+		
+		If (bJustHit)
+		{
+			bJustHit = False;
+			
+			If (!bFriendly) Return True;
+			If (IsDead(Other)) Return False;
+			If (!IsFriend(Other)) Return True;
+			
+			If (Other.Player)
+				Return (Random2[PR_Defect]() > 128);
+			Else
+				Return !(Other.bJustHit && Random2[PR_Defect]() > 128);
+		}
+		
+		If (ReactionTime) Return False;
+		
+		If (IsFriend (Other)) Return False;
+		
+		//If (bFriendly && HitFriend ()) Return False; //This line right here, this is the only reason this stupid duplicate of P_CheckMissileRange has to exist.
+		
+		Dist = Distance2D (Other) - 64;
+		
+		If (!MeleeState)
+			Dist -= 128;
+		
+		If (MaxTargetRange > 0 && Dist > MaxTargetRange) Return False;
+		
+		If (MeleeState && Dist < MeleeThreshold) Return False;
+		
+		If (bMissileMore) Dist *= 0.5;
+		If (bMissileEvenMore) Dist *= 0.125;
+		
+		Int MMC = Int(MinMissileChance * G_SkillPropertyFloat(SKILLP_Aggressiveness));
+		Return Random2[PR_CheckMissileRange]() >= Min(Int(Dist), MMC);
+	}
+	
+	//Used to make vehicles able to run over and grind corpses like crushers. Still WIP so finish it when I wake up.
+	Void MVP_CrushCorpses (Double MaxHeight = 48, Double MaxRadius = 64)
+	{
+		BlockThingsIterator Crusher = BlockThingsIterator.Create (Self);
+		Actor Mobj;
+		
+		While (Crusher.Next())
+		{
+			Mobj = Crusher.Thing;
+			If (!Mobj) Continue; //No actor to crush.
+			If (!IsDead (Mobj)) Continue; //Actor isn't dead already.
+			If (Mobj.Radius > MaxRadius || Mobj.Height > MaxHeight) Continue; //Actor is too big.
+			If (Distance3DSquared (Mobj) > ((Radius*2)*1.75)*((Radius*2)*1.75)) Continue;
+			
+			Mobj.Grind (False); //Crush corpse, but not items.
+		}
+	}
+	
 	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
 	Void FollowPlayerControl (Double MaxDist = 384)
 	{

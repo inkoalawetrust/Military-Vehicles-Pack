@@ -1,4 +1,5 @@
 //Possibly add a line of fire check that checks if the turret can hit it's target or another enemy as it rotates, before it decides to begin shooting.
+//Note to self, looking at the final autocannon sprites, the off-center MG turret on top of the autocannon, should overlay the autocannon sprites, not the other way around.
 Class MVP_APCMachineGun : MVP_BaseTurret
 {
 	Default
@@ -17,7 +18,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	{
 		If (!Target) Return False;
 		
-		If (CheckMissileRange() && !IsDead (Target) && IsHostile (Target) && Target != Self)
+		If (MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && Target != Self)
 		{
 			SetStateLabel ("Fire");
 			Return True;
@@ -33,8 +34,8 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		
 		If (IsFrozen()) Return;
 		
-		If (AbsAngle (Angle,OldAngle) >= 4 && LastEnemyDelay)
-		{	A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);a_log ("bzzt bzzt");}
+		If (AbsAngle (Angle,OldAngle) >= 2 && LastEnemyDelay)
+			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
 	}
 	States
 	{
@@ -49,7 +50,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			Loop;
 		See:
 			APC3 # 1
-			{a_log ("i spy with my little eye");
+			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
@@ -193,15 +194,15 @@ Class MVP_50CalBullet : FastProjectile
 		If (!(Target.Target.Vel.X == 0 && Target.Target.Vel.Y == 0 && Target.Target.Vel.Z == 0))
 		{
 			VelIntercept (Target.Target);
-			Target.Angle = Angle;
-			Target.Pitch = Pitch;
+			//Target.Angle = Angle;
+			//Target.Pitch = Pitch;
 		}
 		Else
 		{
 			Pitch = Target.Pitch;
-			Angle = Target.Angle;console.printf ("pitch %d, angle %d",pitch,angle);
+			Angle = Target.Angle;
 		}
-		console.printf ("turret pitch is %d",target.pitch);
+		
 		Angle += FRandom (0.8,-0.8);
 		Pitch += FRandom (1.0,-1.0);
 		Vel3DFromAngle (Speed,Angle,Pitch);

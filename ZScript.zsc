@@ -35,8 +35,8 @@ Class SM_MarineChecker : EventHandler
 		If (E.Thing && !E.Thing.bSeeFriendlyMonsters)
 		{
 			E.Thing.bSeeFriendlyMonsters = True;
-			//E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
-			E.Thing.FriendlySeeBlocks = 32;
+			E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
+			E.Thing.FriendlySeeBlocks = 48;
 		}
 	}
 	

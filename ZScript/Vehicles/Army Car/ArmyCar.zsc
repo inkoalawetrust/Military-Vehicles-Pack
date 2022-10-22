@@ -188,12 +188,17 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				MVP_Chase (NoRandomTurn:NoRandomTurn);
 				
 				//If you have dropped your marines and still have a turret. And the RNG is on your side.
-				If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4)
+				If (User_NoMarines && User_PainRay && (Target || Turret.Target) && Random[pr_cajump](0,255) < 4)
 				{
 					//Then check if you are far enough from your nearest enemy or target.
 					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
 					&& (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
+					{
+						A_StopSound (CHAN_MOVING);
+						A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
+						ChaseTimer = Random (16,32);
 						Return ResolveState ("StickAround");
+					}
 				}
 				
 				MinMissileChance = Default.MinMissileChance;

@@ -4,7 +4,7 @@ Extend Class MVP_baseTurret
 	//Conditionally change the turrets' sprites based on pitch.
 	Int UpdateElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
 	{
-		If (Pitch >= 8 && Pitch >= 0)
+		If (Pitch >= 6 && Pitch >= 0)
 			Return FaceDown;
 		Else If (Pitch < 10 && Pitch >= -15)
 			Return FaceStraight;
@@ -19,6 +19,12 @@ Extend Class MVP_baseTurret
 	//Makes the turret rotate back over time to the direction that the vehicle is facing. Instead of snapping back instantly.
 	Void RotateToVehicle (Bool NoTargetCheck = False)
 	{
+		If (IsDead (Self))
+		{
+			Angle = Master.Angle+DeathAngleOffset;console.printf ("the angle is now %d",angle);
+			Return;
+		}
+		
 		If ((!Target || NoTargetCheck) && Master)
 		{
 			//If the angle and pitch difference are too small, just start snapping to the vehicles' direction.
@@ -30,12 +36,15 @@ Extend Class MVP_baseTurret
 			If (!LastEnemyDelay || AbsAngle (Master.Angle, Angle) < 0.5)
 				Angle = Master.Angle;
 			Else
+			{
+				A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
 				Angle += DeltaAngle (Angle, Master.Angle) * 0.15;
+			}
 		}
 	}
 	
 	Void UpdateLastEnemyTimer(Int DefaultValue = 50)
-	{console.printf ("last enemy delay is %d",lastenemydelay);
+	{
 		If (!Target && LastEnemyDelay > 0)
 			LastEnemyDelay--;
 		Else If (Target)
