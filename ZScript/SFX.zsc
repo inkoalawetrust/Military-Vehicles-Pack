@@ -127,3 +127,26 @@ Class MVP_Flame : Actor
 			Stop;
 	}
 }
+
+Class MVP_Spark : Actor
+{
+	Default
+	{
+		RenderStyle "Add";
+		Scale 0.05;
+		+NoInteraction;
+		+NoGravity;
+	}
+	States
+	{
+		Spawn:
+			SPKY A 0 NoDelay
+			{
+				A_StartSound ("World/Spark", CHAN_AUTO, CHANF_DEFAULT, 1, ATTN_STATIC);
+				Scale *= FRandom (0.8,2.0) ;
+			}
+			SPKY ABCDEF 4 Bright;
+			TNT1 A 35;
+			Stop;
+	}
+}

@@ -40,6 +40,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		If (DeployTimer) DeployTimer--;
 	}
 	
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		If (Inflictor && Inflictor != Self) //If another actor get killed the player on your behalf.
+			Return Inflictor.Obituary;
+		
+		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+	
 	Override Void SpawnVehicleTurret ()
 	{
 		If (User_PainRay)
@@ -187,17 +195,20 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 
 				MVP_Chase (NoRandomTurn:NoRandomTurn);
 				
-				//If you have dropped your marines and still have a turret. And the RNG is on your side.
-				If (User_NoMarines && User_PainRay && (Target || Turret.Target) && Random[pr_cajump](0,255) < 4)
+				//If you have dropped your marines, still have a turret the RNG is on your side, AND neither the turret or vehicle have a powerful target.
+				If (User_NoMarines && User_PainRay && (Target || Turret.Target)  && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && Random[pr_cajump](0,255) < 4)
 				{
 					//Then check if you are far enough from your nearest enemy or target.
 					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
 					&& (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
 					{
-						A_StopSound (CHAN_MOVING);
-						A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
-						ChaseTimer = Random (16,32);
-						Return ResolveState ("StickAround");
+						If (Turret.CheckSight (Turret.Target))
+						{
+							A_StopSound (CHAN_MOVING);
+							A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
+							ChaseTimer = Random (16,32);
+							Return ResolveState ("StickAround");
+						}
 					}
 				}
 				
@@ -239,9 +250,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			#### G 17
 			{
 				//Store the marines spawned in an array, just in case they need to be kept track of.
-				Marines[0] = SpawnMarine ((Default.Radius*0.70,56),True); //Front left door.
-				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-56),True); //Back right door.
-				Marines[2] = SpawnMarine ((-Default.Radius*0.75,56),True); //Back left door.
+				Marines[0] = SpawnMarine ((Default.Radius*0.70,56,0),True); //Front left door.
+				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-56,0),True); //Back right door.
+				Marines[2] = SpawnMarine ((-Default.Radius*0.75,56,0),True); //Back left door.
 				User_NoMarines = True;
 			}
 			#### G 12 A_StartSound ("Vehicle/ArmyCar/DoorHandle",flags:CHANF_OVERLAP);

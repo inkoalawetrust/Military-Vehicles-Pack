@@ -6,6 +6,7 @@ Version "4.8.2"
 #Include "ZScript/Vehicles/Base/CommonFunctions.zsc"
 #Include "ZScript/Vehicles/Base/TurretFunctions.zsc"
 #Include "ZScript/Vehicles/Base/HeadlightDefinitions.zsc"
+#Include "ZScript/Vehicles/Base/EventHandlers.zsc"
 #Include "ZScript/SFX.zsc"
 #Include "ZScript/Radio.zsc"
 

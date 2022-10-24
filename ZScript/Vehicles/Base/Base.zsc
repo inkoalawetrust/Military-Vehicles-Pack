@@ -2,6 +2,9 @@
 /*Maybe also genericize the code that spawns flames on the vehicles' gib deaths, it could also allow me to put the flames in an array.
 So that I can also spawn warning zones to make the marines avoid the flaming wrecks, only removing the warning zone once every flame
 is gone.*/
+//Should probably add //$GZDB_SKIP keys here and in the other files that don't need to be read by the editor.
+//Okay, the reason I use a custom virtual method instead of //$UserDefaultValue is that GZDoom ignores the key, but maybe I can still use that key while
+//keeping the virtual for when the actor is spawned in-game.
 
 Class MVP_BaseVehicle : Actor Abstract
 {
@@ -21,6 +24,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		FriendlySeeBlocks 48;
 		MaxStepHeight 32;
 		MaxTargetRange 8192;
+		MVP_BaseVehicle.MaxCorpseRadius 64;
+		MVP_BaseVehicle.MaxCorpseHeight 48;
 		Species "Military";
 		Obituary "%o managed to be killed by an abstract class, congratulations %o, we are all very proud of you. Or maybe a modder forgot to define a custom obituary.";
 		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
@@ -121,28 +126,44 @@ Class MVP_BaseVehicle : Actor Abstract
 		
 		If (!bFriendly) Species = 'MilitaryHostile';
 		
-		//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
-		Array <PlayerPawn> VisibleFriends;
-		//Find all visible players friendly to you.
-		For (Int I = 0; I < MAXPLAYERS; I++)
+		If (!User_DefaultOrder || User_DefaultOrder ~== "")
 		{
-			If (!PlayerInGame[I]) Continue;
+			//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
+			Array <PlayerPawn> VisibleFriends;
+			//Find all visible players friendly to you.
+			For (Int I = 0; I < MAXPLAYERS; I++)
+			{
+				If (!PlayerInGame[I]) Continue;
+				
+				If (IsFriend (Players[I].Mo) && CheckSight (Players[I].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+					VisibleFriends.Push (Players[I].Mo);
+			}
 			
-			If (IsFriend (Players[I].Mo) && CheckSight (Players[I].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
-				VisibleFriends.Push (Players[I].Mo);
+			//Found at least one visible friendly player to follow.
+			If (VisibleFriends.Size() - 1 >= 0)
+			{
+				SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
+				CurrentOrder = ORDER_FOLLOW;
+			}
+			//No friendplayer, or they are out of sight
+			Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+			{
+				CurrentOrder = ORDER_WANDER;
+				bDontFollowPlayers = True;
+			}
 		}
-		
-		//Found at least one visible friendly player to follow.
-		If (VisibleFriends.Size() - 1 >= 0)
+		Else If (User_DefaultOrder ~== "Follow")
 		{
-			SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
 			CurrentOrder = ORDER_FOLLOW;
 		}
-		//No friendplayer, or they are out of sight
-		Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+		Else If (User_DefaultOrder ~== "Wander")
 		{
 			CurrentOrder = ORDER_WANDER;
 			bDontFollowPlayers = True;
+		}
+		Else If (User_DefaultOrder ~== "Stay")
+		{
+			CurrentOrder = ORDER_STAY;
 		}
 	}
 	
@@ -174,13 +195,14 @@ Class MVP_BaseVehicle : Actor Abstract
 		If (Turret) //When dead, kill the turret the same way as the vehicle died.
 		{
 			If (Health < GetGibHealth()) //Same check Die() uses internally to check if an actor was gibbed. 
-				Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth()), MeansOfDeath, DMG_FORCED);
+				{Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth())+1, MeansOfDeath, DMG_FORCED);a_log ("gib");}
 			Else
 				Turret.DamageMobj (Inflictor, Source, Turret.Health, MeansOfDeath, DMG_FORCED);
 		}
 		bShootable = bNotAutoaimed = True; //Destroyed vehicles stay shootable and non-autoaimable unless specified otherwise.
 		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
 		HeadlightsOn = False;
+		CorpseTarget = Null;
 		A_StopSound (CHAN_IDLING);
 		A_StopSound (CHAN_MOVING);
 	}
@@ -211,6 +233,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	//AI variables
 	Actor NearestEnemy; //The enemy closest to the vehicle, if any.
+	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
 	Bool AlreadyRetreating; //The vehicle is already running away from something that doesn't involve the enemy avoiding code, so don't both to run from nearby enemies.
 	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight. Is also used to determine how long turreted vehicles stay in one place.
 	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
@@ -221,6 +244,10 @@ Class MVP_BaseVehicle : Actor Abstract
 	Bool HeadlightsOn; //Should the headlights be on ?
 	MVP_BaseTurret Turret; //The turret the vehicle has, used to actually spawn said turret.
 	Vector3 TurretOffsets; //The offsets of the turret relative to the vehicle.
+	
+	Double MaxCorpseRadius, MaxCorpseHeight;
+	Property MaxCorpseRadius : MaxCorpseRadius;
+	Property MaxCorpseHeight : MaxCorpseHeight;
 	
 	//Flag variables
 	Private Int VehicleFlags;
@@ -233,6 +260,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
 	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
 	Int User_ChaseTime; //How much time the vehicle spends looking for it's out-of-sight target before giving up.
+	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
 	
 	States
 	{
@@ -246,7 +274,7 @@ Class MVP_BaseVehicle : Actor Abstract
 			}
 			#### # 4 //If an enemy has gotten too close or enough time has passed, then stop standing around.
 			{
-				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4))
+				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4) || IsDead (Turret))
 				{
 					ChaseTimer = 0;
 					Return ResolveState ("See");

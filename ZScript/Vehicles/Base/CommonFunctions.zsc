@@ -112,7 +112,7 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
-	Actor SpawnMarine (Vector2 Position = (0,0), Bool SetMaster = False)
+	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False)
 	{
 		Name CustomMarine = 'SmartMarine';
 		Class<Actor> WhatToSpawn;
@@ -127,7 +127,7 @@ Extend Class MVP_BaseVehicle
 		
 		//[b,Spawnee] = A_SpawnItemEx (WhatToSpawn,Position.X,Position.Y,GetZAt (Position.X,Position.Y),flags:SXF_NOCHECKPOSITION | SetMaster ? SXF_SETMASTER : 0);
 		//Position = Vec2Offset (Position.X * Cos (Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle));
-		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X * Cos(Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle),GetZAt (Position.X,Position.Y)));
+		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X * Cos(Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle),(Position.Z == 0 ? GetZAt (Position.X,Position.Y) : Position.Z)));
 		If (Target != Goal)
 			Spawnee.CopyFriendliness (Self,True);
 		Else
@@ -193,7 +193,7 @@ Extend Class MVP_BaseVehicle
 	
 	//=====|Vehicle behaviors|=====\\
 	//Generic chase function shared by all vehicles.
-	Void MVP_Chase (Bool AttackWhenScared = False, Double FollowDist = 384, Bool NoRandomTurn = False, Bool TurretMode = False)
+	Void MVP_Chase (Bool AttackWhenScared = False, Double FollowDist = 384, Bool NoRandomTurn = False, Bool NoChase = False, Bool CorpseSeeker = False)
 	{
 		//Vehicles get scared if they have a living, visible target, and are either defenseless or the target is too powerful.
 		If (!bNoFear)
@@ -219,23 +219,38 @@ Extend Class MVP_BaseVehicle
 				MinMissileChance = bMissileMore = 1;
 		}
 		
-		If (!TurretMode) //Turrets don't need to do anything involving moving.
+		If (!NoChase)
 		{
 			FollowPlayerControl (FollowDist);
 			
 			//Vehicles try to stay away from enemies that are too close.
 			Actor OldTarget;
 			NearestEnemy = FindNearestEnemy (User_RetreatDistance);
-			If (!NearestEnemy || IsPatrolling())
-				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
-			Else If (NearestEnemy && !AlreadyRetreating)
+			//Have a close enemy, and not already retreating by something like a powerful target.
+			If (NearestEnemy && !AlreadyRetreating)
 			{
 				OldTarget = Target;
 				Target = NearestEnemy;
 				bFrightened = True;
 				FearTimer = Random (2,48);
-				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
+				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0)); //So move away from the nearest enemy.
 				Target = OldTarget;
+			}
+			//Archvile trolling mode activated.
+			Else If (!Target && !NearestEnemy && CurrentOrder == ORDER_WANDER && CorpseSeeker)
+			{
+				Actor Mobj;
+				//Don't have a corpse to crush already.
+				If (!CorpseTarget)
+				{
+					CorpseTarget = FindNearestCorpse();
+					
+					If (!CorpseTarget) //Still no corpse found.
+						A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
+				}
+				//There is an available corpse to head to and crush.
+				Else
+					{MVP_MoveTowards (CorpseTarget);a_log ("moving to corpse");}
 			}
 			Else
 				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
@@ -244,9 +259,15 @@ Extend Class MVP_BaseVehicle
 		If (ShouldAttack()) //Run the unique attack decision code of the vehicle.
 		{
 			ChaseTimer = 0;
+			CorpseTarget = Null;
 			Return; //End the function if the vehicle should attack.
 		}
 		
+		HandleChaseTimer();
+	}
+	
+	Void HandleChaseTimer() //Made into a separate function so it can be called independently by turrets and such.
+	{
 		//They also eventually stop chasing their target after it's out of sight for long enough.
 		If (User_ChaseTime > 0)
 		{
@@ -271,6 +292,18 @@ Extend Class MVP_BaseVehicle
 					ChaseTimer = 0;
 			}
 		}
+	}
+	
+	//Makes the actor move towards the specified actor.
+	Void MVP_MoveTowards (Actor Other)
+	{
+		If (!Other) {a_log ("no other actor");Return;}
+		
+		Actor OriginalTarget = Target;
+		Target = Other;
+		NewChaseDir();
+		FaceMovementDirection();
+		Target = OriginalTarget;
 	}
 	
 	//This stupid copy and paste has to literally only exist because P_HitFriend breaks friendly turrets with allies below or above them.
@@ -320,8 +353,8 @@ Extend Class MVP_BaseVehicle
 		Return Random2[PR_CheckMissileRange]() >= Min(Int(Dist), MMC);
 	}
 	
-	//Used to make vehicles able to run over and grind corpses like crushers. Still WIP so finish it when I wake up.
-	Void MVP_CrushCorpses (Double MaxHeight = 48, Double MaxRadius = 64)
+	//Used to make vehicles able to run over and grind corpses like crushers.
+	Void MVP_CrushCorpses ()
 	{
 		BlockThingsIterator Crusher = BlockThingsIterator.Create (Self);
 		Actor Mobj;
@@ -330,11 +363,15 @@ Extend Class MVP_BaseVehicle
 		{
 			Mobj = Crusher.Thing;
 			If (!Mobj) Continue; //No actor to crush.
+			//This runs before the bDontGib check, so that vehicles can remove corpse targets if they were already crushed.
+			If (Mobj == CorpseTarget) {CorpseTarget = Null;a_log ("corpse grinded already");} //If the corpse you crushed was one you were targeting already, then remove the pointer to it.
 			If (!IsDead (Mobj)) Continue; //Actor isn't dead already.
-			If (Mobj.Radius > MaxRadius || Mobj.Height > MaxHeight) Continue; //Actor is too big.
+			If (Mobj.bDontGib) {a_log ("this corpse is already crushed");Continue;} //Has already been crushed.
+			If (Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
 			If (Distance3DSquared (Mobj) > ((Radius*2)*1.75)*((Radius*2)*1.75)) Continue;
 			
 			Mobj.Grind (False); //Crush corpse, but not items.
+			
 		}
 	}
 	
@@ -419,6 +456,40 @@ Extend Class MVP_BaseVehicle
 		}
 		
 		Return NearestEnemy;
+	}
+	
+	Actor FindNearestCorpse()
+	{
+		Array <Actor> NearbyCorpses;
+		Double NearestDistance = INT.MAX;
+		
+		BlockThingsIterator CorpseSearch = BlockThingsIterator.Create (Self,1024);
+		
+		While (CorpseSearch.Next())
+		{
+			Actor Mobj = CorpseSearch.Thing;
+			
+			//Skip this actor if it's invalid, is yourself, is already your corpse target, is alive, is already crushed, or cannot be targeted.
+			If (!Mobj || Mobj == Self || Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || !CanBeTargeted (Mobj)) Continue;
+			
+			NearbyCorpses.Push(Mobj); //Add it to the list.
+		}
+		
+		Actor NearestCorpse;
+		
+		//Now check through the enemies found in range.
+		For (Int I = NearbyCorpses.Size()-1; I >= 0; I--)
+		{
+			//Whittle them down to the enemy that is the closest to the vehicle, and that is visible.
+			Double CurrentDistance = Distance3DSquared (NearbyCorpses[I]);
+			If (NearestDistance > CurrentDistance && CheckSight (NearbyCorpses[I]))
+			{
+				NearestDistance = CurrentDistance;
+				NearestCorpse = NearbyCorpses[I];
+			}
+		}
+		
+		Return NearestCorpse;
 	}
 	
 	//Throws actors away from the caller, the code is mostly copied from BlastActor.

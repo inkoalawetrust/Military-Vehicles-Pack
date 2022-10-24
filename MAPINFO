@@ -18,6 +18,6 @@ DoomEdNums
 		17006 = MVP_ArmyTruckProp
 		17007 = MVP_ArmyTruckWreck
 		17008 = MVP_ArmyTruckRuin
-	//Armored personnel carrier (WIP)
+	//Armored personnel carrier
 		17009 = MVP_APC
 }

@@ -235,16 +235,16 @@ Class MVP_Radio : Weapon
 				Switch (Invoker.CurrentOrder)
 				{
 					Case ORDER_WANDER:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Move independently");
+						Console.Printf ("\c[Green]Current Order: Move independently");
 						Break;
 					Case ORDER_FOLLOW:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Follow player");
+						Console.Printf ("\c[Green]Current Order: Follow player");
 						Break;
 					Case ORDER_STAY:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Stay in place");
+						Console.Printf ("\c[Green]Current Order: Stay in place");
 						Break;
 					Case ORDER_GOTOPOINT:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Go to specified location");
+						Console.Printf ("\c[Green]Current Order: Go to specified location");
 					Default:
 						Break;
 				}
@@ -265,13 +265,13 @@ Class MVP_Radio : Weapon
 				Switch (Invoker.CurrentType)
 				{
 					Case TYPE_RAYCAST:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Line of sight");
+						Console.Printf ("\c[Green]Current Order Method: Line of sight");
 						Break;
 					Case TYPE_RADIUS:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Radius");
+						Console.Printf ("\c[Green]Current Order Method: Radius");
 						Break;
 					Case TYPE_RAYCASTRADIUS:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Radius around line of sight");
+						Console.Printf ("\c[Green]Current Order Method: Radius around line of sight");
 						Break;
 					Default:
 						Break;

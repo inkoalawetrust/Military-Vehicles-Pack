@@ -19,7 +19,7 @@ Extend Class MVP_baseTurret
 	//Makes the turret rotate back over time to the direction that the vehicle is facing. Instead of snapping back instantly.
 	Void RotateToVehicle (Bool NoTargetCheck = False)
 	{
-		If (IsDead (Self))
+		If (Master && IsDead (Self))
 		{
 			Angle = Master.Angle+DeathAngleOffset;console.printf ("the angle is now %d",angle);
 			Return;

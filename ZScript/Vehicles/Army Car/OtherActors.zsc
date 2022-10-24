@@ -214,29 +214,6 @@ Class MVP_PlayerPain : Inventory
 	}
 }
 
-Class MVP_Spark : Actor
-{
-	Default
-	{
-		RenderStyle "Add";
-		Scale 0.05;
-		+NoInteraction;
-		+NoGravity;
-	}
-	States
-	{
-		Spawn:
-			SPKY A 0 NoDelay
-			{
-				A_StartSound ("World/Spark", CHAN_AUTO, CHANF_DEFAULT, 1, ATTN_STATIC);
-				Scale *= FRandom (0.8,2.0) ;
-			}
-			SPKY ABCDEF 4 Bright;
-			TNT1 A 35;
-			Stop;
-	}
-}
-
 //Car props
 //So much for trying to avoid code duplication, uuuuuggggggggghhhhhhhhhhhhh.
 Class MVP_ArmyCarProp : MVP_BaseProp
@@ -603,6 +580,7 @@ Class MVP_ArmyCarDoor : Actor
 		ReactionTime 2;
 		DamageFunction (Random (48,64));
 		DamageType "Melee";
+		Obituary "%o was hit an army cars' door";
 		Projectile;
 		-NoBlockmap;
 		-NoGravity;
@@ -640,6 +618,7 @@ Class MVP_ArmyCarHood : MVP_ArmyCarDoor
 		Mass 100;
 		ProjectileKickback 6;
 		DamageFunction (Random (12,24));
+		Obituary "%o had a car hood fall from the sky";
 	}
 	States
 	{
@@ -666,6 +645,7 @@ Class MVP_ArmyCarWheel : MVP_ArmyCarDoor
 		BounceType "Hexen";
 		BounceFactor 0.8;
 		BounceSound "SFX/WheelHit";
+		Obituary "%o didn't check both sides of the road, and was hit by a car wheel";
 		+CanBounceWater;
 		+DontBounceOnSky;
 		+BounceOnActors;
@@ -698,5 +678,15 @@ Class MVP_ArmyCarWheel : MVP_ArmyCarDoor
 		Death:
 			MCR3 U -1;
 			Stop;
+	}
+}
+
+//An allias of the Army Car, that can be used to spawn it through the console with the Pain Ray included.
+Class MVP_ArmyCar_PainRay : MVP_ArmyCar
+{
+	Override Void PostBeginPlay ()
+	{
+		User_PainRay = True;
+		Super.PostBeginPlay();
 	}
 }

@@ -206,6 +206,7 @@ Class MVP_ArmyTruckPipe : Actor
 		ReactionTime 2;
 		DamageFunction (Random (24,32));
 		DamageType "Melee";
+		Obituary "%o was smacked by a stray pipe from a destroyed military truck";
 		Projectile;
 		-NoBlockmap;
 		-NoGravity;
@@ -247,6 +248,7 @@ Class MVP_ArmyTruckWheel : MVP_ArmyTruckPipe
 		BounceType "Hexen";
 		BounceFactor 0.7;
 		BounceSound "SFX/WheelHit";
+		Obituary "%o was hit by a truck wheel";
 		+CanBounceWater;
 		+DontBounceOnSky;
 		+BounceOnActors;
@@ -292,6 +294,7 @@ Class MVP_ArmyTruckBackDoor : MVP_ArmyTruckPipe
 		Mass 250;
 		ProjectileKickback 48;
 		DamageFunction (Random (48,64));
+		Obituary "%o was hit by a truck door";
 	}
 	States
 	{
@@ -314,5 +317,16 @@ Class MVP_TruckWheelSmoke : BulletPuff
 		Super.BeginPlay();
 		
 		Scale *= FRandom (1.5,2.5);
+	}
+}
+
+//An allias for the Army Truck, that can be used to spawn trucks that also ram enemies through the console.
+Class MVP_ArmyTruck_Ramming : MVP_ArmyTruck
+{
+	Override Void PostBeginPlay()
+	{
+		User_Ramming = True;
+		
+		Super.PostBeginPlay();
 	}
 }

@@ -63,6 +63,9 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		"%o is really bad at bullfighting.",
 		"A trucks' passion was more than %o's heart could withstand."};
 		
+		If (Inflictor && Inflictor != Self) //If another actor get killed the player on your behalf.
+			Return Inflictor.Obituary;
+		
 		If (MOD == 'Melee')
 			Return MeleeObituaries [Random (0,MeleeObituaries.Size() - 1)];
 		
@@ -329,7 +332,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				TRK1 G 0
 				{
 					Actor Marine;
-					Marine = SpawnMarine ((-128, FRandom (16,-16)));
+					Marine = SpawnMarine ((-128, FRandom (16,-16),0));
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
 					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;

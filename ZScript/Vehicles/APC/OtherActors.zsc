@@ -1,5 +1,6 @@
 //Possibly add a line of fire check that checks if the turret can hit it's target or another enemy as it rotates, before it decides to begin shooting.
 //Note to self, looking at the final autocannon sprites, the off-center MG turret on top of the autocannon, should overlay the autocannon sprites, not the other way around.
+//Model and make sprites of the autocannon's shells.
 Class MVP_APCMachineGun : MVP_BaseTurret
 {
 	Default
@@ -11,6 +12,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Radius 32;
 		MaxTargetRange 8192;
 		Tag "Machine Gun Turret";
+		Obituary "%o was gunned down by a machine gun turret";
 		+MissileMore;
 		+LookAllAround;
 	}
@@ -54,7 +56,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
-				MVP_Chase (TurretMode:True);
+				MVP_Chase (NoChase:True);
 				UpdateLastEnemyTimer();
 				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
 			}
@@ -87,6 +89,8 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 					LookForPlayers (True); //Look for a new target.
 				}
 				
+				HandleChaseTimer();
+				
 				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
 			}
 			APC3 # 0 A_MonsterRefire (128,"See");
@@ -105,61 +109,19 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				Boom.MeleeRange = 64;
 				Boom.bNoGravity = True;
 				
+				Actor Flame = Spawn ("MVP_Flame",Pos);
+				MVP_Flame(Flame).Offsets = (0.1,0,4);
+				Flame.Scale.X = Flame.Scale.Y = 1.0;
+				Flame.Master = Self;
+				Flame.ReactionTime *= FRandom (1.25,4.25);
+				Flame.SetDamage (8);
+				Flame.MaxTargetRange = 64;
+				Flame.MeleeRange = 32;
+				
 				A_SpawnItemEx ("MVP_DestroyedMGTurretGun",16,0,12,FRandom (16,32),FRandom (-6,6),FRandom (2,6));
 			}
 			APC3 N 1 RotateToVehicle(True);
 			Wait;
-	}
-}
-
-Class MVP_DestroyedMGTurretGun : Actor
-{
-	Default
-	{
-		Radius 8;
-		Height 24;
-		XScale 0.65;
-		YScale 0.541666;
-		Speed 128;
-		Mass 200;
-		Gravity 1;
-		ProjectileKickback 16;
-		ReactionTime 2;
-		DamageFunction (Random (64,96));
-		DamageType "Melee";
-		Projectile;
-		-NoBlockmap;
-		-NoGravity;
-		+BloodlessImpact;
-	}
-	
-	States
-	{
-		Spawn:
-			TNT1 A 0;
-			APC3 O 1
-			{
-				//The turret leans upwards over time as it falls until impact.
-				Switch (GetAge())
-				{
-					Case 35/2:
-						Frame = 15;
-						Break;
-					Case 35:
-						Frame = 16;
-						Break;
-					Case 50:
-						Frame = 17;
-						Break;
-					Default:
-						Break;
-				}
-			}
-			Loop;
-		Death:
-			APC3 O 0 A_StartSound ("SFX/MetalHit",volume:0.5,0.5);
-			APC3 O -1;
-			Stop;
 	}
 }
 
@@ -193,7 +155,7 @@ Class MVP_50CalBullet : FastProjectile
 		If (!(Target && Target.Target) || Target && Target.Player) Return;
 		If (!(Target.Target.Vel.X == 0 && Target.Target.Vel.Y == 0 && Target.Target.Vel.Z == 0))
 		{
-			VelIntercept (Target.Target);
+			VelIntercept (Target.Target); //Re-add the code that uses the NPCs interpolation data to predict their velocity.
 			//Target.Angle = Angle;
 			//Target.Pitch = Pitch;
 		}
@@ -278,3 +240,229 @@ Class MVP_50CalTracer : Actor
 			Stop;
 	}
 }
+
+Class MVP_DestroyedMGTurretGun : Actor
+{
+	Default
+	{
+		Radius 16;
+		Height 32;
+		XScale 0.65;
+		YScale 0.541666;
+		Speed 48;
+		Mass 200;
+		Gravity 1;
+		ProjectileKickback 48;
+		DamageFunction (Random (64,96));
+		DamageType "Melee";
+		Obituary "%o was hit by a destroyed machine gun";
+		Projectile;
+		-NoBlockmap;
+		-NoGravity;
+		+BloodlessImpact;
+	}
+	
+	States
+	{
+		Spawn:
+			TNT1 A 0;
+			APC3 O 1
+			{
+				//The turret leans upwards over time as it falls until impact.
+				Switch (GetAge())
+				{
+					Case 35/2:
+						Frame = 15;
+						Break;
+					Case 35:
+						Frame = 16;
+						Break;
+					Case 50:
+						Frame = 17;
+						Break;
+					Default:
+						Break;
+				}
+			}
+			Loop;
+		Death:
+			APC3 O 0 A_StartSound ("SFX/MetalHit",volume:0.75,0.5);
+			APC3 O -1;
+			Stop;
+	}
+}
+
+Class MVP_DestroyedAPCFrontDoor : MVP_DestroyedMGTurretGun
+{
+	Default
+	{
+		Radius 12;
+		Height 48;
+		Speed 48;
+		Mass 100;
+		DamageFunction (Random (48,64));
+		ProjectileKickback 16;
+		Obituary "%o was hit by an APC's door";
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen ()) Return;
+		//Slow down the spinning over time.
+		If (ReactionTime <= 24 && GetAge() % 8 == 0)
+			ReactionTime++;
+	}
+	
+	States
+	{
+		Spawn:
+			APC5 ABCD 2 A_SetTics (ReactionTime);
+			Loop;
+		Death:
+			APC5 E -1 A_StartSound ("SFX/MetalHit",volume:0.5);
+			Stop;
+	}
+}
+
+Class MVP_APCHatch : MVP_DestroyedAPCFrontDoor
+{
+	Default
+	{
+		Radius 12;
+		Height 8;
+		ProjectileKickBack 8;
+		DamageFunction (Random (12,24));
+		Obituary "%o had an APC hatch fall from the sky";
+	}
+	
+	States
+	{
+		Spawn:
+			APC2 YZ[] 2 A_SetTics (ReactionTime);
+			Loop;
+		Death:
+			APC2 Y -1 A_StartSound ("SFX/MetalHit",volume:0.5);
+			Stop;
+	}
+}
+
+Class MVP_APCWheel : MVP_DestroyedMGTurretGun
+{
+	Default
+	{
+		Radius 24;
+		Height 32;
+		Speed 48;
+		Mass 100;
+		ProjectileKickback 24;
+		DamageFunction (Random (16,32));
+		BounceType "Hexen";
+		BounceFactor 0.75;
+		BounceSound "SFX/WheelHit";
+		Obituary "%o was smacked by an APC wheel";
+		+CanBounceWater;
+		+DontBounceOnSky;
+		+BounceOnActors;
+	}
+	
+	Override Void Tick()
+	{
+		Actor.Tick();
+		
+		If (IsFrozen() || InStateSequence(CurState,ResolveState ("Death"))) Return;
+		
+		//Slow down the spinning over time.
+		If (ReactionTime <= 24 && GetAge() % 8 == 0)
+			ReactionTime++;
+		
+		//Stop moving if too slow.
+		If (Vel.Length() >= 2)
+			BounceSound = Default.BounceSound;
+		Else
+		{
+			BounceSound = "";
+			ExplodeMissile(); //Hit the ground.
+		}
+	}
+	States
+	{
+		Spawn:
+			APC5 FGHI 2 A_SetTics (ReactionTime);
+			Loop;
+		Death:
+			APC5 J -1;
+			Stop;
+	}
+}
+
+//Class MVP_APCProp : MVP_BaseProp
+
+//Grotesque Zandronum-era hack.
+Class MVP_DesolidifyToken : Inventory
+{
+	Default
+	{
+		ReactionTime 8; //Tic timer before item leaves.
+		+Inventory.Untossable;
+	}
+	
+	Override Void AttachToOwner(Actor Other)
+	{
+		Super.AttachToOwner(Other);
+		
+		If (Other){
+			Other.bSolid = False;a_log ("oooh im a ghost");}
+	}
+	
+	Override Void DoEffect()
+	{
+		If (!ReactionTime)
+			GoAwayAndDie();
+		If (ReactionTime)
+			ReactionTime--;
+	}
+	
+	Override Void DetachFromOwner()
+	{
+		Super.DetachFromOwner();
+		If (Owner){
+			Owner.bSolid = True;a_log ("im no longer a ghost");}
+	}
+}
+
+//An alias for the APC, which can be used to spawn the APC through the console with the machine gun included.
+Class MVP_APC_MG : MVP_APC
+{
+	//Spawn only the MG.
+	Override Void SpawnVehicleTurret ()
+	{
+		Turret = MVP_BaseTurret(Spawn ("MVP_APCMachineGun",Pos+TurretOffsets));
+		If (Turret)
+		{
+			Turret.CopyFriendliness (Self,False);
+			Turret.Angle = Angle;
+			Turret.Pitch = Pitch;
+			Turret.Master = Self;
+			Turret.TurretOffsets = TurretOffsets;
+		}
+	}
+}
+/*
+Class MVP_APC_Autocannon : MVP_APC
+{
+	//Spawn only the autocannon.
+	Override Void SpawnVehicleTurret ()
+	{
+		Turret = MVP_BaseTurret(Spawn ("MVP_APCAutocannon",Pos+TurretOffsets));
+		If (Turret)
+		{
+			Turret.CopyFriendliness (Self,False);
+			Turret.Angle = Angle;
+			Turret.Pitch = Pitch;
+			Turret.Master = Self;
+			Turret.TurretOffsets = TurretOffsets;
+		}
+	}
+}*/
