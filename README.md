@@ -3,7 +3,7 @@
 
 Any mention of marines from now on will be about my own marine NPCs.
 
-![](https://i.imgur.com/0gp5Wz0.png)
+![](https://i.imgur.com/YVk58JK.gif)
 
 [(Renders of the vehicles.)](https://imgur.com/a/KUhbDRZ)
 
@@ -38,3 +38,11 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 - Has no weapons of its' own, not even a non-lethal one like the Army Car. However, it can deploy up to 14 marines (Or more if you want it to.). This allows it to be much more potentially dangerous than the Army Car (Or several of them.).
 - Has the (Optional) ability to ram enemies, causing a ton of melee damage based on the speed at which it hits. The truck only rams enemies once it has no marines left inside. And if it hits any ally, it simply pushes them out of the way, all marines will try to run away from the truck while it's ramming.
 - Includes multiple different prop versions of the truck, from different versions of the truck when it is destroyed, to a configurable prop of the normal, non-destroyed truck.
+
+### The APC (WIP)
+![](https://i.imgur.com/bajJ0B1m.jpg)
+- Has 1500 health and decent durability against a range of damage types, particularly the "Explosion" "ExplosiveImpact" and "MarineGrenade" damage tyoes.
+- Can carry up to 8 marines, the marine deploying is more or less the same as on the Army Truck.
+- Is the first vehicle in the pack to actually be armed with a lethal weapon, it has a dual machine gun turret, which more or less acts like a way less squishy and mobile version of marines on machine gun emplacements. And also includes an autocannon, which fires slower, but shoots explosive shells that both do a lot of direct impact damage and explosion damage. The autocannon turret also has a smaller MG attached to it, which fires projectile bullets that are 2-2.5x more powerful per shot than the marines' rifles. Naturally, the small MG is also fairly weak. All the turrets have the ability to rotate around properly instead of snapping in place, and also have the ability to visually change their gun elevation based on the turrets' pitch.
+- Has the ability to crush corpses that are small enough to fit under it. By default, the APC will in fact intentionally go up to, and crush nearby corpses if it's not pre-occupied or ordered to follow a player or stand still. It can also be set to not crush corpses at all, or to only passively crush them as it drives around.
+- Unlike the previous two vehicles, the APC has a chance for its' crew and passengers to survive. Which means that there is a chance for the crew of the APC, and then a random amount of it's surviving passengers, to run out of the APC after it has been destroyed.
