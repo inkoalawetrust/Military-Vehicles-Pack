@@ -51,7 +51,7 @@ Army truck creature hitting sound (TruckHitLiving.ogg) is from the 2018 GDC soun
 Army truck object hitting sound (TruckHitObject.ogg) is from freesfx.co.uk
 
 APC idle sound (APCIdle.ogg) is from the 2018 GDC sound library, "SoundHolder - Cars In Motion"
-APC machine gun shooting sound is from Call of Duty 2, impact sound is from the 2018 GDC sound library
+APC machine gun and autocannon shooting sound is from Call of Duty 2, machine gun impact sound is from the 2018 GDC sound library
 |==============|Sounds|==============|
 
 

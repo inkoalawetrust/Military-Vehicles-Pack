@@ -33,13 +33,24 @@ Class SM_MarineChecker : EventHandler
 	//my marines and vehicles VS other monsters.
 	Override Void WorldThingSpawned (WorldEvent E)
 	{
-		If (E.Thing && !E.Thing.bSeeFriendlyMonsters)
+		If (E.Thing)// && !E.Thing.bSeeFriendlyMonsters)
 		{
 			E.Thing.bSeeFriendlyMonsters = True;
 			E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
-			E.Thing.FriendlySeeBlocks = 48;
+			E.Thing.FriendlySeeBlocks = 128;
 		}
 	}
+	
+	//Just a test, returns the current date in 24 hour format.
+	Struct ScopeBypass ClearScope {String Time;}
+	ScopeBypass ScopeHack;
+	Override Void UITick()
+	{
+		Super.UITick();
+		
+		ScopeHack.Time = SystemTime.Format ("%R",SystemTime.Now());
+	}
+	//=============================================================================================
 	
 	Bool SM_MarinesLoaded()
 	{

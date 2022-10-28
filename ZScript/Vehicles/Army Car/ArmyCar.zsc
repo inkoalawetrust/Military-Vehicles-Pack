@@ -176,7 +176,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
 				bStandStill = True; //So the vehicle isn't alerted by friendly players firing their weapons.
-				If (WaitTimer <= 0) A_LookEx (0,0,8192,3072);
+				If (WaitTimer <= 0) A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
 				bStandStill = False;
 				
 				If (!IsPatrolling() && Target && WaitTimer <= 0)

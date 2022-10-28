@@ -1,10 +1,6 @@
 //To do:
-//First of all, there's A TON of shit I still have to do, but this is just a list of minor things for me to keep in mind once I'm done with the basics.
 //Make the APCs' tag update with what turret it has, for example if it has the autocannon, the tag will be "Armored Personnel Carrier (Autocannon)" until the turret is destroyed.
 //Add the small off-center MG on top of the autocannon turret, this is a crucial test for future vehicles, and hopefully it doesn't lead to visual oddities.
-/*MAKE SPECIAL HANDLING FOR THE TWO DIFFERENT TURRETS THE APC HAS. Probably by making a User_Turret string variable, whose values are checked at the start of
-PostBeginPlay, to change the turrets' VehicleTurret class appropriately.*/
-//For the corpse crushing mechanic, maybe I can add configurable code that allows the APC to deliberately seek out corpses the crush when it has no target left ?
 //Make the APC props, such as the gibbed, dead, and prop APC, along with the gibbed turrets (Since the turrets are flung when the APC is gibbed.).
 
 Class MVP_APC : MVP_BaseVehicle
@@ -34,9 +30,11 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
 		DamageFactor "Fire", 0.7;
 		//Damage factors specific to the Smart Marines.
-		DamageFactor "MarineHMG", 0.70;
+		DamageFactor "MarineHMG", 0.80;
 		DamageFactor "MarineGrenade", 0.6;
 		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.85;
 		
 		+MVP_BaseVehicle.Transport;
 	}
@@ -70,6 +68,20 @@ Class MVP_APC : MVP_BaseVehicle
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
+				SetTag ("Armored Personnel Carrier (Machine Gun)");
+			}
+		}
+		Else If (User_Turret ~== "Autocannon")
+		{
+			Turret = MVP_BaseTurret(Spawn ("MVP_APCAutocannon",Pos+TurretOffsets));
+			If (Turret)
+			{
+				Turret.CopyFriendliness (Self,False);
+				Turret.Angle = Angle;
+				Turret.Pitch = Pitch;
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+				SetTag ("Armored Personnel Carrier (Autocannon)");
 			}
 		}
 	}
@@ -126,7 +138,7 @@ Class MVP_APC : MVP_BaseVehicle
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
 				bStandStill = True;
-				A_LookEx (0,0,8192,3072);
+				A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
 				bStandStill = False;
 			}
 			Loop;

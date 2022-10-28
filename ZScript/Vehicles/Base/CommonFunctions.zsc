@@ -1,3 +1,4 @@
+//$GZDB_SKIP
 //Vehicle functions
 Extend Class MVP_BaseVehicle
 {
@@ -297,7 +298,7 @@ Extend Class MVP_BaseVehicle
 	//Makes the actor move towards the specified actor.
 	Void MVP_MoveTowards (Actor Other)
 	{
-		If (!Other) {a_log ("no other actor");Return;}
+		If (!Other) Return;
 		
 		Actor OriginalTarget = Target;
 		Target = Other;
@@ -371,7 +372,6 @@ Extend Class MVP_BaseVehicle
 			If (Distance3DSquared (Mobj) > ((Radius*2)*1.75)*((Radius*2)*1.75)) Continue;
 			
 			Mobj.Grind (False); //Crush corpse, but not items.
-			
 		}
 	}
 	

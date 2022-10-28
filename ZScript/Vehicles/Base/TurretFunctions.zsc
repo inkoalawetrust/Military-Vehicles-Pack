@@ -1,12 +1,13 @@
-//Functions and code exclusive to the vehicle class.
-Extend Class MVP_baseTurret
+//$GZDB_SKIP
+//Functions and code exclusive to the turret class.
+Extend Class MVP_BaseTurret
 {
 	//Conditionally change the turrets' sprites based on pitch.
 	Int UpdateElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
 	{
 		If (Pitch >= 6 && Pitch >= 0)
 			Return FaceDown;
-		Else If (Pitch < 10 && Pitch >= -15)
+		Else If (Pitch < 6 && Pitch >= -15)
 			Return FaceStraight;
 		Else If (Pitch < -15 && Pitch >= -50)
 			Return FaceUp;
@@ -43,11 +44,56 @@ Extend Class MVP_baseTurret
 		}
 	}
 	
-	Void UpdateLastEnemyTimer(Int DefaultValue = 50)
+	Void UpdateLastEnemyTimer (Int DefaultValue = 50)
 	{
 		If (!Target && LastEnemyDelay > 0)
 			LastEnemyDelay--;
 		Else If (Target)
 			LastEnemyDelay = DefaultValue;
+	}
+	
+	//Handles making the vehicles lead their shots based on their targets' movement, regardless of whether or not it's a player or monster.
+	Void HandleTargetPrediction (Actor Projectile, Vector2 SpreadHorz, Vector2 SpreadVert)
+	{
+		Vector3 OldVel;
+		If (!Projectile || !Target) Return;
+		
+		//Target has no velocity for VelIntercept to work with. This is almost always the case for normal NPCs, which move using small teleport steps, instead of actual movement.
+		If ((Target.Vel.X == 0 && Target.Vel.Y == 0 && Target.Vel.Z == 0))
+		{
+			OldVel = Target.Vel;
+			
+			If (Target.CurState.Tics)
+				Target.Vel = Level.Vec3Diff (LastEnemyPosition,CurrentEnemyPosition) / Target.CurState.Tics;
+			Else //Fallback to prevent division by zero.
+				Target.Vel = Level.Vec3Diff (LastEnemyPosition,CurrentEnemyPosition);
+			
+			If ((Target.Vel.X == 0 && Target.Vel.Y == 0 && Target.Vel.Z == 0)) //Still no velocity
+			{a_log ("no velocity still, falling back to normal aiming");
+				Projectile.A_FaceMovementDirection();
+				Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
+				Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
+				Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
+				Console.Printf ("The pitch is %f",Pitch);
+				Target.Vel = OldVel;
+				Return; //Just add in the projectile spread and finish.
+			}
+			Projectile.VelIntercept (Target);
+			Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
+			Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
+			Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
+			Console.Printf ("The pitch is %f",Pitch);
+			Target.Vel = OldVel;
+		}
+		//Target has velocity, like if it's a player or a custom actor with velocity-based movement.
+		Else
+		{
+			A_Log ("Target has velocity");
+			Projectile.VelIntercept (Target);
+			Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
+			Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
+			Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
+			Console.Printf ("The pitch is %f",Pitch);
+		}
 	}
 }

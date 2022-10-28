@@ -29,7 +29,7 @@ Class MVP_PainRay : MVP_BaseTurret
 	States
 	{
 		Spawn:
-			MCR3 H 1 A_LookEx (0,0,8192,3072);
+			MCR3 H 1 A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
 			Loop;
 		See:
 			MCR3 H 1
@@ -564,6 +564,8 @@ Class MVP_ArmyCarRuin : MVP_ArmyCarWreck
 			Stop;
 	}
 }
+
+//$GZDB_SKIP
 //Car debris
 Class MVP_ArmyCarDoor : Actor
 {

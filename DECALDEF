@@ -63,3 +63,13 @@ DecalGroup 50CalChip
 	50CalChip4	1
 	50CalChip5	1
 }
+
+decal 30mmScorch
+{
+	Pic SCORCH1
+	Shade "00 00 00"
+	X-Scale 0.25
+	Y-Scale 0.25
+	RandomFlipX
+	RandomFlipY
+}

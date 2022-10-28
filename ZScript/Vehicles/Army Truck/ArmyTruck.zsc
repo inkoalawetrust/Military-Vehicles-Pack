@@ -26,6 +26,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		DamageFactor "MarineHMG", 0.9;
 		DamageFactor "MarineGrenade", 1.5;
 		DamageFactor "MarineRifle", 0.9;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 1.25;
 		
 		+MVP_BaseVehicle.Transport; //Carries soldiers.
 		+NoExtremeDeath; //So the truck doesn't gib enemies it runs over.
@@ -287,7 +289,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyTruck/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
 				bStandStill = True; //So the vehicle isn't alerted by friendly players firing their weapons.
-				A_LookEx (0,0,8192,3072);
+				A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
 				bStandStill = False;
 			}
 			Loop;

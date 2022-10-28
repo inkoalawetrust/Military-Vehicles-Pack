@@ -1,10 +1,9 @@
 //The radio that is used to issue commands to vehicle friendly to the radio operator.
 
 //To do:
-//Should probably make this work for marines too. Though in that case, maybe it would be a good idea to somehow add it on the marine mod too but without code dupl- okay nevermind.
 //See if it would be possible to order vehicles (And even marines (!)) to go to a certain point, if they aren't already patrolling.
-//Finish this first before doing the APC, I need to get this stuff out of the way, so that it's not harder to change or add in the future when I have even more vehicles that would also need updating.
 //I should probably make my own walkie talkie sprites at some point, that way I can also do stuff like make the current order and command type visible on overlays that appear on the radios' screen.
+//Figure out why the fuck the radio stops working on marines half the time.
 
 Class MVP_Radio : Weapon
 {
@@ -58,7 +57,7 @@ Class MVP_Radio : Weapon
 		
 		Name CustomMarine = 'SmartMarine';
 		FLineTraceData VehicleFinder;
-		MVP_BaseVehicle Vehicle;
+		MVP_BaseVehicle Vehicle;e();
 		Double FireZ = Height/2 - Floorclip + (PlayerPawn(Invoker.Owner).AttackZOffset * Player.CrouchFactor); //Replicates https://github.com/ZDoom/gzdoom/blob/master/src/playsim/p_map.cpp#L4512
 		Actor Mobj;
 		

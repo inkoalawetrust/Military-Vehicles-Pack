@@ -190,6 +190,7 @@ Class MVP_ArmyTruckRuin : MVP_ArmyTruckWreck
 	}
 }
 
+//$GZDB_SKIP
 //Truck debris
 Class MVP_ArmyTruckPipe : Actor
 {

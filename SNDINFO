@@ -42,6 +42,7 @@ $Limit Weapon/RadioCall 0
 	Vehicle/ArmyTruck/BackSlam "Sounds/Vehicles/Army Truck/TruckSlam.ogg"
 	Vehicle/ArmyTruck/Brake "Sounds/Vehicles/Army Truck/TruckBrake.ogg"
 	Vehicle/ArmyTruck/Crash "Sounds/Vehicles/Army Truck/TruckCrash.ogg"
+	Vehicle/ArmyTruck/Stuffing "Sounds/Vehicles/Army Truck/Move.aiff"
 	Vehicle/ArmyTruck/HitCreature "Sounds/Vehicles/Army Truck/TruckHitLiving.ogg"
 	Vehicle/ArmyTruck/HitObject "Sounds/Vehicles/Army Truck/TruckHitObject.ogg"
 	$Limit Vehicle/ArmyTruck/Idle 0
@@ -58,9 +59,11 @@ $Limit Weapon/RadioCall 0
 	Vehicle/APC/Moving "Sounds/Vehicles/APC/APCMove.ogg"
 	Vehicle/APC/MGFire "Sounds/Vehicles/APC/MGFire.ogg"
 	Vehicle/APC/MGImpact "Sounds/Vehicles/APC/MGImpact.ogg"
+	Vehicle/APC/AutocannonFire "Sounds/Vehicles/APC/CannonFire.ogg"
 	Vehicle/APC/TurretTurn "Sounds/Vehicles/APC/Whirring.ogg"
 	$Limit Vehicle/APC/Idle 0
 	$Limit Vehicle/APC/Moving 0
 	$Limit Vehicle/APC/MGFire 0
 	$Limit Vehicle/APC/MGImpact 0
 	$Limit Vehicle/APC/TurretTurn 1 256
+	$Limit Vehicle/APC/AutocannonFire 0

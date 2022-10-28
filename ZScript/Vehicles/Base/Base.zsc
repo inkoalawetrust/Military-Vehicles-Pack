@@ -2,10 +2,6 @@
 /*Maybe also genericize the code that spawns flames on the vehicles' gib deaths, it could also allow me to put the flames in an array.
 So that I can also spawn warning zones to make the marines avoid the flaming wrecks, only removing the warning zone once every flame
 is gone.*/
-//Should probably add //$GZDB_SKIP keys here and in the other files that don't need to be read by the editor.
-//Okay, the reason I use a custom virtual method instead of //$UserDefaultValue is that GZDoom ignores the key, but maybe I can still use that key while
-//keeping the virtual for when the actor is spawned in-game.
-
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -23,7 +19,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		FastSpeed 16;
 		FriendlySeeBlocks 48;
 		MaxStepHeight 32;
-		MaxTargetRange 8192;
+		MaxTargetRange 25000;//8192; //REPLACE THIS VALUE WITH 8192 AGAIN, THIS IS JUST HERE TO TEST THE MOVEMENT PREDICTION.
 		MVP_BaseVehicle.MaxCorpseRadius 64;
 		MVP_BaseVehicle.MaxCorpseHeight 48;
 		Species "Military";
@@ -68,6 +64,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		DamageFactor "MarineHMG", 0.8;
 		DamageFactor "MarineGrenade", 0.7;
 		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 1.1;
 	}
 	
 	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
@@ -230,6 +228,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	};
 	
 	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
+	Const DEFAULT_HEARDISTANCE = 3072; //Exactly what it says, the default hear distance the vehicles' and turrets' A_LookEx calls use.
 	
 	//AI variables
 	Actor NearestEnemy; //The enemy closest to the vehicle, if any.
@@ -314,8 +313,15 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Private Int TurretFlags;
 	FlagDef FallOnDeath : TurretFlags, 0; //Turret stops being attached to its' vehicle after dying.
 	
+	Double MaxPitch, MinPitch;
+	Property MaximumPitch : MaxPitch;
+	Property MinimumPitch : MinPitch;
+	
 	Int LastEnemyDelay; //Used for the turret rotating code, to make it so the turret snaps back to the vehicle after some time of not having a target.
 	Double DeathAngleOffset; //Offsets the rotation of the turrets by this amount when they are killed.
+	Vector3 LastEnemyPosition; //Used by the target prediction. If the turret has a target with no velocity, it grabs their last position every tick to compare it to the current position.
+	Vector3 CurrentEnemyPosition;
+	Int TicsSinceLastMove; //Keeps track of how many tics have elapsed since the enemy last changes it's position from the above coordinates, and- just fucking look at HandleTargetPrediction().
 	
 	Override Void PostBeginPlay ()
 	{
@@ -335,6 +341,22 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	{
 		Actor.Tick();
 		
+		/*If (Target && Target.Pos == LastEnemyPosition)
+			TicsSinceLastMove++;
+		Else
+			TicsSinceLastMove = 0;
+		*/
+		If (Target && Target.Tics == Target.CurState.Tics)
+		{
+			LastEnemyPosition = CurrentEnemyPosition;
+			CurrentEnemyPosition = Target.Pos;
+			//CurrentEnemyPosition = ((1-(1./35)) * LastEnemyPosition) + ((1./35) * CurrentEnemyPosition);
+		}
+		Else If (!Target)
+			LastEnemyPosition = CurrentEnemyPosition = (0,0,0);
+		
+		If (!(MaxPitch == 0 && MinPitch == 0)) Pitch = Clamp (Pitch,MaxPitch,MinPitch);
+		
 		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
 		
 		SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,Master.Height+TurretOffsets.Z),True);
@@ -353,6 +375,32 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Override Void OnDestroy()
 	{
 		Actor.OnDestroy();
+	}
+}
+
+//Could be used to add generic per-texture liquid splashes for solid and swimmable liquid floors.
+Class MVP_BaseProjectile : FastProjectile
+{
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		If (Target) Species = Target.Species;
+	}
+	Int UpdateProjectileElevation (Int FaceDown, Int FaceDown2, Int FaceStraight, Int FaceUp, Int FaceUp2)
+	{
+		If (Pitch >= 70)
+			Return FaceDown2;
+		Else If (Pitch >= 30 && Pitch < 70)
+			Return FaceDown;
+		Else If (Pitch < 30 && Pitch > -30)
+			Return FaceStraight;
+		Else If (Pitch <= -30 && Pitch > -70)
+			Return FaceUp;
+		Else If (Pitch <= -70)
+			Return FaceUp2;
+		
+		Return FaceStraight;
 	}
 }
 
