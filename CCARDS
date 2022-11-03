@@ -1,3 +1,4 @@
 //Basically a list to exclude turrets from being affected by Corruption Cards.
 excludeactor, MVP_PainRay
 excludeactor, MVP_APCMachineGun
+excludeactor, MVP_APCAutocannon

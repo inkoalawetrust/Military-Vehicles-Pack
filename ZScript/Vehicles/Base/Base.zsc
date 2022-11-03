@@ -321,7 +321,6 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Double DeathAngleOffset; //Offsets the rotation of the turrets by this amount when they are killed.
 	Vector3 LastEnemyPosition; //Used by the target prediction. If the turret has a target with no velocity, it grabs their last position every tick to compare it to the current position.
 	Vector3 CurrentEnemyPosition;
-	Int TicsSinceLastMove; //Keeps track of how many tics have elapsed since the enemy last changes it's position from the above coordinates, and- just fucking look at HandleTargetPrediction().
 	
 	Override Void PostBeginPlay ()
 	{
@@ -339,13 +338,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Override Void Tick()
 	{
-		Actor.Tick();
+		Super.Tick();
 		
-		/*If (Target && Target.Pos == LastEnemyPosition)
-			TicsSinceLastMove++;
-		Else
-			TicsSinceLastMove = 0;
-		*/
 		If (Target && Target.Tics == Target.CurState.Tics)
 		{
 			LastEnemyPosition = CurrentEnemyPosition;
@@ -378,15 +372,194 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	}
 }
 
-//Could be used to add generic per-texture liquid splashes for solid and swimmable liquid floors.
+//The code that actually draws the line between the projectiles' current and previous position was written by Boondorl, since my own version and problems with pitch and so on. 
+//It's a FastProjectile with custom trail spawning code, so don't bother using FastProjectile's own trail system, as this one works better for truly fast projectiles.
+//Add functions for generic per-texture liquid splashes for solid and swimmable liquid floors.
 Class MVP_BaseProjectile : FastProjectile
 {
+	Default
+	{
+		MVP_BaseProjectile.ExtraTrailSpacing 1;
+	}
 	Override Void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
 		
 		If (Target) Species = Target.Species;
 	}
+	
+	Override Void Tick ()
+	{
+		Vector3 OldPos = Pos;
+		Int OldWaterLevel = WaterLevel;
+		Super.Tick();
+		
+		If (!bMissile || IsFrozen()) Return;
+		
+		//Used to make the projectile spawn splashes every time it goes underwater on swimmable floors and the likes,
+		//should also work for projectiles going through multiple swimmable volumes with air gaps between them.
+		If (WaterLevel > 0 && OldWaterLevel == 0)
+		{
+			Vector3 TempPos = Pos;
+			SetXYZ (OldPos);
+			a_log ("it even works underwater !");
+			If (CheckLiquid(FindTextureFlat()) == LIQUID_WATER) a_log ("i have hit some water, splish splash");
+			SetXYZ (TempPos);
+			//Spawn liquid splash here. Also, add a HitLiquid virtual, that is called when this happens, and returns a pointer to the create splash, and maybe to the texture that was hit too ?
+		}
+		Else If (WaterLevel == 0 && OldWaterLevel > 0)
+		{
+			//Add a LineTracer call here for when the projectile gets out of the water, to check the liquid flat behind it.
+			a_log ("landlubber");
+			If (CheckLiquid(FindTextureFlat(True)) == LIQUID_WATER) a_log ("i have come out of the water");
+			//Spawn another liquid splash here.
+		}
+		
+		If (TrailDelay)
+		{
+			TrailDelay--;
+			Return;
+		}
+		
+		If (bNoTrailLine)
+		{
+			Effect();
+			Return;
+		}
+		
+		Vector3 Path = Level.Vec3Diff( Pos, OldPos );
+		Double Distance = Path.Length();
+		If (Distance <= 1) Return;
+		Path /= Distance;
+		
+		For( Double I = 1; I < Distance; I += 1 )
+		{
+			If (MaxTrails != 0 && MaxTrails <= I) Break; //Too many trail actors.
+			Let Trail = Spawn(TrailActor,level.Vec3Offset(pos, Path*i));
+			If (Trail) TrailSpawn (Trail); //Return spawned trail.
+		}
+	}
+	
+	//Mostly ripped from the native FastProjectile, with some changes and additions.
+	Override Void Effect()
+	{
+		Class<Actor> Trail = TrailActor;
+		Actor Act;
+		If (Trail != Null)
+		{
+			Double HitZ = Pos.Z - 8;
+
+			If (HitZ < FloorZ)
+			{
+				HitZ = FloorZ;
+			}
+			// Do not clip this offset to the floor.
+			HitZ += MissileHeight;
+			
+			Act = Spawn (Trail, (Pos.XY, HitZ), ALLOW_REPLACE);
+			If (Act != Null)
+			{
+				TrailSpawn (Act);
+				If (bGetOwner && Target != Null)
+					Act.Target = Target;
+				Else
+					Act.Target = Self;
+				
+				//Act.Angle = Angle; //These are handled by TrailSpawn().
+				//Act.Pitch = Pitch;
+			}
+			
+			//Remove this in the future, it's broken, and I can't use it to fill in the gaps for trails of really fast projectiles.
+			If (ExtraTrails)
+			{
+				Int Spacing = ExtraTrailSpacing;
+				For (Int I = 0; I < ExtraTrails; I++)
+				{
+					Act = Spawn (Trail, (Pos.XY, HitZ), ALLOW_REPLACE);
+					If (Act != Null)
+					{
+						TrailSpawn (Act);
+						Act.Warp (Act,Spacing);
+						If (bGetOwner && Target != Null)
+							Act.Target = Target;
+						Else
+							Act.Target = Self;
+					}
+					Spacing += Spacing;
+				}
+			}
+		}
+	}
+	
+	//Returns each trail actor spawned, allowing you to perform per-trail modifications.
+	Virtual Void TrailSpawn (Actor Trail)
+	{
+		If (!Trail) Return;
+		
+		Trail.Master = Self;
+		Trail.Angle = Angle;
+		Trail.Pitch = Pitch;
+		//Pass trail properties. Only really works for the dedicated trail class in particular, so it only runs if the trail is MVP_Tracer or a child class.
+		If (Trail Is "MVP_Tracer")
+		{
+			MVP_Tracer(Trail).ScaleAmountX = ScaleAmountX;
+			MVP_Tracer(Trail).ScaleAmountY = ScaleAmountY;
+			MVP_Tracer(Trail).SpawnOffsetX = SpawnOffsetX;
+			MVP_Tracer(Trail).SpawnOffsetY = SpawnOffsetY;
+			MVP_Tracer(Trail).SpawnOffsetZ = SpawnOffsetZ;
+			MVP_Tracer(Trail).FadeAmount = FadeAmount;
+			If (bFollowProjectile) MVP_Tracer(Trail).FollowProjectile = True;
+		}
+	}
+	
+	Static Int CheckLiquid (TextureID Texture)
+	{
+		/*===============================================================
+		This class stores the names of the different textures used for each type of liquid.
+		These lists can be expanded as seen fit for your project, in case it has additional custom water/nukage/blood/lava/slime textures.
+		The lists already contain some names of liquid flats that don't exist in the vanilla game, for built-in mod compatibility.
+		Such as by having waterfall textures that don't exist like WFALL# and NFALL#.
+		===============================================================*/
+		Static Const String WaterTextures[] = {"FWATER1", "FWATER2", "FWATER3", "FWATER4", "WFALL1", "WFALL2", "WFALL3", "WFALL4"};
+		Static Const String NukageTextures[] = {"NUKAGE1", "NUKAGE2", "NUKAGE3", "NFALL1", "NFALL2", "NFALL3", "NFALL4"};
+		Static Const String BloodTextures[] = {"BLOOD1", "BLOOD2", "BLOOD3", "BFALL1", "BFALL2", "BFALL3", "BFALL4"};
+		Static Const String LavaTextures[] = {"LAVA1","LAVA2", "LAVA3", "LAVA4", "DBRAIN1", "DBRAIN2", "DBRAIN3", "DBRAIN4", "LFALL1", "LFALL2", "LFALL3", "LFALL4"};
+		Static Const String SlimeTextures[] = {"SLIME01","SLIME02", "SLIME03", "SLIME04", "SLIME05","SLIME06", "SLIME07", "SLIME08", "SFALL1", "SFALL2", "SFALL3", "SFALL4"};
+		
+		For (Int I = 0; I < WaterTextures.Size()-1; I++)
+			If (TexMan.CheckForTexture (WaterTextures[I]) == Texture)
+				Return LIQUID_WATER;
+		For (Int I = 0; I < NukageTextures.Size()-1; I++)
+			If (TexMan.CheckForTexture (NukageTextures[I]) == Texture)
+				Return LIQUID_NUKAGE;
+		For (Int I = 0; I < WaterTextures.Size()-1; I++)
+			If (TexMan.CheckForTexture (BloodTextures[I]) == Texture)
+				Return LIQUID_BLOOD;
+		For (Int I = 0; I < WaterTextures.Size()-1; I++)
+			If (TexMan.CheckForTexture (LavaTextures[I]) == Texture)
+				Return LIQUID_LAVA;
+		For (Int I = 0; I < WaterTextures.Size()-1; I++)
+			If (TexMan.CheckForTexture (SlimeTextures[I]) == Texture)
+				Return LIQUID_SLIME;
+		console.printf ("i have a %s",texman.getname(texture));
+		Return LIQUID_NONE;
+	}
+	
+	TextureID FindTextureFlat (Bool Behind = False, Double Range = 32)
+	{
+		Let Raycast = New ('TextureCheckRaycast');
+		TextureID NullTex;
+		NullTex.SetNull();
+		If (!Raycast) {a_log ("no raycast");Return NullTex;}
+		
+		Vector3 Direction = (Cos(Angle)*Cos(Pitch), Sin(Angle)*Cos(Pitch), -Sin(Pitch));
+		If (Behind) Direction*-1; //Reverse the vector, no, this isn't Star Trek gibberish.
+		
+		Raycast.Trace (Pos,CurSector,Direction,Range,0);
+		if (raycast.results.crossed3dwater) a_log ("swimmable floor was hit");
+		Return Raycast.Results.HitTexture;
+	}
+	
 	Int UpdateProjectileElevation (Int FaceDown, Int FaceDown2, Int FaceStraight, Int FaceUp, Int FaceUp2)
 	{
 		If (Pitch >= 70)
@@ -401,6 +574,53 @@ Class MVP_BaseProjectile : FastProjectile
 			Return FaceUp2;
 		
 		Return FaceStraight;
+	}
+	
+	Enum LiquidTypes
+	{
+		LIQUID_NONE = 0,
+		LIQUID_WATER = 1,
+		LIQUID_NUKAGE = 2,
+		LIQUID_BLOOD = 3,
+		LIQUID_LAVA = 4,
+		LIQUID_SLIME = 5
+	};
+	
+	Private Int ProjectileFlags;
+	FlagDef FollowProjectile : ProjectileFlags, 0; //The trails follow their master around, while retaining the same offset relative to the project as when they were spanwed. Remove this, it doesn't work.
+	FlagDef NoTrailLine : ProjectileFlags, 1; //The projectile uses the normal FastProjectile trail spawning code.
+	Class <Actor> TrailActor;
+	Property TrailActor : TrailActor;
+	
+	Int TrailDelay, MaxTrails, ExtraTrails;
+	Property TrailDelay : TrailDelay;
+	Property MaxTrails : MaxTrails;
+	Property ExtraTrails : ExtraTrails; //Remove this
+	
+	Double ExtraTrailSpacing; //And this, this code to fill in the gaps of normal FastProjectile trails doesn' work.
+	Property ExtraTrailSpacing : ExtraTrailSpacing;
+	
+	Double ScaleAmountX, ScaleAmountY, FadeAmount;
+	Property ScaleAmountX : ScaleAmountX;
+	Property ScaleAmountY : ScaleAmountY;
+	Property FadeAmount : FadeAmount;
+	
+	Double SpawnOffsetX, SpawnOffsetY, SpawnOffsetZ;
+	Property SpawnOffsetX : SpawnOffsetX;
+	Property SpawnOffsetY : SpawnOffsetY;
+	Property SpawnOffsetZ : SpawnOffsetZ;
+}
+
+Class TextureCheckRaycast : LineTracer
+{
+	Override ETraceStatus TraceCallback()
+	{
+		If (Results.HitType == TRACE_HitCeiling || Results.HitType == TRACE_HitFloor)
+		{console.printf ("hit a ceiling or floor");
+		console.printf ("Hit coords: %d %d %d",results.hitpos.x,results.hitpos.y,results.hitpos.z);
+			Return TRACE_STOP; //We found a sector or 3D floor plane, stop the raycast.
+		}console.printf ("traversing");
+		Return TRACE_CONTINUE; //Skip until the max range of the raycast is reached.
 	}
 }
 

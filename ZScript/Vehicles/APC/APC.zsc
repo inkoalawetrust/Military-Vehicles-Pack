@@ -1,5 +1,4 @@
 //To do:
-//Make the APCs' tag update with what turret it has, for example if it has the autocannon, the tag will be "Armored Personnel Carrier (Autocannon)" until the turret is destroyed.
 //Add the small off-center MG on top of the autocannon turret, this is a crucial test for future vehicles, and hopefully it doesn't lead to visual oddities.
 //Make the APC props, such as the gibbed, dead, and prop APC, along with the gibbed turrets (Since the turrets are flung when the APC is gibbed.).
 
