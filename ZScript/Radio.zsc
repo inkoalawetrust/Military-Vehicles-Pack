@@ -3,7 +3,6 @@
 //To do:
 //See if it would be possible to order vehicles (And even marines (!)) to go to a certain point, if they aren't already patrolling.
 //I should probably make my own walkie talkie sprites at some point, that way I can also do stuff like make the current order and command type visible on overlays that appear on the radios' screen.
-//Figure out why the fuck the radio stops working on marines half the time.
 
 Class MVP_Radio : Weapon
 {
@@ -105,7 +104,7 @@ Class MVP_Radio : Weapon
 		
 		//You are ordering a Smart Marine, so do the order by remotely calling Used() on the marine, and change CurrentMarineOrder manually.
 		If (Other Is CustomMarine)
-		{console.printf ("current order is %d",invoker.currentorder-1);
+		{console.PrintfEx (PRINT_LOW,"current order is %d",invoker.currentorder-1);
 			If (Invoker.CurrentOrder == MarineGetCurrentOrder (Other)+1) Return;
 			SetMarineOrderTo (Other,Invoker.CurrentOrder-1);
 			Other.Used (Self);
@@ -234,16 +233,16 @@ Class MVP_Radio : Weapon
 				Switch (Invoker.CurrentOrder)
 				{
 					Case ORDER_WANDER:
-						Console.Printf ("\c[Green]Current Order: Move independently");
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Move independently");
 						Break;
 					Case ORDER_FOLLOW:
-						Console.Printf ("\c[Green]Current Order: Follow player");
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Follow player");
 						Break;
 					Case ORDER_STAY:
-						Console.Printf ("\c[Green]Current Order: Stay in place");
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Stay in place");
 						Break;
 					Case ORDER_GOTOPOINT:
-						Console.Printf ("\c[Green]Current Order: Go to specified location");
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Go to specified location");
 					Default:
 						Break;
 				}
@@ -264,13 +263,13 @@ Class MVP_Radio : Weapon
 				Switch (Invoker.CurrentType)
 				{
 					Case TYPE_RAYCAST:
-						Console.Printf ("\c[Green]Current Order Method: Line of sight");
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Line of sight");
 						Break;
 					Case TYPE_RADIUS:
-						Console.Printf ("\c[Green]Current Order Method: Radius");
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Radius");
 						Break;
 					Case TYPE_RAYCASTRADIUS:
-						Console.Printf ("\c[Green]Current Order Method: Radius around line of sight");
+						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order Method: Radius around line of sight");
 						Break;
 					Default:
 						Break;

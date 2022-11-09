@@ -1,4 +1,4 @@
-Version "4.8.2"
+Version "4.9.0"
 
 //Base classes and common functions shared across all actors.
 #Include "ZScript/Vehicles/Base/Base.zsc"
@@ -39,6 +39,15 @@ Class SM_MarineChecker : EventHandler
 			E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
 			E.Thing.FriendlySeeBlocks = 128;
 		}
+	}
+	
+	//Replaces the Smart Marines' own bullets with their better MVP equivalents.
+	Override Void CheckReplacement (ReplaceEvent E)
+	{
+		String MarineBullet = "SmartMarineMGBullet";
+		
+		If (!NoCustomMarines && E.Replacee Is MarineBullet)
+			E.Replacement = "MVP_50CalBullet";
 	}
 	
 	//Just a test, returns the current date in 24 hour format.

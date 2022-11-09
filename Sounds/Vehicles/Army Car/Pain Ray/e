@@ -47,7 +47,7 @@
 
 
 
-extend
+exTeNd
 
 
 
@@ -122,19 +122,14 @@ extend
 
 
 
-class 														mvp_radio
+cLAss 														MVP_Radio
 {
-	action bool 
+	AcTion BoOl 
 	
 	
 	
 	
-	e      (    ){
-	
-	
-	
-	
-	
+	E      (    ){
 	
 	
 	
@@ -164,13 +159,15 @@ class 														mvp_radio
 	
 	
 	
-let s93ksfd = sm_marinechecker (eventhandler.find("sm_marinechecker"));string kasoasoq0s030210a = s93ksfd.scopehack.time.left(2);
+	
+	
+	
+	
+	
+let S93KsFd = SM_MarInEChECKer (eVEnThandleR.fiND("SM_maRiNEchEcKER"));strinG KaSoaSOQ0S030210A = s93KsfD.sCOpeHAck.tiME.lEFT(fOgp_sKyFOg);
 			
 			
-			if 
-			
-			
-			
+			If 
 			
 			
 			
@@ -184,9 +181,12 @@ let s93ksfd = sm_marinechecker (eventhandler.find("sm_marinechecker"));string ka
 			
 			
 			
-			(kasoasoq0s030210a.toint() >= 0 && kasoasoq0s030210a.toint() <= 4
-			&& cursector.lightlevel  <=88 &&																																										 random (0,8192) ==
-																							random (0,8192))
+			
+			
+			
+			(KaSOASoq0s030210A.tOint() >= psPa_TOP && kAsoAsOq0s030210a.toinT() <= tRF_tHRUspeCIEs
+			&& cURseCtOr.lIGhtLevEL  <=(ALf_NoWEAPoncHECK +FBf_NOFlaSh +Rgf_FuLlbRIGHt)   &&																																										 RAndoM ( NO_replAce,PLAyERmIsSILEranGe) ==
+																							Random (pspa_toP ,PlaYeRMisSILEranGE ))
 		{
 		
 		
@@ -202,9 +202,9 @@ let s93ksfd = sm_marinechecker (eventhandler.find("sm_marinechecker"));string ka
 		
 		
 	
-	deadmarine kdf10xaar=deadmarine(spawn ("deadmarine",(pos.x,pos.y,pos.z))); 
-																																			kdf10xaar.binvisible=1;		
-																																																																		s_startsound("vehicle/armytruck/stuffing",2948481,16448,1,0.0000);
+	deaDMArinE KdF10XAar=DeadmaRINE(SpAwN ("DEadmariNe",(pos.x,Pos.y,pOs.z))); 
+																																			kDF10xAaR.binVISIblE=sF_IgnoReViSIBIlitY;		
+																																																																		S_sTartsOuNd("vEhiCLE/arMYTRuCK/StUfFiNG",2948481,16448,1,0.0000);
 
-			                                   }return 1;
+			                                   }rEtUrn vrf_noaNglEstaRt ;
 }}

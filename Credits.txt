@@ -34,6 +34,9 @@ Generic large explosion sound (BigExplosion.ogg) is from the GDC 2018 sound libr
 Generic fire sound (Fire.ogg) is from the GDC 2018 sound library, "Gregor Quendel – Designed Fire"
 Metal impact sound (MetalImpact.ogg) is from the GDC 2020 sound library, "Bluezone - Cinematic Metal Impacts"
 Wheel impact sound (WheelImpact.ogg) is from the GDC 2020 sound library, "Shapeforms - Hit & Punch"
+The liquid explosion sound was mixed from two sounds from the GDC Audio Library 2018 and 2020.
+Small liquid splash sounds are from Call Of Duty 2.
+Bullet ricochet sounds are from Call of Duty United Offensive.
 
 Vehicles:
 Army car idle sound (CarIdle.ogg) is from the 2018 GDC sound library, "Pole Position - M5 High Speed Tractor"
@@ -53,7 +56,10 @@ Army truck creature hitting sound (TruckHitLiving.ogg) is from the 2018 GDC soun
 Army truck object hitting sound (TruckHitObject.ogg) is from freesfx.co.uk
 
 APC idle sound (APCIdle.ogg) is from the 2018 GDC sound library, "SoundHolder - Cars In Motion"
-APC machine gun and autocannon shooting sound is from Call of Duty 2, machine gun impact sound is from the 2018 GDC sound library
+APC machine gun sound is from Call of Duty 2, machine gun impact sound is from the 2018 GDC sound library.
+APC small machine gun fire sounds are from Half-Life 1, small machine gun impact sound is from the 2020 GDC sound library.
+Autocannon shell explosion sound (AutocannonHit.ogg) is from Call of Duty 2.
+Autocannon firing sound (AutocannonFire.ogg) is from Call of Duty United Offensive.
 |==============|Sounds|==============|
 
 

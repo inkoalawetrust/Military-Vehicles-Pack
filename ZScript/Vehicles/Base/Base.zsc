@@ -2,6 +2,7 @@
 /*Maybe also genericize the code that spawns flames on the vehicles' gib deaths, it could also allow me to put the flames in an array.
 So that I can also spawn warning zones to make the marines avoid the flaming wrecks, only removing the warning zone once every flame
 is gone.*/
+//Replace the MVP_Trail actor trails with textured particles created by A_SpawnParticleEx at some point, as textured particles have all to customization I need. And are WAY more optimized to boot.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -38,7 +39,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		//+DontBlast; Also reserved for the tank.
 		+DontMorph; //This is just here because ZDoom's morphing code is a mess internally, and having any of the vehicles morph would definitely break something.
 		+DontDrain; //How would you suck the life out of an inanimate object ?
-		+DontCorpse; //Keeps the vehicles normal collision even after they are destroyed.
+		+DontCorpse; //Keeps the vehicles' normal collision even after they are destroyed.
 		+NoBlood; //https://www.youtube.com/watch?v=K63AVSCPcSI
 		+NoPain;
 		+FloorClip;
@@ -65,7 +66,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		DamageFactor "MarineGrenade", 0.7;
 		DamageFactor "MarineRifle", 0.7;
 		//Vehicle damage factors
-		DamageFactor "Autocannon", 1.1;
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "RifleBullet", 0.8;
 	}
 	
 	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
@@ -85,6 +87,8 @@ Class MVP_BaseVehicle : Actor Abstract
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
 				Turret.Angle = Angle;
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
@@ -167,6 +171,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	Override Void Tick()
 	{
+		Name FearToken = "SM_IAmTheDanger";
 		Super.Tick();
 		
 		If (!User_NoHeadlights)
@@ -176,6 +181,10 @@ Class MVP_BaseVehicle : Actor Abstract
 			TurnHeadlightsOn();
 		Else
 			TurnHeadlightsOff();
+		
+		If (bScareMarines) SetInventory (FearToken,1);
+		Else TakeInventory (FearToken,INT.MAX);
+			
 	}
 	
 	Override Bool CanCollideWith (Actor Other, Bool Passive)
@@ -189,14 +198,16 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
+		Name FearToken = "SM_IAmTheDanger";
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		If (Turret) //When dead, kill the turret the same way as the vehicle died.
 		{
 			If (Health < GetGibHealth()) //Same check Die() uses internally to check if an actor was gibbed. 
-				{Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth())+1, MeansOfDeath, DMG_FORCED);a_log ("gib");}
+				Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth())+1, MeansOfDeath, DMG_FORCED);
 			Else
 				Turret.DamageMobj (Inflictor, Source, Turret.Health, MeansOfDeath, DMG_FORCED);
 		}
+		TakeInventory (FearToken,INT.MAX);
 		bShootable = bNotAutoaimed = True; //Destroyed vehicles stay shootable and non-autoaimable unless specified otherwise.
 		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
 		HeadlightsOn = False;
@@ -229,6 +240,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
 	Const DEFAULT_HEARDISTANCE = 3072; //Exactly what it says, the default hear distance the vehicles' and turrets' A_LookEx calls use.
+	Const DEFAULT_SEEDISTANCE = 8192;
 	
 	//AI variables
 	Actor NearestEnemy; //The enemy closest to the vehicle, if any.
@@ -252,11 +264,13 @@ Class MVP_BaseVehicle : Actor Abstract
 	Private Int VehicleFlags;
 	FlagDef Transport : VehicleFlags, 0; //The vehicle is marked as being able to transport soldiers.
 	FlagDef NoRadio : VehicleFlags, 1; //The vehicle ignores orders given to it by the radio item.
+	FlagDef ScareMarines : VehicleFlags, 2; //The vehicle can automatically scare marines away, regardless of its' size or health.
 	Class<MVP_BaseTurret> VehicleTurret; //The pointer to the vehicles' turret, if any.
 	Property VehicleTurret : VehicleTurret;
 	
 	//Generic user variables
 	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
+	//Bool User_NoTargetPrediction; //The vehicle will not calculate it's targets' movement and lead its' shots, this is only available to certain vehicles as not all of them have projectile attacks.
 	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
 	Int User_ChaseTime; //How much time the vehicle spends looking for it's out-of-sight target before giving up.
 	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
@@ -298,9 +312,10 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
-		+NoFear;
+		+NoFear; //Can't really move to run away.
 		+DontThrust;
 		+StandStill;
+		+LookAllAround;
 		+DontFollowPlayers;
 		+NoSpriteShadow;
 		+MVP_BaseVehicle.NoRadio;
@@ -312,6 +327,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Private Int TurretFlags;
 	FlagDef FallOnDeath : TurretFlags, 0; //Turret stops being attached to its' vehicle after dying.
+	FlagDef DontStayAround : TurretFlags, 1; //Used to make the turret not make the vehicle stop to sit around and let the turret shoot, even if the latter has a target.
+	FlagDef NoTargetPrediction : TurretFlags, 2; //The turret will not calculate its' targets' movement and lead its' shots.
 	
 	Double MaxPitch, MinPitch;
 	Property MaximumPitch : MaxPitch;
@@ -325,6 +342,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Override Void PostBeginPlay ()
 	{
 		Actor.PostBeginPlay ();
+		UserVariableDefaults();
+		SpawnVehicleTurret();
 		If (!bFriendly) Species = 'MilitaryHostile';
 	}
 	
@@ -358,9 +377,9 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
-		If (Master){
-			DeathAngleOffset = DeltaAngle (Angle,Master.Angle);CONSOLE.PRINTF ("the offset relative to the vehicle is %d",deathangleoffset);}
-		Actor.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		If (Master)
+			DeathAngleOffset = DeltaAngle (Angle,Master.Angle);
+		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		bShootable = bNotAutoaimed = True;
 		If (bFallOnDeath) bNoSpriteShadow = False;
 		LastEnemyDelay = 0;
@@ -368,19 +387,21 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Override Void OnDestroy()
 	{
-		Actor.OnDestroy();
+		Super.OnDestroy();
 	}
 }
 
 //The code that actually draws the line between the projectiles' current and previous position was written by Boondorl, since my own version and problems with pitch and so on. 
 //It's a FastProjectile with custom trail spawning code, so don't bother using FastProjectile's own trail system, as this one works better for truly fast projectiles.
-//Add functions for generic per-texture liquid splashes for solid and swimmable liquid floors.
 Class MVP_BaseProjectile : FastProjectile
 {
 	Default
 	{
-		MVP_BaseProjectile.ExtraTrailSpacing 1;
+		MissileHeight 8;
+		MVP_BaseProjectile.TrailLineSpacing 2;
+		Projectile;
 	}
+	
 	Override Void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
@@ -391,29 +412,9 @@ Class MVP_BaseProjectile : FastProjectile
 	Override Void Tick ()
 	{
 		Vector3 OldPos = Pos;
-		Int OldWaterLevel = WaterLevel;
 		Super.Tick();
 		
 		If (!bMissile || IsFrozen()) Return;
-		
-		//Used to make the projectile spawn splashes every time it goes underwater on swimmable floors and the likes,
-		//should also work for projectiles going through multiple swimmable volumes with air gaps between them.
-		If (WaterLevel > 0 && OldWaterLevel == 0)
-		{
-			Vector3 TempPos = Pos;
-			SetXYZ (OldPos);
-			a_log ("it even works underwater !");
-			If (CheckLiquid(FindTextureFlat()) == LIQUID_WATER) a_log ("i have hit some water, splish splash");
-			SetXYZ (TempPos);
-			//Spawn liquid splash here. Also, add a HitLiquid virtual, that is called when this happens, and returns a pointer to the create splash, and maybe to the texture that was hit too ?
-		}
-		Else If (WaterLevel == 0 && OldWaterLevel > 0)
-		{
-			//Add a LineTracer call here for when the projectile gets out of the water, to check the liquid flat behind it.
-			a_log ("landlubber");
-			If (CheckLiquid(FindTextureFlat(True)) == LIQUID_WATER) a_log ("i have come out of the water");
-			//Spawn another liquid splash here.
-		}
 		
 		If (TrailDelay)
 		{
@@ -432,17 +433,36 @@ Class MVP_BaseProjectile : FastProjectile
 		If (Distance <= 1) Return;
 		Path /= Distance;
 		
-		For( Double I = 1; I < Distance; I += 1 )
+		Double CurScaleX = ScaleAmountX;
+		Double CurScaleY = ScaleAmountY;
+		Double CurAlpha = FadeAmount;
+		
+		For( Double I = InitialTrailsSkipped; I < Distance; I += TrailLineSpacing )
 		{
 			If (MaxTrails != 0 && MaxTrails <= I) Break; //Too many trail actors.
+			
 			Let Trail = Spawn(TrailActor,level.Vec3Offset(pos, Path*i));
-			If (Trail) TrailSpawn (Trail); //Return spawned trail.
+			If (Trail)
+			{
+				TrailSpawn (Trail); //Return spawned trail.
+				//If it's time to begin scaling and fading the trail.
+				If (I >= TrailFadeAndScaleStart)
+				{
+					Trail.Scale.X += CurScaleX;
+					Trail.Scale.Y += CurScaleY;
+					Trail.Alpha += CurAlpha;
+					CurScaleX += ScaleAmountX;
+					CurScaleY += ScaleAmountY;
+					CurAlpha += FadeAmount;
+				}
+			}
 		}
 	}
 	
 	//Mostly ripped from the native FastProjectile, with some changes and additions.
 	Override Void Effect()
 	{
+		If (!bNoTrailLine) Return;
 		Class<Actor> Trail = TrailActor;
 		Actor Act;
 		If (Trail != Null)
@@ -468,26 +488,6 @@ Class MVP_BaseProjectile : FastProjectile
 				//Act.Angle = Angle; //These are handled by TrailSpawn().
 				//Act.Pitch = Pitch;
 			}
-			
-			//Remove this in the future, it's broken, and I can't use it to fill in the gaps for trails of really fast projectiles.
-			If (ExtraTrails)
-			{
-				Int Spacing = ExtraTrailSpacing;
-				For (Int I = 0; I < ExtraTrails; I++)
-				{
-					Act = Spawn (Trail, (Pos.XY, HitZ), ALLOW_REPLACE);
-					If (Act != Null)
-					{
-						TrailSpawn (Act);
-						Act.Warp (Act,Spacing);
-						If (bGetOwner && Target != Null)
-							Act.Target = Target;
-						Else
-							Act.Target = Self;
-					}
-					Spacing += Spacing;
-				}
-			}
 		}
 	}
 	
@@ -502,62 +502,90 @@ Class MVP_BaseProjectile : FastProjectile
 		//Pass trail properties. Only really works for the dedicated trail class in particular, so it only runs if the trail is MVP_Tracer or a child class.
 		If (Trail Is "MVP_Tracer")
 		{
-			MVP_Tracer(Trail).ScaleAmountX = ScaleAmountX;
-			MVP_Tracer(Trail).ScaleAmountY = ScaleAmountY;
 			MVP_Tracer(Trail).SpawnOffsetX = SpawnOffsetX;
 			MVP_Tracer(Trail).SpawnOffsetY = SpawnOffsetY;
 			MVP_Tracer(Trail).SpawnOffsetZ = SpawnOffsetZ;
-			MVP_Tracer(Trail).FadeAmount = FadeAmount;
-			If (bFollowProjectile) MVP_Tracer(Trail).FollowProjectile = True;
 		}
 	}
 	
-	Static Int CheckLiquid (TextureID Texture)
+	//Allows to quickly set up a spawned liquid splash, and then returns a pointer the splash to allow for further modifications, like making it visually larger or calling A_QuakeEx from it.
+	Actor SpawnLiquidSplash (Int LiquidType = LIQUID_WATER, Sound SplashSound = "SFX/LiquidExplosion", Double Volume = 1.0, Double Attenuation = 0.5,
+	Int ExplosionDamage = 0, Double ExplosionRadius = 0, Double FullDamageRadius = 0, Name DamageType = "", Bool DontHarmSource = False)
 	{
-		/*===============================================================
-		This class stores the names of the different textures used for each type of liquid.
-		These lists can be expanded as seen fit for your project, in case it has additional custom water/nukage/blood/lava/slime textures.
-		The lists already contain some names of liquid flats that don't exist in the vanilla game, for built-in mod compatibility.
-		Such as by having waterfall textures that don't exist like WFALL# and NFALL#.
-		===============================================================*/
-		Static Const String WaterTextures[] = {"FWATER1", "FWATER2", "FWATER3", "FWATER4", "WFALL1", "WFALL2", "WFALL3", "WFALL4"};
-		Static Const String NukageTextures[] = {"NUKAGE1", "NUKAGE2", "NUKAGE3", "NFALL1", "NFALL2", "NFALL3", "NFALL4"};
-		Static Const String BloodTextures[] = {"BLOOD1", "BLOOD2", "BLOOD3", "BFALL1", "BFALL2", "BFALL3", "BFALL4"};
-		Static Const String LavaTextures[] = {"LAVA1","LAVA2", "LAVA3", "LAVA4", "DBRAIN1", "DBRAIN2", "DBRAIN3", "DBRAIN4", "LFALL1", "LFALL2", "LFALL3", "LFALL4"};
-		Static Const String SlimeTextures[] = {"SLIME01","SLIME02", "SLIME03", "SLIME04", "SLIME05","SLIME06", "SLIME07", "SLIME08", "SFALL1", "SFALL2", "SFALL3", "SFALL4"};
+		Actor Splash = Spawn ("MVP_LiquidSplash",Pos);
 		
-		For (Int I = 0; I < WaterTextures.Size()-1; I++)
-			If (TexMan.CheckForTexture (WaterTextures[I]) == Texture)
-				Return LIQUID_WATER;
-		For (Int I = 0; I < NukageTextures.Size()-1; I++)
-			If (TexMan.CheckForTexture (NukageTextures[I]) == Texture)
-				Return LIQUID_NUKAGE;
-		For (Int I = 0; I < WaterTextures.Size()-1; I++)
-			If (TexMan.CheckForTexture (BloodTextures[I]) == Texture)
-				Return LIQUID_BLOOD;
-		For (Int I = 0; I < WaterTextures.Size()-1; I++)
-			If (TexMan.CheckForTexture (LavaTextures[I]) == Texture)
-				Return LIQUID_LAVA;
-		For (Int I = 0; I < WaterTextures.Size()-1; I++)
-			If (TexMan.CheckForTexture (SlimeTextures[I]) == Texture)
-				Return LIQUID_SLIME;
-		console.printf ("i have a %s",texman.getname(texture));
-		Return LIQUID_NONE;
+		If (Splash)
+		{
+			//Set the shooter of the projectile for DontHarmSource to work.
+			If (bMissile)
+				Splash.Target = Target; //Projectiles store their shooter in the target point, so transfer the shooter to the splash.
+			Else
+				Splash.Target = Self; //Otherwise set the shooter to the actor calling the function, if it's not a projectile somehow.
+			
+			MVP_LiquidSplash(Splash).LiquidType = LiquidType;
+			MVP_LiquidSplash(Splash).SplashSound = SplashSound;
+			MVP_LiquidSplash(Splash).Volume = Volume;
+			MVP_LiquidSplash(Splash).Attenuation = Attenuation;
+			MVP_LiquidSplash(Splash).RadiusDamage = ExplosionDamage;
+			MVP_LiquidSplash(Splash).MaxTargetRange = ExplosionRadius;
+			MVP_LiquidSplash(Splash).MeleeRange = FullDamageRadius;
+			MVP_LiquidSplash(Splash).ExplosionDamageType = DamageType;
+			MVP_LiquidSplash(Splash).DontHarmSource = DontHarmSource;
+			Return Splash;
+		}
+		
+		Return Null;
 	}
 	
-	TextureID FindTextureFlat (Bool Behind = False, Double Range = 32)
+	Bool DeflectProjectile (Actor Victim, Int DeflectChance, Double DamageReductionFactor, Double SlowDownFactor = 0,
+	Vector2 RandomAngle = (0,0), Vector2 RandomPitch = (0,0), Double Volume = 1, Double Attenuation = 0.9)
 	{
-		Let Raycast = New ('TextureCheckRaycast');
+		If (Random (0,255) < DeflectChance) Return False; //Fission mailed.
+		
+		Int Damage = GetMissileDamage(7,1); //Get your damage, be it a static number or a damage function.
+		Victim.DamageMobj (Self,Target,Damage*DamageReductionFactor,DamageType); //Harm the caller even when deflected.
+		Angle -= 180; //Turn around.
+		Vel *= -1; //Opposite day today
+		Speed *= SlowDownFactor; //Slow down by a set amount. Can just be randomized in the parameters instead.
+		//Randomize the direction you'll fly to.
+		Angle += FRandom (RandomAngle.X,RandomAngle.Y);
+		Pitch += FRandom (RandomPitch.X,RandomPitch.Y);
+		Vel3DFromAngle (Speed,Angle,Pitch);
+		
+		//Spark effect.
 		TextureID NullTex;
-		NullTex.SetNull();
-		If (!Raycast) {a_log ("no raycast");Return NullTex;}
+		For (Int I = 0; I < 24; I++)
+		{
+			A_SpawnParticleEx (
+			"yellow",
+			NullTex,
+			STYLE_Add,
+			lifetime:23,
+			size:3,
+			xoff:FRandom (6,-6),
+			yoff:FRandom (6,-6),
+			zoff:FRandom (6,-6),
+			velx:FRandom (1,-1),
+			vely:FRandom (1,-1),
+			velz:FRandom (1,3),
+			accelz: FRandom (-0.1,-0.25)
+			);
+		}
+		Victim.A_StartSound (BounceSound,flags:CHANF_OVERLAP,Volume,Attenuation); //Ricochet sound, uses the BounceSound property, naturally.
+		DontCollide = Victim;
 		
-		Vector3 Direction = (Cos(Angle)*Cos(Pitch), Sin(Angle)*Cos(Pitch), -Sin(Pitch));
-		If (Behind) Direction*-1; //Reverse the vector, no, this isn't Star Trek gibberish.
-		
-		Raycast.Trace (Pos,CurSector,Direction,Range,0);
-		if (raycast.results.crossed3dwater) a_log ("swimmable floor was hit");
-		Return Raycast.Results.HitTexture;
+		Return True;
+	}
+	
+	Bool HasGodMode (Actor Other)
+	{
+		//Check if it's a player in god mode.
+		Return (Other.Player && Other.Player.Cheats & (CF_GODMODE | CF_GODMODE2));
+	}
+	
+	Bool IsIndestructible (Actor Other)
+	{
+		Return (Other.bInvulnerable || Other.bNoDamage);
 	}
 	
 	Int UpdateProjectileElevation (Int FaceDown, Int FaceDown2, Int FaceStraight, Int FaceUp, Int FaceUp2)
@@ -586,19 +614,22 @@ Class MVP_BaseProjectile : FastProjectile
 		LIQUID_SLIME = 5
 	};
 	
+	Actor DontCollide; //Stores an actor that will be ignored by SpecialMissileHit, this is here so deflecting projectiles to deflect dozens of time when bouncing off.
+	
+	Mixin MVP_UniversalFunctions;
 	Private Int ProjectileFlags;
-	FlagDef FollowProjectile : ProjectileFlags, 0; //The trails follow their master around, while retaining the same offset relative to the project as when they were spanwed. Remove this, it doesn't work.
-	FlagDef NoTrailLine : ProjectileFlags, 1; //The projectile uses the normal FastProjectile trail spawning code.
+	FlagDef NoTrailLine : ProjectileFlags, 0; //The projectile uses the normal FastProjectile trail spawning code.
 	Class <Actor> TrailActor;
 	Property TrailActor : TrailActor;
 	
-	Int TrailDelay, MaxTrails, ExtraTrails;
+	Int TrailDelay, MaxTrails, InitialTrailsSkipped, TrailFadeAndScaleStart;
 	Property TrailDelay : TrailDelay;
 	Property MaxTrails : MaxTrails;
-	Property ExtraTrails : ExtraTrails; //Remove this
+	Property InitialTrailsSkipped : InitialTrailsSkipped;
+	Property TrailFadeAndScaleStart : TrailFadeAndScaleStart;
 	
-	Double ExtraTrailSpacing; //And this, this code to fill in the gaps of normal FastProjectile trails doesn' work.
-	Property ExtraTrailSpacing : ExtraTrailSpacing;
+	Double TrailLineSpacing;
+	Property TrailLineSpacing : TrailLineSpacing;
 	
 	Double ScaleAmountX, ScaleAmountY, FadeAmount;
 	Property ScaleAmountX : ScaleAmountX;
@@ -609,19 +640,6 @@ Class MVP_BaseProjectile : FastProjectile
 	Property SpawnOffsetX : SpawnOffsetX;
 	Property SpawnOffsetY : SpawnOffsetY;
 	Property SpawnOffsetZ : SpawnOffsetZ;
-}
-
-Class TextureCheckRaycast : LineTracer
-{
-	Override ETraceStatus TraceCallback()
-	{
-		If (Results.HitType == TRACE_HitCeiling || Results.HitType == TRACE_HitFloor)
-		{console.printf ("hit a ceiling or floor");
-		console.printf ("Hit coords: %d %d %d",results.hitpos.x,results.hitpos.y,results.hitpos.z);
-			Return TRACE_STOP; //We found a sector or 3D floor plane, stop the raycast.
-		}console.printf ("traversing");
-		Return TRACE_CONTINUE; //Skip until the max range of the raycast is reached.
-	}
 }
 
 Class MVP_Headlight : DynamicLight

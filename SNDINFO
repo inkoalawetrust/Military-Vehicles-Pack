@@ -2,16 +2,53 @@
 
 SFX/BigExplosion "Sounds/SFX/BigExplosion.ogg"
 SFX/Explosion "Sounds/SFX/Explosion.ogg" //Maybe get more explosion sounds, and turn SFX/Explosion into a random sound ?
+SFX/LiquidExplosion "Sounds/SFX/WaterBoom.ogg"
+SFX/WaterImpact1 "Sounds/SFX/MGImpactWater1.ogg"
+SFX/WaterImpact2 "Sounds/SFX/MGImpactWater2.ogg"
+SFX/WaterImpact3 "Sounds/SFX/MGImpactWater3.ogg"
+SFX/WaterImpact4 "Sounds/SFX/MGImpactWater4.ogg"
 SFX/Fire "Sounds/SFX/Fire.ogg"
 SFX/MetalHit "Sounds/SFX/MetalImpact.ogg"
 SFX/WheelHit "Sounds/SFX/WheelImpact.ogg"
+SFX/BulletRicochet1 "Sounds/SFX/BulletRicochet1.ogg"
+SFX/BulletRicochet2 "Sounds/SFX/BulletRicochet2.ogg"
+SFX/BulletRicochet3 "Sounds/SFX/BulletRicochet3.ogg"
+SFX/BulletRicochet4 "Sounds/SFX/BulletRicochet4.ogg"
+//SFX/BulletRicochet5 "Sounds/SFX/BulletRicochet5.ogg"
 Weapon/RadioCall "Sounds/SFX/RadioCall.ogg"
+
+$Random SFX/WaterHit
+{
+	SFX/WaterImpact1
+	SFX/WaterImpact2
+	SFX/WaterImpact3
+	SFX/WaterImpact4
+}
+
+$Random SFX/BulletRicochet
+{
+	SFX/BulletRicochet1
+	SFX/BulletRicochet2
+	SFX/BulletRicochet3
+	SFX/BulletRicochet4
+	//SFX/BulletRicochet5
+}
 
 $Limit SFX/BigExplosion 0
 $Limit SFX/Explosion 0
 $Limit SFX/Fire 1
 $Limit SFX/MetalHit 0
 $Limit SFX/WheelHit 0
+$Limit SFX/LiquidExplosion 0
+$Limit SFX/WaterImpact1 0
+$Limit SFX/WaterImpact2 0
+$Limit SFX/WaterImpact3 0
+$Limit SFX/WaterImpact4 0
+$Limit SFX/BulletRicochet1 0
+$Limit SFX/BulletRicochet2 0
+$Limit SFX/BulletRicochet3 0
+$Limit SFX/BulletRicochet4 0
+//$Limit BulletRicochet5 0
 $Limit Weapon/RadioCall 0
 
 //=====|Vehicle specific sound effects|=====\\
@@ -58,12 +95,23 @@ $Limit Weapon/RadioCall 0
 	Vehicle/APC/Idle "Sounds/Vehicles/APC/APCIdle.ogg"
 	Vehicle/APC/Moving "Sounds/Vehicles/APC/APCMove.ogg"
 	Vehicle/APC/MGFire "Sounds/Vehicles/APC/MGFire.ogg"
+	Vehicle/APC/SmallMGFire1 "Sounds/Vehicles/APC/MGSmallFire1.ogg"
+	Vehicle/APC/SmallMGFire2 "Sounds/Vehicles/APC/MGSmallFire2.ogg"
+	$Random Vehicle/APC/SmallMGFire
+	{
+		Vehicle/APC/SmallMGFire1
+		Vehicle/APC/SmallMGFire2
+	}
 	Vehicle/APC/MGImpact "Sounds/Vehicles/APC/MGImpact.ogg"
-	Vehicle/APC/AutocannonFire "Sounds/Vehicles/APC/CannonFire.ogg"
+	Vehicle/APC/SmallMGImpact "Sounds/Vehicles/APC/MGSmallImpact.ogg"
+	Vehicle/APC/AutocannonFire "Sounds/Vehicles/APC/AutocannonFire.ogg"
 	Vehicle/APC/TurretTurn "Sounds/Vehicles/APC/Whirring.ogg"
+	Vehicle/APC/AutocannonHit "Sounds/Vehicles/APC/AutocannonHit.ogg"
 	$Limit Vehicle/APC/Idle 0
 	$Limit Vehicle/APC/Moving 0
 	$Limit Vehicle/APC/MGFire 0
 	$Limit Vehicle/APC/MGImpact 0
+	$Limit Vehicle/APC/SmallMGImpact 0
 	$Limit Vehicle/APC/TurretTurn 1 256
 	$Limit Vehicle/APC/AutocannonFire 0
+	$Limit Vehicle/APC/AutocannonHit 0

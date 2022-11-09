@@ -13,6 +13,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Tag "Army Car";
 		MVP_BaseVehicle.VehicleTurret "MVP_PainRay";
 		DamageFactor "MarineGrenade", 1.25;
+		DamageFactor "RifleBullet", 0.9;
 		//+MissileEvenMore
 		+MVP_BaseVehicle.Transport;
 	}
@@ -70,7 +71,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		If (!User_NoMarines && DeployTimer <= 0 && CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
 		{
 			SetStateLabel ("DeployMarines");
-			Return True; //Tell MVP_CHASE to end.
+			Return True; //Tell MVP_Chase to end.
 		}
 		
 		Return False;
@@ -176,7 +177,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
 				bStandStill = True; //So the vehicle isn't alerted by friendly players firing their weapons.
-				If (WaitTimer <= 0) A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
+				If (WaitTimer <= 0) A_LookEx (0,0,DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 				bStandStill = False;
 				
 				If (!IsPatrolling() && Target && WaitTimer <= 0)

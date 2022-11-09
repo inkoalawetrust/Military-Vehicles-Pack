@@ -230,7 +230,7 @@ PointLight 50CalTracerLight
 {
 	Color 1.00 0.30 0.00
 	Size 48
-	Offset -256 0 0
+	Offset -64 0 0
 	Attenuate 1
 }
 
@@ -239,6 +239,23 @@ PointLight 50CalFiringLight
 	Color 1.00 0.30 0.00
 	Size 192
 	Offset 0 32 0
+	Attenuate 1
+}
+
+//7.62mm round lighting
+PointLight RifleTracerLight
+{
+	Color 1.00 0.30 0.00
+	Size 32
+	Offset -32 0 0
+	Attenuate 1
+}
+
+PointLight RifleFiringLight
+{
+	Color 1.00 0.30 0.00
+	Size 96
+	Offset 0 8 0
 	Attenuate 1
 }
 

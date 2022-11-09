@@ -1,5 +1,4 @@
 //To do:
-//Add the small off-center MG on top of the autocannon turret, this is a crucial test for future vehicles, and hopefully it doesn't lead to visual oddities.
 //Make the APC props, such as the gibbed, dead, and prop APC, along with the gibbed turrets (Since the turrets are flung when the APC is gibbed.).
 
 Class MVP_APC : MVP_BaseVehicle
@@ -33,7 +32,8 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "MarineGrenade", 0.6;
 		DamageFactor "MarineRifle", 0.7;
 		//Vehicle damage factors
-		DamageFactor "Autocannon", 0.85;
+		DamageFactor "Autocannon", 0.7;
+		DamageFactor "RifleBullet", 0.75;
 		
 		+MVP_BaseVehicle.Transport;
 	}
@@ -63,10 +63,13 @@ Class MVP_APC : MVP_BaseVehicle
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
 				Turret.Angle = Angle;
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
+				If (User_NoTargetPrediction) Turret.bNoTargetPrediction = True;
 				SetTag ("Armored Personnel Carrier (Machine Gun)");
 			}
 		}
@@ -76,10 +79,14 @@ Class MVP_APC : MVP_BaseVehicle
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
 				Turret.Angle = Angle;
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
+				If (User_FocusFire) MVP_APCAutocannon(Turret).FocusFire = True;
+				If (User_NoTargetPrediction) Turret.bNoTargetPrediction = True;
 				SetTag ("Armored Personnel Carrier (Autocannon)");
 			}
 		}
@@ -121,6 +128,8 @@ Class MVP_APC : MVP_BaseVehicle
 	Int User_MarineAmount;
 	String User_Turret;
 	Int User_CrushMode;
+	Bool User_NoTargetPrediction; //The vehicle will not calculate it's targets' movement and lead its' shots.
+	Bool User_FocusFire; //Makes the small MG on the autocannon turret not actively try to not target the same thing as the autocannon.
 	
 	Enum CorpseCrushModes
 	{
@@ -153,14 +162,14 @@ Class MVP_APC : MVP_BaseVehicle
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
 				
 				//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
-				If (Turret && Turret.Health > Turret.SpawnHealth()/4 && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)))
+				If (Turret && Turret.Health > Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)))
 				{
 					If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
-					{a_log ("time to take a sit");
+					{
 						//Then check if you are far enough from your nearest enemy or target.
 						If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
 						|| (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
-						{a_log ("it's sittin' time !");
+						{
 							If (Turret.CheckSight (Turret.Target))
 							{
 								A_StopSound (CHAN_MOVING);
@@ -249,7 +258,7 @@ Class MVP_APC : MVP_BaseVehicle
 				
 				//Spawn a random amount of gibbed marines.
 				If (Random (0,255) < 255/2 && User_MarineAmount)
-				{a_log ("you fucked up my marines");
+				{
 					Int DeadMarines = Random (0,User_MarineAmount);
 					Actor Marine;
 					For (Int I; I < DeadMarines; I++)

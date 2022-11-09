@@ -9,7 +9,7 @@ Extend Class MVP_BaseTurret
 			Return FaceDown;
 		Else If (Pitch < 6 && Pitch >= -15)
 			Return FaceStraight;
-		Else If (Pitch < -15 && Pitch >= -50)
+		Else If (Pitch < -14 && Pitch >= -50)
 			Return FaceUp;
 		Else If (Pitch <= -50)
 			Return FaceUp2;
@@ -58,6 +58,13 @@ Extend Class MVP_BaseTurret
 		Vector3 OldVel;
 		If (!Projectile || !Target) Return;
 		
+		//No movement prediction, so just shoot normally and move on.
+		If (bNoTargetPrediction)
+		{
+			NormalProjectileFire (Projectile,SpreadHorz,SpreadVert);
+			Return;
+		}
+		
 		//Target has no velocity for VelIntercept to work with. This is almost always the case for normal NPCs, which move using small teleport steps, instead of actual movement.
 		If ((Target.Vel.X == 0 && Target.Vel.Y == 0 && Target.Vel.Z == 0))
 		{
@@ -69,31 +76,165 @@ Extend Class MVP_BaseTurret
 				Target.Vel = Level.Vec3Diff (LastEnemyPosition,CurrentEnemyPosition);
 			
 			If ((Target.Vel.X == 0 && Target.Vel.Y == 0 && Target.Vel.Z == 0)) //Still no velocity
-			{a_log ("no velocity still, falling back to normal aiming");
-				Projectile.A_FaceMovementDirection();
-				Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
-				Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
-				Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
-				Console.Printf ("The pitch is %f",Pitch);
-				Target.Vel = OldVel;
-				Return; //Just add in the projectile spread and finish.
+			{
+				NormalProjectileFire (Projectile,SpreadHorz,SpreadVert);
+				Target.Vel = OldVel; //Revent velocity.
+				Return;
 			}
 			Projectile.VelIntercept (Target);
 			Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
 			Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
 			Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
-			Console.Printf ("The pitch is %f",Pitch);
+			//Console.Printf ("The pitch is %f",Pitch);
 			Target.Vel = OldVel;
 		}
 		//Target has velocity, like if it's a player or a custom actor with velocity-based movement.
 		Else
 		{
-			A_Log ("Target has velocity");
+			//A_Log ("Target has velocity");
 			Projectile.VelIntercept (Target);
 			Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
 			Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
 			Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
-			Console.Printf ("The pitch is %f",Pitch);
+			//Console.Printf ("The pitch is %f",Pitch);
 		}
+	}
+	
+	//Adds projectile spread and adjusts the projectiles' velocity accordingly. Basically just normal shooting with no prediction.
+	Void NormalProjectileFire (Actor Projectile, Vector2 SpreadHorz, Vector2 SpreadVert)
+	{
+		//a_log ("no velocity still, falling back to normal aiming");
+		Projectile.A_FaceMovementDirection();
+		Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
+		Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
+		Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
+		//Console.Printf ("The pitch is %f",Pitch);
+	}
+	
+	//The generic line of fire function used by turrets to performan additional checks.
+	//HeightOffset is, well, the offset from the callers' Z position at which the cast will be shot.
+	//PropHealthThreshold is the maximum amount of health that a destructible blocking decoration can have and still return true.
+	//IgnoreActors makes the raycast ignore powerful enough or indestructible props in the way. Nor check for still-solid corpses, e.g vehicle wrecks.
+	//IgnoreLinedefs makes the raycast ignore projectile blocking lines.
+	Bool TurretLOFCheck (Double HeightOffset = 16, Int PropHealthThreshold = 400, Bool IgnoreActors = False, Bool IgnoreLinedefs = False)
+	{
+		Let Check = New ("MVP_TurretRaycast");
+		
+		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch)); //Fire the ray at wherever the actor is facing.
+		
+		Check.Shooter = Self;
+		Check.IgnoreActors = IgnoreActors;
+		Check.IgnoreLinedefs = IgnoreLinedefs;
+		Check.PropHealthThreshold = PropHealthThreshold;
+		Check.Trace ((Pos.X,Pos.Y,Pos.Z+HeightOffset),CurSector,Direction,MaxTargetRange,0);
+		
+		If (Check.BadLOF)
+		{
+			bDontStayAround = True;
+			Check.Destroy();
+			Return False;
+		}
+		
+		bDontStayAround = False;
+		Check.Destroy();
+		Return True;
+	}
+	
+	//This function can be used by turrets to make them able to pick different targets from their master, instead of chasing or firing at the same target.
+	//The Avoid parameter specifies the actor to avoid targeting, Origin specifies the actor the search starts around, and CheckRange is the search range.
+	/*MinAlternateTargetRange specifies how far the new target must be from the actor that must be avoided. A value of 0 or less makes it just randomly
+	pick one of the target candidates. If there is no other target that is further than MinAlternateTargetRange from the actor to avoid, then it picks the
+	last target candidate left in the array.*/
+	Actor PickDifferentTarget (Actor Avoid, Actor Origin, Double CheckRange, Double MinAlternateTargetRange = -1)
+	{
+		If (!Avoid || !CheckRange) Return Null;
+		
+		Array <Actor> TargetList;
+		
+		BlockThingsIterator EnemyFinder = BlockThingsIterator.Create (Origin,CheckRange);
+		
+		CheckRange *= CheckRange; //Do the multiplication for Distance3DSquared only once.
+		
+		While (EnemyFinder.Next())
+		{
+			Actor Mobj = EnemyFinder.Thing;
+			
+			If (!Mobj || Mobj == Avoid) {a_log ("this is who i should avoid");Continue;} //AVOID THIS TARGET.
+			
+			If (Mobj.bDormant || !Mobj.bIsMonster) Continue;//{a_log ("not a valid monster"); Continue;} //Don't attack dormant or non-monster actors.
+			
+			If (!CanBeTargeted(Mobj)) {a_log ("cant target this");Continue;} //Can't be targeted. (Duh)
+			
+			If (Origin.Distance3DSquared(Mobj) > CheckRange) {a_log ("too far away");Continue;} //Too out of reach.
+			
+			If (!IsHostile (Mobj)) {a_log ("not hostile");Continue;} //Actor isn't hostile.
+			
+			If (!CheckSight(Mobj)) {a_log ("not visible");Continue;} //Actor is not visible.
+			
+			TargetList.Push(Mobj); //Actor passed the checks, put it on the list of candidates.
+		}
+		
+		//If no target was found at all.
+		If (!TargetList.Size()) {a_log ("we aint found shit");Return Null;}
+		
+		//The minimum distance the new target must have from the actor to avoid is zero, so just pick a random potential target that was found.
+		If (MinAlternateTargetRange <= 0) {a_log ("just pick a different target at random");Return TargetList[Random(0,TargetList.Size()-1)];}
+		
+		For (Int I = 0; I < TargetList.Size(); I++)
+		{
+			If (I == TargetList.Size()-1) {a_log ("no distant enough target");Return TargetList[I];} //No target that were further than the actor to avoid, so return the last candidate left.
+			
+			If (TargetList[I].Distance3DSquared(Avoid) > MinAlternateTargetRange) {a_log ("too close to the actor im avoiding");Return TargetList[I];} //Candidate is too close to the actor to avoid.
+			Else {a_log ("found alternate target");} //Found a potential target that is far enough away from the actor that must be avoided.
+		}
+		
+		Return Null;
+	}
+}
+
+//This LOF check code should probably be genericized, with stuff like a customizable amount of health over which a prop is considered too strong.
+Class MVP_TurretRaycast : LineTracer
+{
+	Bool BadLOF; //If true, there is something standing in the turrets' line of fire.
+	Bool IgnoreActors, IgnoreLinedefs; //Tells the raycast what checks to perform.
+	Int PropHealthThreshold; //The threshold over which a non-indestructible solid prop is considered too strong for the turret to bother shooting through.
+	Actor Shooter; //The actor firing the raycast.
+	Override ETraceStatus TraceCallback ()
+	{
+		Actor Mobj = Results.HitActor;
+		//Make the prop check also ignore dead monsters that are still solid.
+		If (!IgnoreActors && Results.HitType == Trace_HitActor)
+		{
+			//If you hit an actor that is not a monster or player, and is a really strong or indestructible prop.
+			If(((Mobj.bInvulnerable || Mobj.bNoDamage) || !Mobj.bIsMonster && !Mobj.Player) && Mobj.bSolid && (Mobj.Health > PropHealthThreshold))
+			{
+				BadLOF = True;
+				Return Trace_Stop;
+			}
+			//If the collidable corpse of an enemy is in the way (e.g a destroyed vehicle), don't shoot.
+			Else If (Shooter && Shooter.IsHostile (Mobj) && Mobj.Health <= 0 && Mobj.bDontCorpse)
+			{
+				BadLOF = True;
+				Return Trace_Stop;
+			}
+			//Alternatively, if you hit a monster or player that is hostile to you, or is just your target.
+			Else If (Shooter && (Mobj.bIsMonster || Mobj.Player) && (Shooter.IsHostile (Mobj) || Mobj == Shooter.Target))
+				Return Trace_Stop;
+		}
+		
+		If (!IgnoreLinedefs && Results.HitType == Trace_HitWall)
+		{
+			//If there is a line in the way that is set to block projectiles or everything, then don't try shooting at it pointelessly.
+			If (Results.HitLine.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKEVERYTHING))
+			{
+				BadLOF = True;
+				Return Trace_Stop;
+			}
+			//If it isn't blocking the projectile, then ignore it.
+			Else
+				Return Trace_Skip;
+		}
+		
+		Return Trace_Skip;
 	}
 }
