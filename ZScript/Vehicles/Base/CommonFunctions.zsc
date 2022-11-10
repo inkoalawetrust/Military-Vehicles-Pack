@@ -301,7 +301,7 @@ Extend Class MVP_BaseVehicle
 			
 			//Vehicles try to stay away from enemies that are too close.
 			Actor OldTarget;
-			NearestEnemy = FindNearestEnemy (User_RetreatDistance);
+			If (!(IsPatrolling() && bChaseGoal)) NearestEnemy = FindNearestEnemy (User_RetreatDistance); //Only retreat from enemies if NOT set to patrol AND ignore targets.
 			//Have a close enemy, and not already retreating by something like a powerful target.
 			If (NearestEnemy && !AlreadyRetreating)
 			{
@@ -313,7 +313,7 @@ Extend Class MVP_BaseVehicle
 				Target = OldTarget;a_log ("ooh spooky enemy");
 			}
 			//Archvile trolling mode activated.
-			Else If (!Target && !NearestEnemy && CurrentOrder == ORDER_WANDER && CorpseSeeker)
+			Else If (!Target && !IsPatrolling() && !NearestEnemy && CurrentOrder == ORDER_WANDER && CorpseSeeker)
 			{
 				//Don't have a corpse to crush already.
 				If (!CorpseTarget)
@@ -518,6 +518,8 @@ Extend Class MVP_BaseVehicle
 			//Skip this actor if it's dead, cannot be targeted, is not a monster nor a player, or is not even an enemy.
 			If (!Mobj || IsDead (Mobj) || !CanBeTargeted (Mobj) || !(Mobj.bIsMonster || Mobj.Player) || !IsHostile (Mobj)) Continue;
 			
+			If (!CheckSight (Mobj)) Continue; //And at last, check if the enemy is even visible.
+			
 			NearbyEnemies.Push(Mobj); //Add it to the list.
 		}
 		
@@ -550,7 +552,9 @@ Extend Class MVP_BaseVehicle
 			Actor Mobj = CorpseSearch.Thing;
 			
 			//Skip this actor if it's invalid, is yourself, is already your corpse target, is alive, is already crushed, is not a dead corpse, or cannot be targeted.
-			If (!Mobj || Mobj == Self || Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || Mobj.bDontCorpse|| !CanBeTargeted (Mobj)) Continue;
+			If (!Mobj || Mobj == Self || Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || Mobj.bDontCorpse || !CanBeTargeted (Mobj)) Continue;
+			
+			If (!CheckSight (Mobj)) Continue; //And at last, check if the corpse is even visible.
 			
 			NearbyCorpses.Push(Mobj); //Add it to the list.
 		}

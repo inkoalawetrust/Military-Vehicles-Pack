@@ -482,7 +482,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		//Always bounce off players with god mode.
 		If (HasGodMode(Victim) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10),attenuation:0.75)) {bRipper = False; Return 1;}
 		//Fairly likely to bounce off healthy enough actors that don't bleed (Which should suggest its' something inorganic like a robot or golem or something, where deflection would make sense).
-		Else If (Victim.bNoBlood && !IsIndestructible (Victim) && Victim.SpawnHealth() >= 2000 && DeflectProjectile (Victim,96,FRandom(0.5,0.7),FRandom (1.,0.8),(6,-6),(6,-6),attenuation:0.75)) {bRipper = False; Return 1;}
+		Else If (Victim.bNoBlood && !IsIndestructible (Victim) && Victim.SpawnHealth() >= 2000 && DeflectProjectile (Victim,192,FRandom(0.5,0.7),FRandom (1.,0.85),(6,-6),(6,-6),attenuation:0.75)) {bRipper = False; Return 1;}
 		
 		If (Victim.SpawnHealth() <= 200) bExtremeDeath = True; //Obliterate any weak enemy.
 		Else bExtremeDeath = False;

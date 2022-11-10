@@ -89,6 +89,7 @@ Class MVP_PainRay : MVP_BaseTurret
 			{
 				A_StartSound ("Vehicle/ArmyCar/PainRay/Active",CHAN_VOICE,CHANF_LOOPING,1,0.5);
 				
+				If (!Target) Return State (Null);
 				Actor Victim;
 				BlockThingsIterator ItBurnsItBurns = BlockThingsIterator.Create (Target,512);
 				
@@ -115,6 +116,8 @@ Class MVP_PainRay : MVP_BaseTurret
 					If (Victim.Player)
 						Victim.GiveInventory ("MVP_PlayerPain",5);
 				}
+				
+				Return State (Null);
 			}
 			MCR3 H 0
 			{
@@ -123,8 +126,8 @@ Class MVP_PainRay : MVP_BaseTurret
 				LookExParams PainRaySight;
 				PainRaySight.MaxDist = 1536;
 				
-				//Target is out of sight.
-				If (!IsVisible(Target,True,PainRaySight) || IsDead (Target))
+				//Target is out of sight or no longer exists.
+				If (!Target || !IsVisible(Target,True,PainRaySight) || IsDead (Target))
 				{
 					A_ClearTarget(); //Forget it.
 					LookForPlayers (True,PainRaySight); //And look for a new one.
