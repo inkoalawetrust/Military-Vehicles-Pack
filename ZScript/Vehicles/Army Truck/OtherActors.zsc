@@ -19,13 +19,17 @@ Class MVP_ArmyTruckProp : MVP_BaseProp
 		Tag "Army Truck (Prop)";
 		DamageFactor "Melee", 0.4;
 		DamageFactor "Electric", 0.3;
-		DamageFactor "ExplosiveImpact", 0.9;
-		DamageFactor "Explosion", 0.9;
+		DamageFactor "ExplosiveImpact", 1.25;
+		DamageFactor "Explosion", 1.25;
+		DamageFactor "Explosive", 1.25;
 		DamageFactor "HitScan", 0.9; //The generic damage type of hitscan attacks.
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.9;
 		DamageFactor "MarineGrenade", 1.5;
-		DamageFactor "MarineRifle", 0.75;
+		DamageFactor "MarineRifle", 0.9;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 1.25;
+		DamageFactor "RifleBullet", 0.95;
 	}
 	
 	Override Void PostBeginPlay ()

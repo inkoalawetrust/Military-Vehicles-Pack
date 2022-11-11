@@ -21,6 +21,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		DamageFactor "Electric", 0.3;
 		DamageFactor "ExplosiveImpact", 1.25;
 		DamageFactor "Explosion", 1.25;
+		DamageFactor "Explosive", 1.25;
 		DamageFactor "HitScan", 0.9; //The generic damage type of hitscan attacks.
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.9;
