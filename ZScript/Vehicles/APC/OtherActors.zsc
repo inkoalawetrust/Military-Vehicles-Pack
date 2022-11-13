@@ -146,6 +146,9 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			}
 			APC3 N 1 RotateToVehicle(True);
 			Wait;
+		GenericFreezeDeath:
+			APC3 # 0 {Frame = UpdateElevation (3,0,6,9); /*D, A, G, J*/}
+			Goto Super::GenericFreezeDeath;
 	}
 }
 
@@ -183,7 +186,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		Vector3 Original = TurretOffsets;
 		TurretOffsets = (-0.1,0,1.1); //Temporarily set the autocannons' turret offsets to this, for spawning the small MG, then revert to the previous offsets.
 		Super.SpawnVehicleTurret();
-		If (FocusFire) MVP_APCMGTurret(Turret).FocusFire = True;
+		If (FocusFire && Turret) MVP_APCMGTurret(Turret).FocusFire = True;
 		If (bNoTargetPrediction) Turret.bNoTargetPrediction = True;
 		TurretOffsets = Original;
 	}
@@ -294,6 +297,9 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			}
 			APC2 U 1 RotateToVehicle(True);
 			Wait;
+		GenericFreezeDeath:
+			APC2 # 0 {Frame = UpdateElevation (2,0,4,6); /*C, A, E, G*/}
+			Goto Super::GenericFreezeDeath;
 	}
 }
 
@@ -445,6 +451,9 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				Boom.bNoGravity = True;
 			}
 			Stop;
+		GenericFreezeDeath:
+			APC2 # 0 {Frame = UpdateElevation (10,8,12,14); /*K, I, M, O*/}
+			Goto Super::GenericFreezeDeath;
 	}
 }
 Class MVP_50CalBullet : MVP_BaseProjectile

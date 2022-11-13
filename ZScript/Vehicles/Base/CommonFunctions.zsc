@@ -554,6 +554,9 @@ Extend Class MVP_BaseVehicle
 			//Skip this actor if it's invalid, is yourself, is already your corpse target, is alive, is already crushed, is not a dead corpse, or cannot be targeted.
 			If (!Mobj || Mobj == Self || Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || Mobj.bDontCorpse || !CanBeTargeted (Mobj)) Continue;
 			
+			If (!Mobj.bIsMonster && !Mobj.Player) Continue; //Ignore destroyed props.
+			//Perhaps check if the found actor has a raise state instead ?
+			
 			If (!CheckSight (Mobj)) Continue; //And at last, check if the corpse is even visible.
 			
 			NearbyCorpses.Push(Mobj); //Add it to the list.

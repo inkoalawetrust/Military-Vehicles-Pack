@@ -2,6 +2,7 @@ Mod made by Inkoalawetrust
 
 |==============|Code|==============|
 Any code not written by me (Inkoalawetrust) will be specified here.
+Help with coding by RaveYard.
 PitchTo() function written by Boondorl.
 |==============|Code|==============|
 
@@ -12,6 +13,8 @@ PitchTo() function written by Boondorl.
 
 =====<Vehicles>=====
 All vehicle sprites are entirely made by me (Inkoalawetrust) unless otherwise specified.
+APC death sprites partially edited by TG5, he drew the marines jumping out of the APC.
+Original APC sprites by Gorman Freebmane: https://drive.google.com/file/d/1ETjHquh0woyRwo2sGBOOFPRHoIxC_xD5/view?usp=share_link
 
 =====<SFX>=====
 Fire sprites (F1RE) are from Duke Nukem 3D, ripped from Project Brutality.

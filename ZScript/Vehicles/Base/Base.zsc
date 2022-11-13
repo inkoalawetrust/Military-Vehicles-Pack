@@ -183,8 +183,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		Else
 			TurnHeadlightsOff();
 		
-		If (bScareMarines) SetInventory (FearToken,1);
-		Else TakeInventory (FearToken,INT.MAX);
+		If (bScareMarines && Self) SetInventory (FearToken,1);
+		Else If (!bScareMarines && Self) TakeInventory (FearToken,INT.MAX);
 			
 	}
 	
@@ -374,6 +374,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
 		
 		SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,Master.Height+TurretOffsets.Z),True);
+		Floorclip = Master.Floorclip; //Copy floorclip offset for TERRAIN liquids.
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)

@@ -197,7 +197,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				MVP_Chase (NoRandomTurn:NoRandomTurn);
 				
 				//If you have dropped your marines, still have a turret the RNG is on your side, AND neither the turret or vehicle have a powerful target.
-				If (User_NoMarines && User_PainRay && (Target || Turret.Target)  && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && Random[pr_cajump](0,255) < 4)
+				If (User_NoMarines && User_PainRay && (Target || Turret && Turret.Target) && !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && Random[pr_cajump](0,255) < 4)
 				{
 					//Then check if you are far enough from your nearest enemy or target.
 					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
