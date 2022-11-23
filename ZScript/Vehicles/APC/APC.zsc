@@ -45,6 +45,7 @@ Class MVP_APC : MVP_BaseVehicle
 		Super.PostBeginPlay();
 		
 		SpawnAPCHeadlights();
+		MissileState = FindState ("DeployMarines");
 	}
 	
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)

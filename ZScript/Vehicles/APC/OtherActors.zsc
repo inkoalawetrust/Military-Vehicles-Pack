@@ -30,6 +30,13 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Return False;
 	}
 	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		MissileState = FindState ("Fire");
+	}
+	
 	Override Void Tick()
 	{
 		Double OldAngle = Angle;
@@ -168,6 +175,8 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		+MissileEvenMore;
 	}
 	
+	Bool FocusFire; //Turned on by the APC, then passed over to the small MG on the autocannon.
+	
 	Override Void Tick()
 	{
 		Double OldAngle = Angle;
@@ -179,7 +188,12 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
 	}
 	
-	Bool FocusFire; //Turned on by the APC, then passed over to the small MG on the autocannon.
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		MissileState = FindState ("Fire");
+	}
 	
 	Override Void SpawnVehicleTurret ()
 	{
@@ -332,6 +346,13 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 	}
 	
 	Bool FocusFire; //Makes the MG not actively avoid sharing the same target as the turret, even if the shared target isn't a powerful enemy.
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		MissileState = FindState ("Fire");
+	}
 	
 	Override Bool ShouldAttack ()
 	{

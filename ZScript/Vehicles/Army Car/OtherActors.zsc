@@ -20,6 +20,11 @@ Class MVP_PainRay : MVP_BaseTurret
 	Int Patience;
 	Actor WarningZone;
 	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		MissileState = FindState ("PainAttack");
+	}	
 	Override Void OnDestroy()
 	{
 		Super.OnDestroy();

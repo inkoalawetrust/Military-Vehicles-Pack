@@ -328,7 +328,6 @@ Extend Class MVP_BaseVehicle
 				//There is an available corpse to head to and crush.
 				Else
 				{console.printf ("corpse target is %s",corpsetarget.getclassname());
-					If (CorpseTarget.bDontGib) CorpseTarget = Null; //This will hopefully prevent vehicles from some times getting stuck running in place over an already crushed corpse.
 					MVP_MoveTowards (CorpseTarget);
 				}
 			}

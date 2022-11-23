@@ -574,7 +574,7 @@ Class MVP_BaseProjectile : FastProjectile
 			);
 		}
 		Victim.A_StartSound (BounceSound,flags:CHANF_OVERLAP,Volume,Attenuation); //Ricochet sound, uses the BounceSound property, naturally.
-		DontCollide = Victim;
+		DontCollide = Victim; //You should no longer collide with the actor you just deflected, to avoid getting stuck inside it.
 		
 		Return True;
 	}
