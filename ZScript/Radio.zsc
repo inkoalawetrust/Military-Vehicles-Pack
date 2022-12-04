@@ -17,6 +17,7 @@ Class MVP_Radio : Weapon
 		Weapon.SlotNumber 1;
 		+Weapon.Ammo_Optional;
 		+Weapon.NoAutoSwitchTo;
+		+Weapon.NoAlert;
 		+Inventory.InvBar;
 	}
 	
