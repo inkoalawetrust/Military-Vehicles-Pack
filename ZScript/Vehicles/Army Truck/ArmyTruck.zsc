@@ -369,9 +369,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				A_FaceTarget ();
 				VelFromAngle (14);
 				ChaseTimer = 0; //Just in case.
-				WarningZone = WarnMarines (512,True,False);
-				If (WarningZone)
-					WarningZone.Master = Self;
+				WarningZone = WarnMarines (512,True,True,towho:Self);
 				
 				Return State (Null);
 			}
@@ -499,7 +497,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				Boom.SetDamage(384);
 				Boom.A_SetScale (2.0);
 				
-				A_QuakeEx (1,1,1,35*2,0,1024,flags:QF_3D|QF_SCALEDOWN);
+				A_QuakeEx (1,1,1,35*2,0,1024,flags:QF_3D|QF_SCALEDOWN|QF_GROUNDONLY);
 				//Spawn a random amount of flames around the truck wreck.
 				For (Int I = 0; I < RandomFlames; I++)
 				{

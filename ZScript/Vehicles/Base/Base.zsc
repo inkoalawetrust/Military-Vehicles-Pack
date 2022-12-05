@@ -76,10 +76,11 @@ Class MVP_BaseVehicle : Actor Abstract
 	Virtual Void UserVariableDefaults ()
 	{
 		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
-		If (User_ChaseTime == 0) User_ChaseTime = (35/2)*30; //This is 35/2, because it assumes that the default see state on the vehicles has 2 tic long states.
+		If (User_ChaseTime == 0) User_ChaseTime = (35/2)*30; //This is 35/2, because it assumes that the default See state on the vehicles has 2 tic long states.
 	}
 	
 	//Handles spawning each vehicles' turret, if they have any.
+	//To do, pass spawn health modifications such as from the health UDMF property to turrets as well.
 	Virtual Void SpawnVehicleTurret ()
 	{
 		If (VehicleTurret)
@@ -336,7 +337,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Property MinimumPitch : MinPitch;
 	
 	Int LastEnemyDelay; //Used for the turret rotating code, to make it so the turret snaps back to the vehicle after some time of not having a target.
-	Double DeathAngleOffset; //Offsets the rotation of the turrets by this amount when they are killed.
+	Double DeathAngleOffset; //Offsets the rotation of the turrets by this amount when they are killed. Also used by turret props.
 	Vector3 LastEnemyPosition; //Used by the target prediction. If the turret has a target with no velocity, it grabs their last position every tick to compare it to the current position.
 	Vector3 CurrentEnemyPosition;
 	
@@ -373,13 +374,13 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		
 		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
 		
-		SetOrigin (Master.Vec3Offset(TurretOffsets.X,TurretOffsets.Y,Master.Height+TurretOffsets.Z),True);
+		SetOrigin (Master.Vec3Offset (TurretOffsets.X * Cos(Angle) + TurretOffsets.Y * Sin (Angle),TurretOffsets.X * Sin (Angle) - TurretOffsets.Y * Cos (Angle),Master.Height+TurretOffsets.Z),True);
 		Floorclip = Master.Floorclip; //Copy floorclip offset for TERRAIN liquids.
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
-		If (Master)
+		If (Master && !(Self Is "MVP_BaseTurretProp")) //Prop turrets use DeathAngleOffset differently.
 			DeathAngleOffset = DeltaAngle (Angle,Master.Angle);
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		bShootable = bNotAutoaimed = True;
@@ -393,7 +394,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	}
 }
 
-//The code that actually draws the line between the projectiles' current and previous position was written by Boondorl, since my own version and problems with pitch and so on. 
+//The code that actually draws the line between the projectiles' current and previous position was written by Boondorl, since my own version had problems with pitch and so on. 
 //It's a FastProjectile with custom trail spawning code, so don't bother using FastProjectile's own trail system, as this one works better for truly fast projectiles.
 Class MVP_BaseProjectile : FastProjectile
 {
@@ -690,15 +691,24 @@ Class SmartMarineWarningZone : Actor
 	{
 		Radius 0.1; Height 0;
 		MaxTargetRange 256;
-		+Friendly; //To get your grenade-type warning to work with the marines the Friendly flag is NEEDED, because otherwise friendly marines will sometimes end up running in place for some ungodly reason.
+		//+Friendly; //To get your grenade-type warning to work with the marines the Friendly flag is NEEDED, because otherwise friendly marines will sometimes end up running in place for some ungodly reason.
 		+Shootable; //This will hopefully stop marines running from these warnings from ever getting stuck and running in place.
 		+NotAutoaimed
 		+NoBlood;
 		+NoDamage;
-		+NoInteraction;
 		+NoGravity;
 	}
 	Inventory Token;
+	Vector3 Offset;
+	
+	Override Void BeginPlay ()
+	{
+		Super.BeginPlay ();
+		
+		String NoMarineAlert = "SM_DontWarnOthers";
+		
+		GiveInventory (NoMarineAlert,1);
+	}
 	
 	//Cool code duplication because the warning zone isn't a vehicle of any kind.
 	Bool MarineIsOnTurret (Actor Other)
@@ -721,7 +731,8 @@ Class SmartMarineWarningZone : Actor
 		String WarningToken = "SM_ImInDanger";
 		//Can be used to attach the zone to an actor.
 		If (Master)
-			SetOrigin (Master.Pos,True);
+			//SetOrigin (Master.Pos,True);
+			SetOrigin (Master.Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle),Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Offset.Z),True); //Copied from SpawnMarine().
 		
 		BlockThingsIterator MarineFinder = BlockThingsIterator.Create (Self,MaxTargetRange);
 		

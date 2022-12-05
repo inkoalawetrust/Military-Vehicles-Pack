@@ -18,15 +18,17 @@ Extend Class MVP_BaseTurret
 	}
 	
 	//Makes the turret rotate back over time to the direction that the vehicle is facing. Instead of snapping back instantly.
-	Void RotateToVehicle (Bool NoTargetCheck = False)
+	Void RotateToVehicle (Bool NoTargetCheck = False, Bool OnlyRelativeRotation = False)
 	{
-		If (Master && IsDead (Self))
+		If (!Master) Return;
+		
+		If (IsDead (Self) || OnlyRelativeRotation)
 		{
-			Angle = Master.Angle+DeathAngleOffset;console.printf ("the angle is now %d",angle);
+			Angle = Master.Angle+DeathAngleOffset;console.printf ("the death angle is now %d",deathangleoffset);
 			Return;
 		}
 		
-		If ((!Target || NoTargetCheck) && Master)
+		If ((!Target || NoTargetCheck))
 		{
 			//If the angle and pitch difference are too small, just start snapping to the vehicles' direction.
 			If (!LastEnemyDelay || Abs (Master.Pitch - Pitch) < 0.5)

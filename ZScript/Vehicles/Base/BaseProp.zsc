@@ -5,6 +5,7 @@ Class MVP_BaseProp : MVP_BaseVehicle Abstract
 		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
 		+NotAutoaimed;
 		+CastSpriteShadow
+		+NeverTarget; //There should not be a reason to target a prop.
 		+MVP_BaseVehicle.NoRadio;
 		-CountKill;
 		-ActivateMCross;
@@ -58,10 +59,25 @@ Class MVP_BaseTurretProp : MVP_BaseTurret
 		Tag "Military Vehicle Turret Prop Base (You really shouldn't be seeing this in-game)";
 		+NotAutoaimed;
 		+NoSpriteShadow;
+		+NeverTarget; //There should not be a reason to target a prop.
+		+MVP_BaseVehicle.NoRadio;
 		-CountKill;
 		-ActivateMCross;
 		-IsMonster;
 		-CanPushWalls;
 		-CanUseWalls;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay ();
+		
+		//Since turrets on turrets are a thing in the mod, indestructibility also needs to be passed to sub-turrets.
+		If (bNoDamage)
+			If (Turret)
+				Turret.bNoDamage = True;
+		Else
+			If (Turret)
+				Turret.bNoDamage = False;
 	}
 }

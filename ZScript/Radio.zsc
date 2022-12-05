@@ -3,6 +3,7 @@
 //To do:
 //See if it would be possible to order vehicles (And even marines (!)) to go to a certain point, if they aren't already patrolling.
 //I should probably make my own walkie talkie sprites at some point, that way I can also do stuff like make the current order and command type visible on overlays that appear on the radios' screen.
+//God fucking fuck fuck make the fucking radio work with my marines again ffuck fuck/
 
 Class MVP_Radio : Weapon
 {

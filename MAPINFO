@@ -19,4 +19,7 @@ DoomEdNums
 		17008 = MVP_ArmyTruckRuin
 	//Armored personnel carrier
 		17009 = MVP_APC
+		17010 = MVP_APCProp
+		17011 = MVP_APCWreck
+		//17012 = MVP_APCRuin
 }
