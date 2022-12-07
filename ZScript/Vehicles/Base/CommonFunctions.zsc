@@ -175,6 +175,55 @@ Extend Class MVP_BaseVehicle
 		Return False;
 	}
 	
+	Enum MVPFlameFlags
+	{
+		FSP_WARNMARINES = 1 << 0, //If any flames are succesfully created around the vehicle, should a marine warning zone be made ?
+		FSP_VEHICLEDEATH = 1 << 1 //Mark the warning zone as needing to vanish once all of the flames have evaporated.
+	}
+	
+	//Creates multiple flames within the bounding box of the vehicle. Used to create flaming wrecks when vehicles are gibbed.
+	//Flags: The flags that control the spawning behavior, look at MVPFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
+	//Amount: The random amount of flames that will be created, the X component is the minimum amount of flames, and Y is the maximum.
+	//Lifespan: The random lifespan each flame has in tics, the default is 35*30 (30 seconds). The X component is the minimum lifespan a flame can have, and Y is the maximum.
+	Void SpawnDeathFlames (Int Flags = FSP_WARNMARINES|FSP_VEHICLEDEATH, Vector2 Amount = (5,12), Vector2 Lifespan = (24*TICRATE,105*TICRATE))
+	{
+		Int RandomFlames = Random (Amount.X,Amount.Y);
+		Actor Flame;
+		Vector3 SpawnPos;
+		//Spawn a random amount of flames around the APC wreck.
+		For (Int I = 0; I < RandomFlames; I++)
+		{
+			SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
+			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
+			Flame = Spawn ("MVP_Flame",SpawnPos);
+			
+			If (Flame)
+			{
+				If (!Level.IsPointInLevel (Flame.Pos))
+					Flame.Destroy();
+				
+				If (Flame)
+				{
+					Flame.Master = Self; //So the flame knows what actor to warp to.
+					MVP_Flame(Flame).Offsets = SpawnPos;
+					Flame.ReactionTime = FRandom (Lifespan.X,LifeSpan.Y);
+					Console.Printf ("Lifespan is %d",Flame.ReactionTime);
+					DeathFlames.Push (Flame); //Add the valid flame to the list.
+				}
+			}
+		}
+		int leflags = MWRN_WARP|MWRN_ALLIESTOO|FSP_VEHICLEDEATH ? MWRN_VEHICLEDEATH : 0;
+		int lealtflags = MWRN_WARP|MWRN_ALLIESTOO;
+		int lealtaltflags = MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH;
+		console.printf ("the flags are %d, the normal flags are %d, the other flags are %d",leflags,lealtflags,lealtaltflags);
+		//Create a warning zone if any flames actually spawned.
+		If (Flags & FSP_WARNMARINES && DeathFlames.Size())
+			If (Flags & FSP_VEHICLEDEATH)
+				{A_LOG ("in da vehicle death zone");DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);}
+			Else
+				{A_LOG ("in da zone");DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);}
+	}
+	
 	//=====|Marine related functions|=====\\
 	//Can the vehicle spawn Smart Marines ?
 	Bool CustomMarinesAvailable()
@@ -208,7 +257,7 @@ Extend Class MVP_BaseVehicle
 			Spawnee.CopyFriendliness (Self,True);
 		Else
 			Spawnee.CopyFriendliness (Self,False);
-		Spawnee.bSummonedMonster = True;
+		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
 		Spawnee.Angle = Self.Angle;
 		If (SetMaster)
 			Spawnee.Master = Self;
@@ -221,7 +270,7 @@ Extend Class MVP_BaseVehicle
 	{
 		If (!Other) Return False;
 		
-		String MGMarine = "TurretMarine";
+		Name MGMarine = "TurretMarine";
 		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
 		
 		If (Other.GetClassName() == MGMarine)
@@ -233,27 +282,31 @@ Extend Class MVP_BaseVehicle
 		Return False;
 	}
 	
+	Enum MVPMarineWarnFlags
+	{
+		MWRN_ALLIESTOO = 1 << 0, //The warning zone should warn marines friendly to the caller as well.
+		MWRN_WARP = 1 << 1, //The warning zone should stick to the actor specified by the ToWho parameter.
+		MWRN_PAINONLY = 1 << 2, //The warning zone is just warning the marines of an attack that only causes pain (e.g the Pain Ray).
+		MWRN_VEHICLEDEATH = 1 << 3, //Despawn the warning zone if the vehicles DeathFlames array is empty.
+	}
 	//Spawns a warning zone for smart marines that gives them a token, which tells them to run away from the warning zone.
 	//Since it is basically a fancy wrapper for giving the "SM_ImInDanger" token, you could make your own actors to also support that token.
+	//Flags: The flags that determine the behavior of the warning zone. Info on the flags is above. Default flag is MWRN_WARP.
 	//Range: The range of the warning zone (NO WAYU !?1?1?1?!@?@?!/@/3/$3?3??543?), default is 256.
-	//AlliesToo: If actors friendly to the functions' caller should also be warned.
-	//StickToTarget: If the warning zone should be attached to the target actor.
-	//PainOnly: Specifies that the thing that the warning is for is harmless, and simply causes pain.
 	//ToWho: What actor should the zone be attached to ? Default is the callers' target, if any.
 	//Offsets: The offsets which the warning zone uses when warping to the specified actor. Default is no offsets.
-	Actor WarnMarines (Double Range = 256, Bool AlliesToo = False, Bool StickToTarget = True, Bool PainOnly = False, Actor ToWho = Null, Vector3 Offsets = (0,0,0))
+	Actor WarnMarines (Int Flags = MWRN_WARP, Double Range = 256, Actor ToWho = Null, Vector3 Offsets = (0,0,0))
 	{
-		If (!ToWho) ToWho = Target; //Can't set the Target pointer in the parameter decleration.
 		If (ToWho == Null || !CustomMarinesAvailable()) Return Null;
 		Actor WarnZone = Spawn ("SmartMarineWarningZone",ToWho.Pos);
 		
 		WarnZone.CopyFriendliness (Self,False);
+		If (Flags & MWRN_WARP) WarnZone.Master = ToWho;
+		If (Flags & MWRN_ALLIESTOO) WarnZone.bHarmFriends = True;
+		If (Flags & MWRN_PAINONLY) WarnZone.bCausePain = True; //I had forgot to make the function handle this warning zone flag for two months lmfao.
+		If (Flags & MWRN_VEHICLEDEATH) {WarnZone.bSpecialFireDamage = True;a_log ("setting flag");}
 		WarnZone.MaxTargetRange = Range;
-		WarnZone.bHarmFriends = AlliesToo;
-		WarnZone.bCausePain = PainOnly; //I had forgot to make the function handle this warning zone flag for two months lmfao.
 		SmartMarineWarningZone(WarnZone).Offset = Offsets;
-		If (StickToTarget)
-			WarnZone.Master = ToWho;
 		
 		Return WarnZone; //Return a pointer to the created warning zone.
 	}
@@ -261,7 +314,7 @@ Extend Class MVP_BaseVehicle
 	//Only warn a specific marine, and return if the warning token was successfully given to them.
 	Bool WarnSpecificMarine (Actor Marine)
 	{
-		String WarningToken = "SM_ImInDanger";
+		Name WarningToken = "SM_ImInDanger";
 		Inventory Token;
 		
 		If (!Marine) //No marine to warn.

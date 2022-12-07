@@ -369,7 +369,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				A_FaceTarget ();
 				VelFromAngle (14);
 				ChaseTimer = 0; //Just in case.
-				WarningZone = WarnMarines (512,True,True,towho:Self);
+				WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,512,towho:Self);
 				
 				Return State (Null);
 			}
@@ -484,13 +484,9 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		XDeath:
 			TRK1 N 0
 			{
-				Int RandomFlames; RandomFlames = Random (5,12);
-				Actor Flame;
-				Actor Boom;
-				Vector3 SpawnPos;
-				
 				Height = 70;
 				
+				Actor Boom;
 				Boom = Spawn ("MVP_BigExplosion",Pos);
 				Boom.MaxTargetRange = 384;
 				Boom.MeleeRange = 128;
@@ -499,25 +495,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				
 				A_QuakeEx (1,1,1,35*2,0,1024,flags:QF_3D|QF_SCALEDOWN|QF_GROUNDONLY);
 				//Spawn a random amount of flames around the truck wreck.
-				For (Int I = 0; I < RandomFlames; I++)
-				{
-					SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
-					SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
-					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
-					
-					If (Flame)
-					{
-						If (!Level.IsPointInLevel (Flame.Pos))
-							Flame.Destroy();
-						
-						If (Flame)
-						{
-							Flame.Master = Self;
-							MVP_Flame(Flame).Offsets = SpawnPos;
-							Flame.ReactionTime *= FRandom (0.8,3.5);
-						}
-					}
-				}
+				SpawnDeathFlames();
 			}
 			TRK1 N -1;
 			Stop;

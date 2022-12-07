@@ -291,33 +291,12 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		XDeath:
 			MCR1 N 0
 			{
-				Int RandomFlames; RandomFlames = Random (2,6);
-				Actor Flame;
-				Vector3 SpawnPos;
-				
 				Height = 34;
 				
 				Spawn ("MVP_BigExplosion",Pos); //BigExplosion is a generic effect, not specific to this vehicle.
+				
 				//Spawn a random amount of flames around the car wreck.
-				For (Int I = 0; I < RandomFlames; I++)
-				{
-					SpawnPos = (FRandom (-Radius*2,Radius*2),FRandom (-Radius*2,Radius*2),0);
-					SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
-					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
-					
-					If (Flame)
-					{
-						If (!Level.IsPointInLevel (Flame.Pos))
-							Flame.Destroy();
-						
-						If (Flame)
-						{
-							Flame.Master = Self;
-							MVP_Flame(Flame).Offsets = SpawnPos;
-							Flame.ReactionTime *= FRandom (0.5,2.5);
-						}
-					}
-				}
+				SpawnDeathFlames();
 				
 				If (Turret)
 				{

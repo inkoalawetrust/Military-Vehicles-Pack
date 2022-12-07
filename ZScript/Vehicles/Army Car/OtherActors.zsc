@@ -85,7 +85,7 @@ Class MVP_PainRay : MVP_BaseTurret
 			MCR3 H 0
 			{
 				A_StartSound ("Vehicle/ArmyCar/PainRay/On",CHAN_VOICE,0,1,0.5);
-				WarningZone = WarnMarines (512,painonly:True); //Warn the marines of the pain ray attack.
+				WarningZone = WarnMarines (MWRN_WARP|MWRN_PAINONLY,512,towho:Target); //Warn the marines of the pain ray attack.
 			}
 			MCR3 HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH 1 A_FaceTarget (5,5,FAF_MIDDLE);
 		PainAttack:
@@ -374,32 +374,11 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 		XDeath:
 			MCR1 N 0
 			{
-				Int RandomFlames; RandomFlames = Random (2,6);
-				Actor Flame;
-				Vector3 SpawnPos;
-				
 				Height = 34;
 				
 				Spawn ("MVP_BigExplosion",Pos); //BigExplosion is a generic effect, not specific to this vehicle.
 				//Spawn a random amount of flames around the car wreck.
-				For (Int I = 0; I < RandomFlames; I++)
-				{
-					SpawnPos = (FRandom (-Radius*2,Radius*2),FRandom (-Radius*2,Radius*2),0);
-					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
-					
-					If (Flame)
-					{
-						If (!Level.IsPointInLevel (Flame.Pos))
-							Flame.Destroy();
-						
-						If (Flame)
-						{
-							Flame.Master = Self;
-							MVP_Flame(Flame).Offsets = SpawnPos;
-							Flame.ReactionTime *= FRandom (0.5,2.5);
-						}
-					}
-				}
+				SpawnDeathFlames();
 				
 				If (Turret)
 				{
@@ -541,29 +520,7 @@ Class MVP_ArmyCarRuin : MVP_ArmyCarWreck
 		Super.PostBeginPlay ();
 		
 		If (User_SpawnFlames)
-		{
-			Int RandomFlames; RandomFlames = Random (2,6);
-			Actor Flame;
-			Vector3 SpawnPos;
-			For (Int I = 0; I < RandomFlames; I++)
-			{
-				SpawnPos = (FRandom (-Radius*2,Radius*2),FRandom (-Radius*2,Radius*2),0);
-				Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
-				
-				If (Flame)
-				{
-					If (!Level.IsPointInLevel (Flame.Pos))
-						Flame.Destroy();
-					
-					If (Flame)
-					{
-						Flame.Master = Self;
-						MVP_Flame(Flame).Offsets = SpawnPos;
-						Flame.ReactionTime = INT.MAX; //Stay around forever, or rather, a really long time.
-					}
-				}
-			}
-		}
+			SpawnDeathFlames();
 	}
 	
 	States

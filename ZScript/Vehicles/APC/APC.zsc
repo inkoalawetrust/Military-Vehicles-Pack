@@ -260,7 +260,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				A_StartSound ("SFX/Fire",flags:CHANF_LOOPING|CHANF_OVERLAP,attenuation:0.65);
 				SmokeCounter = Random (8,64); //Might as well make this otherwise useless variable useful.
-				WarnMarines (80,True,towho:Self,(32,-48,24));
+				WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(32,-48,24));
 			}
 			//Fall through
 		DeathFlameLoop:
@@ -315,10 +315,7 @@ Class MVP_APC : MVP_BaseVehicle
 		XDeath:
 			APC4 X -1
 			{
-				Int RandomFlames = Random (5,10);
-				Actor Flame;
 				Actor Hatch;
-				Vector3 SpawnPos;
 				Bool B; //Why the fuck does A_SpawnItemEx return if the spawn was succesfful or not ? Just return the fucking pointer to the spawned actor.
 				
 				Height = 36;
@@ -361,26 +358,8 @@ Class MVP_APC : MVP_BaseVehicle
 				
 				A_QuakeEx (1,1,1,52,0,768,flags:QF_3D|QF_SCALEDOWN|QF_GROUNDONLY);
 				
-				//Spawn a random amount of flames around the APC wreck. This really needs to be made into a function.
-				For (Int I = 0; I < RandomFlames; I++)
-				{
-					SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
-					SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
-					Flame = Spawn ("MVP_Flame",SpawnPos); //So is the flame actor.
-					
-					If (Flame)
-					{
-						If (!Level.IsPointInLevel (Flame.Pos))
-							Flame.Destroy();
-						
-						If (Flame)
-						{
-							Flame.Master = Self;
-							MVP_Flame(Flame).Offsets = SpawnPos;
-							Flame.ReactionTime *= FRandom (0.8,3.5);
-						}
-					}
-				}
+				//Spawn a random amount of flames around the APC wreck.
+				SpawnDeathFlames();
 			}
 			Stop;
 	}

@@ -1,0 +1,702 @@
+Class MVP_APCProp : MVP_BaseProp
+{
+	Default
+	{
+		//$Title Armored Personnel Carrier (Prop)
+		//$Category Vehicles/APC
+		//$Sprite APC1A1
+		Health 1500;
+		GibHealth 500;
+		Height 72;
+		DeathHeight 72;
+		Radius 64;
+		RipLevelMin 5;
+		Mass 28000;
+		Tag "Armored Personnel Carrier (Prop)";
+		
+		//"Armor"
+		DamageFactor 0.75; //Generic damage factor.
+		DamageFactor "ExplosiveImpact", 0.65;
+		DamageFactor "Explosion", 0.65;
+		DamageFactor "Explosive", 0.65;
+		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.7;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.80;
+		DamageFactor "MarineGrenade", 0.6;
+		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.7;
+		DamageFactor "RifleBullet", 0.75;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		TurretOffsets = (0.1,0,4.25);
+		Super.PostBeginPlay();
+		
+		SpawnAPCHeadlights();
+	}
+	
+	//Handle spawning either the autocannon or MG turret prop.
+	Override Void SpawnVehicleTurret ()
+	{
+		Int RandomAngle = Random (0,360); //Used if the APC prop has a turret angle of -1.
+		If (User_Turret ~== "Machine Gun" || User_Turret ~== "MachineGun" || User_Turret ~== "MG")
+		{
+			Turret = MVP_BaseTurret(Spawn ("MVP_APCMachineGunProp",Pos+TurretOffsets));
+			If (Turret)
+			{
+				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
+				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
+				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
+				console.printf ("the angle is %d",turret.angle);
+				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (90,-90);
+				console.printf ("the pitch is %d",turret.pitch);
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+			}
+		}
+		Else If (User_Turret ~== "Autocannon")
+		{
+			Turret = MVP_BaseTurret(Spawn ("MVP_APCAutocannonProp",Pos+TurretOffsets));
+			If (Turret)
+			{
+				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
+				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
+				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
+				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (90,-90);
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+			}
+		}
+	}
+	
+	Bool User_OpenDoors; //Should the APC have its' back doors open ?
+	String User_Turret; //The turret the APC should be equipped with, uses the same options as the NPC.
+	Double User_TurretAngle; //The angle the turret of the APC should be facing.
+	Double User_TurretPitch; //The pitch the turret of the APC should be facing.
+	
+	States
+	{
+		Spawn:
+			APC1 A 0;
+			APC1 # 1
+			{
+				If (User_OpenDoors)
+					Frame = 7; //Frame G
+				Else
+					Frame = 0; //Frame A
+				
+				If (User_IdleSound)
+					A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
+				Else
+					A_StopSound (CHAN_IDLING);
+			}
+			Loop;
+		Death:
+			APC4 A 2 Bright
+			{
+				A_Explode (384,256,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
+				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.5);
+				A_StopSound (CHAN_IDLING);
+				A_StopSound (CHAN_MOVING);
+			}
+			APC4 BC 4 Bright;
+			APC4 DE 6 Bright;
+			TNT1 A 0 A_StartSound ("SFX/Fire",flags:CHANF_LOOPING|CHANF_OVERLAP,attenuation:0.65);
+			TNT1 A 0 WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(32,-48,24));
+			TNT1 A 0 A_JumpIf (User_OpenDoors,"DeathFlameLoopOpen");
+			//Fall through
+		DeathFlameLoop:
+			APC4 GHIJ 5 Bright
+			{
+				Vector3 OldPos = Pos;
+				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
+				SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				bNoDamageThrust = True;
+				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
+				bNoDamageThrust = False;
+				SetOrigin (OldPos,False);
+				
+				Return State (Null);
+			}
+			Loop;
+		DeathFlameLoopOpen:
+			APC4 RS 8 Bright;
+			APC4 TUVW 5 Bright
+			{
+				Vector3 OldPos = Pos;
+				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
+				SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				bNoDamageThrust = True;
+				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
+				bNoDamageThrust = False;
+				SetOrigin (OldPos,False);
+			}
+			Goto DeathFlameLoopOpen+2;
+		XDeath:
+			APC4 X -1
+			{
+				Actor Hatch;
+				Bool B; //Why the fuck does A_SpawnItemEx return if the spawn was succesfful or not ? Just return the fucking pointer to the spawned actor.
+				
+				Height = 36;
+				
+				If (Turret)
+				{
+					Turret.Master = Null; //Detach turret. The code for actually killing it as well is in the Die() override of MVP_BaseTurret.
+					Turret.A_ChangeVelocity (FRandom (16,24),FRandom (16,24),FRandom (24,32),CVF_RELATIVE); //Weeeeeeeee
+				}
+				
+				A_SpawnItemEx ("MVP_DestroyedAPCFrontDoor",64,-48,24,FRandom (4,-4),FRandom (-24,-32),FRandom (4,-4));
+				[B,Hatch] = A_SpawnItemEx ("MVP_APCHatch",96,8,48,FRandom (4,8),FRandom (6,-6),FRandom (24,32));
+				Hatch.Scale.X *= 2; Hatch.Scale.Y *= 2; //Big boy hatch, since the sprites are actually for the autocannons' hatch.
+				//Right row wheels, I don't know why the fuck the wheels fly in opposite directions, I've tried fixing it but it just won't go away for some fucking reason.
+				A_SpawnItemEx ("MVP_APCWheel",-32,-48,4,FRandom (6,-6),FRandom (24,32),FRandom (6,12));
+				A_SpawnItemEx ("MVP_APCWheel",96,-48,4,FRandom (6,-6),FRandom (24,32),FRandom (6,12));
+				//Left row wheels
+				A_SpawnItemEx ("MVP_APCWheel",96,48,4,FRandom (6,-6),FRandom (24,32),FRandom (6,12));
+				A_SpawnItemEx ("MVP_APCWheel",-32,48,4,FRandom (6,-6),FRandom (24,32),FRandom (6,12));
+				
+				Actor Boom = Spawn ("MVP_BigExplosion",Pos);
+				Boom.MaxTargetRange = 384;
+				Boom.MeleeRange = 128;
+				Boom.SetDamage(384);
+				Boom.A_SetScale (2.0);
+				
+				A_QuakeEx (1,1,1,52,0,768,flags:QF_3D|QF_SCALEDOWN|QF_GROUNDONLY);
+				
+				//Spawn a random amount of flames around the APC wreck.
+				SpawnDeathFlames();
+			}
+			Stop;
+
+	}
+}
+
+Class MVP_APCMachineGunProp : MVP_BaseTurretProp
+{
+	Default
+	{
+		Health 400;
+		GibHealth 250;
+		Height 32;
+		DeathHeight 32;
+		Radius 32;
+		MVP_BaseTurret.MaximumPitch -70;
+		MVP_BaseTurret.MinimumPitch 20;
+		Tag "Machine Gun Turret (Prop)";
+		Obituary "%o is bad at prop hunt";
+		DamageFactor "Autocannon", 0.8;
+	}
+	
+	Int WreckState; //These wreck states are used by the pre-destroyed versions of these prop turrets, so they are stored here to avoid code duplication.
+	Enum WreckStates
+	{
+		WRECK_DEAD = 0,
+		WRECK_VERYDEAD = 1,
+		WRECK_VERYDEAD_FIRELESS = 2
+	}
+	
+	States
+	{
+		Spawn:
+			APC3 A 0;
+			APC3 # 1
+			{
+				RotateToVehicle(False,True);
+				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
+			}
+			Loop;
+		Death:
+			APC3 M 0 {Actor Boom = Spawn ("MVP_Explosion",Pos); Boom.bNoGravity = True;}
+			APC3 M 1 RotateToVehicle(False,True);
+			Wait;
+		XDeath:
+			APC3 N 0
+			{
+				Height = 16;
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 1.75;
+				Boom.SetDamage (192);
+				Boom.MeleeRange = 64;
+				Boom.bNoGravity = True;
+				
+				Actor Flame = Spawn ("MVP_Flame",Pos);
+				MVP_Flame(Flame).Offsets = (0.1,0,4);
+				Flame.Scale.X = Flame.Scale.Y = 1.0;
+				Flame.Master = Self;
+				Flame.ReactionTime *= FRandom (1.25,4.25);
+				Flame.SetDamage (8);
+				Flame.MaxTargetRange = 64;
+				Flame.MeleeRange = 32;
+				
+				A_SpawnItemEx ("MVP_DestroyedMGTurretGun",16,0,12,FRandom (16,32),FRandom (-6,6),FRandom (2,6));
+			}
+			APC3 N 1 RotateToVehicle(False,True);
+			Wait;
+		GenericFreezeDeath:
+			APC3 # 0 {Frame = UpdateElevation (3,0,6,9); /*D, A, G, J*/}
+			Goto Super::GenericFreezeDeath;
+	}
+}
+
+Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
+{
+	Default
+	{
+		Health 450;
+		GibHealth 300;
+		Height 20;
+		DeathHeight 20;
+		Tag "Autocannon Turret (Prop)";
+		Obituary "%o got killed by an empty prop";
+		MVP_BaseVehicle.VehicleTurret "MVP_APCMGTurretProp";
+	}
+	
+	Override Void SpawnVehicleTurret()
+	{
+		Vector3 Original = TurretOffsets;
+		TurretOffsets = (-0.1,0,1.1); //Temporarily set the autocannons' turret offsets to this, for spawning the small MG, then revert to the previous offsets.
+		Super.SpawnVehicleTurret();
+		//Randomize the small MG's pitch if the pitch was also randomized on the APC, however don't mess with the angle as it looks bad.
+		If (Turret && (Master && MVP_APCProp(Master).User_TurretPitch == -1)) Turret.Pitch = Random (90,-90);
+		TurretOffsets = Original;
+	}
+	
+	States
+	{
+		Spawn:
+			APC2 A 0;
+			APC2 # 1
+			{
+				RotateToVehicle(False,True);
+				Frame = UpdateElevation (2,0,4,6); //C, A, E, G
+			}
+			Loop;
+		Death:
+			APC2 Q 0
+			{
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 1.75;
+				Boom.SetDamage (192);
+				Boom.MeleeRange = 64;
+				Boom.bNoGravity = True;
+			}
+			APC2 Q 1 RotateToVehicle (False,True);
+			Wait;
+		XDeath:
+			APC2 U 0
+			{
+				Height = 16;
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 2.5;
+				Boom.SetDamage (256);
+				Boom.MeleeRange = 96;
+				Boom.MaxTargetRange = 384;
+				Boom.bNoGravity = True;
+				
+				Actor Flame = Spawn ("MVP_Flame",Pos);
+				MVP_Flame(Flame).Offsets = (0.1,0,4);
+				Flame.Scale.X = Flame.Scale.Y = 1.0;
+				Flame.Master = Self;
+				Flame.ReactionTime *= FRandom (1.25,4.25);
+				Flame.SetDamage (8);
+				Flame.MaxTargetRange = 64;
+				Flame.MeleeRange = 32;
+				
+				A_SpawnItemEx ("MVP_APCHatch",-12,6,24,FRandom (6,-6),FRandom (6,-6),FRandom (18,24));
+			}
+			APC2 U 1 RotateToVehicle(False,True);
+			Wait;
+		GenericFreezeDeath:
+			APC2 # 0 {Frame = UpdateElevation (2,0,4,6); /*C, A, E, G*/}
+			Goto Super::GenericFreezeDeath;
+	}
+}
+
+Class MVP_APCMGTurretProp : MVP_BaseTurretProp
+{
+	Default
+	{
+		Health 125;
+		GibHealth 60;
+		Height 12;
+		DeathHeight 12;
+		Radius 24;
+		RipLevelMin 1;
+		MVP_BaseTurret.MaximumPitch -70;
+		MVP_BaseTurret.MinimumPitch 20;
+		Obituary "%o found out that even empty guns can kill %h"; //First time I've had to actually use an obituary keyword that isn't %o.
+		Tag "7.62mm Turret (Prop)";
+		DamageType "RifleBullet";
+		DamageFactor "Autocannon", 0.95;
+		DamageFactor "Melee", 0.4;
+		DamageFactor "Electric", 0.4;
+		DamageFactor "ExplosiveImpact", 0.825;
+		DamageFactor "Explosion", 0.825;
+		DamageFactor "HitScan", 0.9;
+	}
+	
+	States
+	{
+		Spawn:
+			APC2 I 0;
+			APC2 # 1
+			{
+				RotateToVehicle(False,True);
+				Frame = UpdateElevation (10,8,12,14); //K, I, M, O
+			}
+			Loop;
+		Death:
+			APC2 V 20
+			{
+				//Match angles with the autocannon yada yada just read MVP_APCMGTurrets' death state for this comment.
+				If (Master)
+				{
+					Angle = Master.Angle;
+					DeathAngleOffset = 0; //Also remove the angle offset relative to the autocannon that was collected in Die().
+				}
+				RotateToVehicle (False,True);
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 0.4;
+				Boom.SetDamage (24);
+				Boom.MaxTargetRange = 64;
+				Boom.MeleeRange = 0;
+				Boom.bNoGravity = True;
+			}
+			APC2 WWWWWWWWWWWWWW 2 RotateToVehicle (False,True);
+			APC2 X 1 RotateToVehicle (False,True);
+			Wait;
+		XDeath:
+			TNT1 A 0
+			{
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 0.75;
+				Boom.SetDamage (48);
+				Boom.MaxTargetRange = 96;
+				Boom.MeleeRange = 24;
+				Boom.bNoGravity = True;
+			}
+			Stop;
+		GenericFreezeDeath:
+			APC2 # 0 {Frame = UpdateElevation (10,8,12,14); /*K, I, M, O*/}
+			Goto Super::GenericFreezeDeath;
+
+	}
+}
+
+//This wreck prop is a bit more involved than the Cars' and Trucks'
+Class MVP_APCWreck : MVP_APCProp
+{
+	Default
+	{
+		//$Title Armored Personnel Carrier (Wreck)
+		//$Category Vehicles/APC
+		//$Sprite APC4V1
+		
+		+NoDamage;
+		Tag "Armored Personnel Carrier (Wreck)";
+	}
+	
+	Override Void Tick() {Actor.Tick();}
+	
+	Int User_WreckState; //Should the wreck be fully burned out, burning, burning with the hatches open, or burning with all doors and hatches open ?
+	//String User_Turret; //This and turret angle are already defined on the APC prop, and do basically the same thing here.
+	//Double User_TurretAngle; //The angle of the destroyed turret. -1 means random rotation.
+	Bool User_CannonHatchOpen; //Should the hatch of the autocannon turret be open ?
+	Bool User_NoSmallMG; //Used if the wrecks' turret is the autocannon, should the autocannon have the small 
+	Bool User_TurretGibbed; //Is the wrecks' turret, if any, gibbed ?
+	Bool User_TurretFlame; //If gibbed, does the turret have flames spewing out of its' remains ?
+	
+	Actor WarnZone; //In case someone wants to modify the warning zone attached to the APC if any. Or something like that.
+	
+	Enum WreckState
+	{
+		WRECK_BURNT = 0,
+		WRECK_BURNING_CLOSED = 1,
+		WRECK_BURNING_OPEN = 2
+	}
+	
+	Protected Int HandleTurretState()
+	{
+		If (User_TurretGibbed)
+		{
+			If (User_TurretFlame)
+				Return 1; //WRECK_VERYDEAD
+			Else
+				Return 2; //WRECK_VERYDEAD_FIRELESS
+		}
+		
+		Return 0; //WRECK_DEAD
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		TurretOffsets = (-0.1,0,4.25);
+		User_Destructible = False; //Ignore User_Destructible
+		Super.PostBeginPlay ();
+	}
+	
+	//Handle spawning either the autocannon or MG turret prop.
+	Override Void SpawnVehicleTurret ()
+	{
+		Int RandomAngle = Random (0,360); //Used if the APC prop has a turret angle of -1.
+		If (User_Turret ~== "Machine Gun" || User_Turret ~== "MachineGun" || User_Turret ~== "MG")
+		{
+			Turret = MVP_BaseTurret(Spawn ("MVP_APCMachineGunPropDead",Pos+TurretOffsets));
+			If (Turret)
+			{
+				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
+				MVP_APCMachineGunPropDead(Turret).WreckState = HandleTurretState();
+				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
+				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
+				console.printf ("the angle is %d",turret.angle);
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+			}
+		}
+		Else If (User_Turret ~== "Autocannon")
+		{
+			Turret = MVP_BaseTurret(Spawn ("MVP_APCAutocannonPropDead",Pos+TurretOffsets));
+			If (Turret)
+			{
+				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
+				MVP_APCAutocannonPropDead(Turret).WreckState = HandleTurretState();
+				MVP_APCAutocannonPropDead(Turret).HatchOpen = User_CannonHatchOpen;
+				If (User_NoSmallMG) Turret.Turret = Null;
+				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
+				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+			}
+		}
+	}
+	
+	Void APCWreckBurn ()
+	{
+		Vector3 OldPos = Pos;
+		Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
+		SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+		bNoDamageThrust = True;
+		A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
+		bNoDamageThrust = False;
+		SetOrigin (OldPos,False);
+	}
+	
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay
+			{
+				If (User_WreckState != WRECK_BURNT)
+				{
+					A_StartSound ("SFX/Fire",flags:CHANF_LOOPING|CHANF_OVERLAP,attenuation:0.65); //Play fire sound.
+					WarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(32,-48,24)); //Warn marines of burning wreck.
+				}
+			}
+			APC4 F 1
+			{
+				Switch (User_WreckState)
+				{
+					Case WRECK_BURNING_CLOSED:
+						Return ResolveState ("WreckBurning");
+						Break;
+					Case WRECK_BURNING_OPEN:
+						Return ResolveState ("WreckBurningOpen");
+						Break;
+					Default:
+						Break; //Just chill all burnt out and shit.
+				}
+				
+				Return State (Null);
+			}
+			Wait;
+		//Burning APC, no hatches or doors open.
+		WreckBurning:
+			APC4 GHIJ 5 Bright APCWreckBurn();
+			Loop;
+		WreckBurningOpen:
+			APC4 TUVW 5 Bright APCWreckBurn();
+			Loop;
+	}
+}
+
+Class MVP_APCMachineGunPropDead : MVP_APCMachineGunProp
+{
+	Default
+	{
+		+NoDamage;
+		Tag "Machine Gun Turret (Wreck)";
+	}
+	
+	States
+	{
+		Spawn:
+			APC3 M 0 NoDelay
+			{
+				Switch (WreckState)
+				{
+					Case WRECK_VERYDEAD:
+						Return ResolveState ("Gibbed");
+						Break;
+					Case WRECK_VERYDEAD_FIRELESS:
+						Return ResolveState ("GibbedNoFire");
+						Break;
+					Default:
+						Break;
+				}
+				
+				Return State (Null);
+			}
+			APC3 M 1 RotateToVehicle(False,True);
+			Wait;
+		Gibbed:
+			APC3 N 0
+			{
+				Height = 16;
+				Actor Flame = Spawn ("MVP_Flame",Pos);
+				MVP_Flame(Flame).Offsets = (0.1,0,4);
+				Flame.Scale.X = Flame.Scale.Y = 1.0;
+				Flame.Master = Self;
+				Flame.ReactionTime = INT.MAX;
+				Flame.SetDamage (8);
+				Flame.MaxTargetRange = 64;
+				Flame.MeleeRange = 32;
+				
+				//A_SpawnItemEx ("MVP_DestroyedMGTurretGun",16,0,12,FRandom (16,32),FRandom (-6,6),FRandom (2,6));
+			}
+			APC3 N 1 RotateToVehicle(False,True);
+			Wait;
+		GibbedNoFire:
+			APC3 N 1 RotateToVehicle(False,True);
+			Loop;
+	}
+}
+
+Class MVP_APCAutocannonPropDead : MVP_APCAutocannonProp
+{
+	Default
+	{
+		+NoDamage;
+		Tag "Autocannon Turret (Wreck)";
+		MVP_BaseVehicle.VehicleTurret "MVP_APCMGTurretPropDead";
+	}
+	
+	Override Void SpawnVehicleTurret()
+	{
+		If (!Turret) Return;
+		Vector3 Original = TurretOffsets;
+		TurretOffsets = (-0.1,0,1.1); //Temporarily set the autocannons' turret offsets to this, for spawning the small MG, then revert to the previous offsets.
+		Super.SpawnVehicleTurret();
+		TurretOffsets = Original;
+	}
+	
+	Bool HatchOpen;
+	
+	States
+	{
+		Spawn:
+			APC2 Q 0 NoDelay
+			{
+				Switch (WreckState)
+				{
+					Case WRECK_VERYDEAD:
+						Return ResolveState ("Gibbed");
+						Break;
+					Case WRECK_VERYDEAD_FIRELESS:
+						Return ResolveState ("GibbedNoFire");
+						Break;
+					Default:
+						Break;
+				}
+				
+				Return State (Null);
+			}
+			APC2 Q 1
+			{
+				RotateToVehicle(False,True);
+				
+				If (HatchOpen)
+					Frame = 19; //T
+				Else
+					Frame = 16; //Q
+			}
+			Wait;
+		Gibbed:
+			APC2 U 0
+			{
+				Height = 16;
+				Actor Flame = Spawn ("MVP_Flame",Pos);
+				MVP_Flame(Flame).Offsets = (0.1,0,4);
+				Flame.Scale.X = Flame.Scale.Y = 1.0;
+				Flame.Master = Self;
+				Flame.ReactionTime = INT.MAX;
+				Flame.SetDamage (8);
+				Flame.MaxTargetRange = 64;
+				Flame.MeleeRange = 32;
+				
+				//A_SpawnItemEx ("MVP_APCHatch",-12,6,24,FRandom (6,-6),FRandom (6,-6),FRandom (18,24));
+			}
+			APC2 U 1 RotateToVehicle(False,True);
+			Wait;
+		GibbedNoFire:
+			APC2 U 1 RotateToVehicle(False,True);
+			Loop;
+	}
+}
+
+//This is by far the simplest prop turret.
+Class MVP_APCMGTurretPropDead : MVP_APCMGTurretProp
+{
+	Default
+	{
+		+NoDamage;
+		Tag "7.62mm Turret (Wreck)";
+	}
+	
+	States
+	{
+		Spawn:
+			APC2 X 1 RotateToVehicle (False,True);
+			Loop;
+	}
+}
+
+Class MVP_APCRuin : MVP_APCWreck
+{
+	Default
+	{
+		//$Title Armored Personnel Carrier (Ruin)
+		//$Category Vehicles/APC
+		//$Sprite APC4X1
+		Height 36;
+		Tag "Armored Personnel Carrier (Ruin)";
+	}
+	
+	Bool User_SpawnFlames;
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay ();
+		
+		If (User_SpawnFlames)
+			SpawnDeathFlames (lifespan:(INT.MAX,INT.MAX));
+	}
+	
+	States
+	{
+		Spawn:
+			APC4 X -1;
+			Stop;
+	}
+}

@@ -155,15 +155,14 @@ Class MVP_LiquidSplash : Actor
 	}
 }
 
-//The reaction time property is used as the lifespan in tics.
 Class MVP_Flame : Actor
 {
 	Default
 	{
 		RenderStyle "Add";
-		ReactionTime (35*30);
+		ReactionTime (35*30); //Flame lifespan.
 		Scale 0.75;
-		DamageType "Fire";
+		DamageType "Fire"; //No shit sherlock.
 		Damage 5; //Damage done every 16 tics by the fire.
 		MaxTargetRange 48; //Range of the flame.
 		MeleeRange 24; //Radius in which the flame does its' full damage with no falloff.
@@ -175,20 +174,28 @@ Class MVP_Flame : Actor
 	
 	Vector3 Offsets;
 	
+	Override Void OnDestroy()
+	{
+		Super.OnDestroy();
+		
+		If (Master && Master Is "MVP_BaseVehicle")
+			MVP_BaseVehicle(Master).DeathFlames.Delete (MVP_BaseVehicle(Master).DeathFlames.Find(Self));
+	}
+	
 	Override Void Tick()
 	{
 		Super.Tick();
 		
 		If (IsFrozen()) Return;
 		
-		//Stick to you master, if any.
+		//Stick to your master, if any.
 		If (Master)
 			SetOrigin (Master.Vec3Offset(Offsets.X,Offsets.Y,Offsets.Z),True);
 		
 		If (!InStateSequence(CurState,ResolveState ("Death")))
 		{
 			If (!(ReactionTime == 0) && GetAge() >= ReactionTime)
-				SetStateLabel ("Death");
+				Die (Null,Null);
 			
 			If (GetAge() % 16 == 0)
 				A_Explode (Damage*FRandom (0.75,1.5),MaxTargetRange,XF_HURTSOURCE|XF_NOTMISSILE,False,MeleeRange);
@@ -205,18 +212,18 @@ Class MVP_Flame : Actor
 				A_StartSound ("SFX/Fire",CHAN_BODY,flags:CHANF_LOOPING,0.5);
 				A_AttachLight ('Fire',DynamicLight.FlickerLight,"EBDB57",48,40,param:0.25);
 			}
-			#### ABCDEFGH 4;
+			F1RE ABCDEFGH 4;
 			Goto Spawn+1;
 		Death:
-			#### A 4;
-			#### B 4 A_SoundVolume (CHAN_BODY,0.8);
-			#### # 0 {Scale -= (.15,.15);}
-			#### C 4 A_SoundVolume (CHAN_BODY,0.6);
-			#### # 0 {Scale -= (.15,.15);}
-			#### D 4 A_SoundVolume (CHAN_BODY,0.4);
-			#### # 0 {Scale -= (.15,.15);}
-			#### E 4 A_SoundVolume (CHAN_BODY,0.2);
-			#### # 0 {Scale -= (.15,.15);}
+			F1RE A 4;
+			F1RE B 4 A_SoundVolume (CHAN_BODY,0.8);
+			F1RE # 0 {Scale -= (.15,.15);}
+			F1RE C 4 A_SoundVolume (CHAN_BODY,0.6);
+			F1RE # 0 {Scale -= (.15,.15);}
+			F1RE D 4 A_SoundVolume (CHAN_BODY,0.4);
+			F1RE # 0 {Scale -= (.15,.15);}
+			F1RE E 4 A_SoundVolume (CHAN_BODY,0.2);
+			F1RE # 0 {Scale -= (.15,.15);}
 			TNT1 A 0 A_RemoveLight ('Fire');
 			Stop;
 		Sprites:

@@ -19,6 +19,7 @@ Version "4.9.0"
 	#Include "ZScript/Vehicles/Army Truck/OtherActors.zsc"
 	//Armored Personnel Carrier
 	#Include "ZScript/Vehicles/APC/APC.zsc"
+	#Include "ZScript/Vehicles/APC/APCProps.zsc" //The APC's OtherActors.zsc is already too long without the props.
 	#Include "ZScript/Vehicles/APC/OtherActors.zsc"
 
 
