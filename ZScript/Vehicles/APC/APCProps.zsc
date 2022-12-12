@@ -22,7 +22,7 @@ Class MVP_APCProp : MVP_BaseProp
 		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
 		DamageFactor "Fire", 0.7;
 		//Damage factors specific to the Smart Marines.
-		DamageFactor "MarineHMG", 0.80;
+		DamageFactor "MarineHMG", 0.90; //APCs stop 50. cal bullets from ripping, so the multiple damage they do as they go through actors is not much issue.
 		DamageFactor "MarineGrenade", 0.6;
 		DamageFactor "MarineRifle", 0.7;
 		//Vehicle damage factors
@@ -41,7 +41,9 @@ Class MVP_APCProp : MVP_BaseProp
 	//Handle spawning either the autocannon or MG turret prop.
 	Override Void SpawnVehicleTurret ()
 	{
-		Int RandomAngle = Random (0,360); //Used if the APC prop has a turret angle of -1.
+		If (User_TurretAngle == -1) User_TurretAngle = Random (180,-180);
+		//If (User_TurretPitch == -1) User_TurretPitch = Random (90,-90); 
+		
 		If (User_Turret ~== "Machine Gun" || User_Turret ~== "MachineGun" || User_Turret ~== "MG")
 		{
 			Turret = MVP_BaseTurret(Spawn ("MVP_APCMachineGunProp",Pos+TurretOffsets));
@@ -50,11 +52,9 @@ Class MVP_APCProp : MVP_BaseProp
 				Turret.CopyFriendliness (Self,False);
 				Turret.SpawnFlags = SpawnFlags;
 				Turret.HandleSpawnFlags();
-				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
-				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
-				console.printf ("the angle is %d",turret.angle);
-				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (90,-90);
-				console.printf ("the pitch is %d",turret.pitch);
+				Turret.Angle = Angle;
+				Turret.DeathAngleOffset = User_TurretAngle;
+				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (45,-90);
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
 			}
@@ -67,9 +67,9 @@ Class MVP_APCProp : MVP_BaseProp
 				Turret.CopyFriendliness (Self,False);
 				Turret.SpawnFlags = SpawnFlags;
 				Turret.HandleSpawnFlags();
-				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
-				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
-				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (90,-90);
+				Turret.Angle = Angle;//console.printf ("what the fuck is the value of user_turretangle ? %d ? shouldn't it be FUCKING ZERO ?",user_turretangle);
+				Turret.DeathAngleOffset = User_TurretAngle;
+				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (45,-90);
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
 			}
@@ -188,6 +188,7 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 		Height 32;
 		DeathHeight 32;
 		Radius 32;
+		Mass 700;
 		MVP_BaseTurret.MaximumPitch -70;
 		MVP_BaseTurret.MinimumPitch 20;
 		Tag "Machine Gun Turret (Prop)";
@@ -254,6 +255,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 		GibHealth 300;
 		Height 20;
 		DeathHeight 20;
+		Mass 1000;
 		Tag "Autocannon Turret (Prop)";
 		Obituary "%o got killed by an empty prop";
 		MVP_BaseVehicle.VehicleTurret "MVP_APCMGTurretProp";
@@ -329,10 +331,11 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 		Height 12;
 		DeathHeight 12;
 		Radius 24;
+		Mass 125;
 		RipLevelMin 1;
-		MVP_BaseTurret.MaximumPitch -70;
+		MVP_BaseTurret.MaximumPitch -60;
 		MVP_BaseTurret.MinimumPitch 20;
-		Obituary "%o found out that even empty guns can kill %h"; //First time I've had to actually use an obituary keyword that isn't %o.
+		Obituary "%o found out that even empty guns can kill %h"; //First time I've had to actually use an obituary keyword that isn't %o lol.
 		Tag "7.62mm Turret (Prop)";
 		DamageType "RifleBullet";
 		DamageFactor "Autocannon", 0.95;
@@ -486,9 +489,9 @@ Class MVP_APCWreck : MVP_APCProp
 	{
 		Vector3 OldPos = Pos;
 		Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-		SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+		SetOrigin (Vec3Offset(-32,-48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 		bNoDamageThrust = True;
-		A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
+		A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,False,64,damagetype:'Fire');
 		bNoDamageThrust = False;
 		SetOrigin (OldPos,False);
 	}
@@ -501,7 +504,7 @@ Class MVP_APCWreck : MVP_APCProp
 				If (User_WreckState != WRECK_BURNT)
 				{
 					A_StartSound ("SFX/Fire",flags:CHANF_LOOPING|CHANF_OVERLAP,attenuation:0.65); //Play fire sound.
-					WarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(32,-48,24)); //Warn marines of burning wreck.
+					WarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(-32,-48,24)); //Warn marines of burning wreck.
 				}
 			}
 			APC4 F 1

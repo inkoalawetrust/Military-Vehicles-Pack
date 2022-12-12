@@ -1,5 +1,6 @@
 //$GZDB_SKIP
 //Functions and code exclusive to the turret class.
+//Todo: Probably add a minimum range that if lower, will have turrets NOT do movement prediction.
 Extend Class MVP_BaseTurret
 {
 	//Conditionally change the turrets' sprites based on pitch.
@@ -24,19 +25,19 @@ Extend Class MVP_BaseTurret
 		
 		If (IsDead (Self) || OnlyRelativeRotation)
 		{
-			Angle = Master.Angle+DeathAngleOffset;console.printf ("the death angle is now %d",deathangleoffset);
+			Angle = Master.Angle+DeathAngleOffset;//console.printf ("the death angle is now %d",deathangleoffset);
 			Return;
 		}
 		
 		If ((!Target || NoTargetCheck))
 		{
 			//If the angle and pitch difference are too small, just start snapping to the vehicles' direction.
-			If (!LastEnemyDelay || Abs (Master.Pitch - Pitch) < 0.5)
+			If (!LastEnemyDelay || Abs (Master.Pitch - Pitch) < 0.75)
 				Pitch = Master.Pitch;
 			Else
 				Pitch += (Master.Pitch - Pitch) * 0.15;
 			
-			If (!LastEnemyDelay || AbsAngle (Master.Angle, Angle) < 0.5)
+			If (!LastEnemyDelay || AbsAngle (Master.Angle, Angle) < 0.75)
 				Angle = Master.Angle;
 			Else
 			{
@@ -55,13 +56,16 @@ Extend Class MVP_BaseTurret
 	}
 	
 	//Handles making the vehicles lead their shots based on their targets' movement, regardless of whether or not it's a player or monster.
-	Void HandleTargetPrediction (Actor Projectile, Vector2 SpreadHorz, Vector2 SpreadVert)
+	//Projectile: The projectile to spawn.
+	//SpreadHorz/SpreadVert: Maximum and minimum horizontaly and vertical spread, stored in Vector2s.
+	//MinDist: The minimum distance below which target prediction won't be used. And the projectile will be fired straight at the target instead.
+	Void HandleTargetPrediction (Actor Projectile, Vector2 SpreadHorz, Vector2 SpreadVert, Double MinDist)
 	{
 		Vector3 OldVel;
 		If (!Projectile || !Target) Return;
 		
 		//No movement prediction, so just shoot normally and move on.
-		If (bNoTargetPrediction)
+		If (bNoTargetPrediction || Distance3DSquared(Target) <= MinDist*MinDist)
 		{
 			NormalProjectileFire (Projectile,SpreadHorz,SpreadVert);
 			Return;
@@ -80,7 +84,7 @@ Extend Class MVP_BaseTurret
 			If ((Target.Vel.X == 0 && Target.Vel.Y == 0 && Target.Vel.Z == 0)) //Still no velocity
 			{
 				NormalProjectileFire (Projectile,SpreadHorz,SpreadVert);
-				Target.Vel = OldVel; //Revent velocity.
+				Target.Vel = OldVel; //Revert velocity.
 				Return;
 			}
 			Projectile.VelIntercept (Target);
@@ -167,6 +171,8 @@ Extend Class MVP_BaseTurret
 			
 			If (!CanBeTargeted(Mobj)) {a_log ("cant target this");Continue;} //Can't be targeted. (Duh)
 			
+			If (IsDead (Mobj)) {a_log ("this is dead"); Continue;} //Is dead (Duuuuuuuuuuh)
+			
 			If (Origin.Distance3DSquared(Mobj) > CheckRange) {a_log ("too far away");Continue;} //Too out of reach.
 			
 			If (!IsHostile (Mobj)) {a_log ("not hostile");Continue;} //Actor isn't hostile.
@@ -194,7 +200,7 @@ Extend Class MVP_BaseTurret
 	}
 }
 
-//This LOF check code should probably be genericized, with stuff like a customizable amount of health over which a prop is considered too strong.
+//Todo: Fix a big caused by the blocking actor check returning BadLOF even when it hits an enemy actor. Caused by actors that are invulnerable.
 Class MVP_TurretRaycast : LineTracer
 {
 	Bool BadLOF; //If true, there is something standing in the turrets' line of fire.
@@ -204,18 +210,19 @@ Class MVP_TurretRaycast : LineTracer
 	Override ETraceStatus TraceCallback ()
 	{
 		Actor Mobj = Results.HitActor;
-		//Make the prop check also ignore dead monsters that are still solid.
+		
 		If (!IgnoreActors && Results.HitType == Trace_HitActor)
 		{
+			If (Shooter && Mobj == Shooter.Master) Return Trace_Skip; //Ignore the vehicle you are attached to.
 			//If you hit an actor that is not a monster or player, and is a really strong or indestructible prop.
-			If(((Mobj.bInvulnerable || Mobj.bNoDamage) || !Mobj.bIsMonster && !Mobj.Player) && Mobj.bSolid && (Mobj.Health > PropHealthThreshold))
-			{
+			If(((Mobj.bInvulnerable || Mobj.bNoDamage) && !(Mobj.bIsMonster || Mobj.Player) || !Mobj.bIsMonster && !Mobj.Player) && Mobj.bSolid && (Mobj.Health > PropHealthThreshold))
+			{console.printf ("actor on my way called %s",mobj.getclassname());
 				BadLOF = True;
 				Return Trace_Stop;
 			}
 			//If the collidable corpse of an enemy is in the way (e.g a destroyed vehicle), don't shoot.
 			Else If (Shooter && Shooter.IsHostile (Mobj) && Mobj.Health <= 0 && Mobj.bDontCorpse)
-			{
+			{console.printf ("corpse on my way");
 				BadLOF = True;
 				Return Trace_Stop;
 			}
@@ -228,7 +235,7 @@ Class MVP_TurretRaycast : LineTracer
 		{
 			//If there is a line in the way that is set to block projectiles or everything, then don't try shooting at it pointelessly.
 			If (Results.HitLine.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKEVERYTHING))
-			{
+			{console.printf ("hitting geometry");
 				BadLOF = True;
 				Return Trace_Stop;
 			}

@@ -9,6 +9,8 @@ Class MVP_PainRay : MVP_BaseTurret
 		Height 64;
 		DeathHeight 16;
 		Radius 24;
+		Mass 250;
+		FriendlySeeBlocks 14; //Doesn't need that much sight range, since it's max target range is deliberately so low.
 		MaxTargetRange 1536;
 		DamageFactor "Electric", 1.25;
 		Obituary "%o was killed by a non-lethal weapon, somehow";

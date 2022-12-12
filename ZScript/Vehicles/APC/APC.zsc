@@ -1,5 +1,4 @@
 //To do:
-//Make the APC props, such as the gibbed, dead, and prop APC, along with the gibbed turrets (Since the turrets are flung when the APC is gibbed.).
 //Add GLDEFS entries for the APC death animation.
 
 Class MVP_APC : MVP_BaseVehicle
@@ -17,6 +16,7 @@ Class MVP_APC : MVP_BaseVehicle
 		Radius 64;
 		CameraHeight 48; //Hopefully this matches the height of the viewing port.
 		DeathHeight 72; //No height change when killed. Unless gibbed of course.
+		FriendlySeeBlocks 80; //A bit over 10000 map unit sight range, useful for vehicles with actual guns to attack with.
 		RipLevelMin 5;
 		Mass 28000;
 		MaxStepHeight 48;
@@ -165,7 +165,7 @@ Class MVP_APC : MVP_BaseVehicle
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
 				
 				//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
-				If (Turret && Turret.Health > Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)))
+				If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling() && bChaseGoal))
 				{
 					If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
 					{
@@ -199,7 +199,7 @@ Class MVP_APC : MVP_BaseVehicle
 					DeployTimer = 35;
 					Return ResolveState ("See");
 				}
-				If (!ValidPositionAt ((-112,0),36,68)) //Fine tune these parameters by playtesting.
+				If (!ValidPositionAt ((-120,0),36,68))
 				{
 					Recursions++;
 					Return ResolveState ("See");
@@ -220,7 +220,7 @@ Class MVP_APC : MVP_BaseVehicle
 				APC1 H 0
 				{
 					Actor Marine;
-					Marine = SpawnMarine ((-112, FRandom (10,-10),0));
+					Marine = SpawnMarine ((-120, FRandom (10,-10),0));
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
 					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;
@@ -260,7 +260,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				A_StartSound ("SFX/Fire",flags:CHANF_LOOPING|CHANF_OVERLAP,attenuation:0.65);
 				SmokeCounter = Random (8,64); //Might as well make this otherwise useless variable useful.
-				WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(32,-48,24));
+				WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(-32,-48,24));
 			}
 			//Fall through
 		DeathFlameLoop:
@@ -268,13 +268,13 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-				SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				SetOrigin (Vec3Offset(-32,-48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;
 				SetOrigin (OldPos,False);
 				
-				If (User_MarineAmount) SmokeCounter--; //Only go to the escape state if any passengers survived to begin with.
+				If (User_MarineAmount > 0) SmokeCounter--; //Only go to the escape state if any passengers survived to begin with.
 				console.printf ("the timer is %d", smokecounter);
 				If (SmokeCounter <= 0) Return ResolveState ("DeathEscapeLoop");
 				
@@ -294,7 +294,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-				SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				SetOrigin (Vec3Offset(-32,-48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;

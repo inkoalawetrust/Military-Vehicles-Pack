@@ -1,4 +1,4 @@
-Version "4.9.0"
+Version "4.10.0"
 
 //Base classes and common functions shared across all actors.
 #Include "ZScript/Vehicles/Base/Base.zsc"
@@ -34,12 +34,12 @@ Class SM_MarineChecker : EventHandler
 	//my marines and vehicles VS other monsters.
 	Override Void WorldThingSpawned (WorldEvent E)
 	{
-		If (E.Thing)// && !E.Thing.bSeeFriendlyMonsters)
+		/*If (E.Thing && !E.Thing.bSeeFriendlyMonsters)
 		{
 			E.Thing.bSeeFriendlyMonsters = True;
 			E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
 			E.Thing.FriendlySeeBlocks = 128;
-		}
+		}*/
 	}
 	
 	//Replaces the Smart Marines' own bullets with their better MVP equivalents.

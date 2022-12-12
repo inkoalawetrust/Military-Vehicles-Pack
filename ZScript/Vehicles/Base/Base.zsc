@@ -15,9 +15,9 @@ Class MVP_BaseVehicle : Actor Abstract
 		RipLevelMin 3;
 		Speed 8;
 		FastSpeed 16;
-		FriendlySeeBlocks 48;
+		FriendlySeeBlocks 48; // 6144 map units, armed vehicles should have a longer range to be able to attack from across the map. 80; //A bit over 10000 map unit sight range
 		MaxStepHeight 32;
-		MaxTargetRange 25000;//8192; //REPLACE THIS VALUE WITH 8192 AGAIN, THIS IS JUST HERE TO TEST THE MOVEMENT PREDICTION.
+		MaxTargetRange 10000;
 		MVP_BaseVehicle.MaxCorpseRadius 64;
 		MVP_BaseVehicle.MaxCorpseHeight 48;
 		Species "Military";
@@ -126,7 +126,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		SpawnVehicleTurret();
 		
 		If (!bFriendly) Species = 'MilitaryHostile';
-		
+		console.printf ("hello my name is %s and my current order is %s",getclassname(),user_defaultorder);
 		If (!User_DefaultOrder || User_DefaultOrder ~== "")
 		{
 			//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
@@ -144,27 +144,27 @@ Class MVP_BaseVehicle : Actor Abstract
 			If (VisibleFriends.Size() - 1 >= 0)
 			{
 				SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
-				CurrentOrder = ORDER_FOLLOW;
+				CurrentOrder = ORDER_FOLLOW;//a_log ("following");
 			}
 			//No friendplayer, or they are out of sight
 			Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
 			{
 				CurrentOrder = ORDER_WANDER;
-				bDontFollowPlayers = True;
+				bDontFollowPlayers = True;//a_log ("wandering");
 			}
 		}
 		Else If (User_DefaultOrder ~== "Follow")
 		{
-			CurrentOrder = ORDER_FOLLOW;
+			CurrentOrder = ORDER_FOLLOW;a_log ("following");
 		}
 		Else If (User_DefaultOrder ~== "Wander")
 		{
 			CurrentOrder = ORDER_WANDER;
-			bDontFollowPlayers = True;
+			bDontFollowPlayers = True;a_log ("wandering");
 		}
 		Else If (User_DefaultOrder ~== "Stay")
 		{
-			CurrentOrder = ORDER_STAY;
+			CurrentOrder = ORDER_STAY;a_log ("bing chilling");
 		}
 	}
 	
@@ -183,7 +183,6 @@ Class MVP_BaseVehicle : Actor Abstract
 		
 		If (bScareMarines && Self) SetInventory (FearToken,1);
 		Else If (!bScareMarines && Self) TakeInventory (FearToken,INT.MAX);
-			
 	}
 	
 	Override Bool CanCollideWith (Actor Other, Bool Passive)
@@ -220,6 +219,22 @@ Class MVP_BaseVehicle : Actor Abstract
 		Super.OnDestroy();
 		RemoveHeadlights();
 		If (Turret) Turret.Destroy();
+	}
+	
+	Override Void Activate (Actor Activator)
+	{
+		Super.Activate(Activator);
+		
+		If (Turret) //Pass it down to turets as well.
+			Turret.Activate (Activator);
+	}
+	
+	Override Void Deactivate (Actor Activator)
+	{
+		Super.Deactivate(Activator);
+		
+		If (Turret) //Pass it down to turets as well.
+			Turret.Deactivate (Activator);
 	}
 	
 	Enum VehicleSoundChannels
@@ -360,6 +375,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	{
 		Super.Tick();
 		
+		//Keeps track of the current targets' position for the target prediction code.
 		If (Target && Target.Tics == Target.CurState.Tics)
 		{
 			LastEnemyPosition = CurrentEnemyPosition;
@@ -380,7 +396,11 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		If (Master && !(Self Is "MVP_BaseTurretProp")) //Prop turrets use DeathAngleOffset differently.
-			DeathAngleOffset = DeltaAngle (Angle,Master.Angle);
+		{
+			//Console.Printf ("Vehicle angle is %d, turret angle is %d",Master.Angle,Angle);
+			DeathAngleOffset = DeltaAngle (Master.Angle,Angle);
+			//Console.Printf ("The angle different is %d",DeathAngleOffset);
+		}
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		bShootable = bNotAutoaimed = True;
 		If (bFallOnDeath) bNoSpriteShadow = False;
@@ -759,6 +779,7 @@ Class SmartMarineWarningZone : Actor
 					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
+						console.printf ("i gave the token to a %s",mobj.getclassname());
 						If (Token) Token.Master = Self;
 					}
 				}
@@ -771,6 +792,7 @@ Class SmartMarineWarningZone : Actor
 					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
+						console.printf ("i gave the token to a %s",mobj.getclassname());
 						If (Token) Token.Master = Self;
 					}
 				}

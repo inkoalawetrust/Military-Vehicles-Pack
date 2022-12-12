@@ -4,8 +4,9 @@ Class MVP_BaseProp : MVP_BaseVehicle Abstract
 	{
 		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
 		+NotAutoaimed;
-		+CastSpriteShadow
-		+NeverTarget; //There should not be a reason to target a prop.
+		+CastSpriteShadow;
+		+DoHarmSpecies;
+		//+NeverTarget; //There should not be a reason to target a prop.
 		+MVP_BaseVehicle.NoRadio;
 		-CountKill;
 		-ActivateMCross;
@@ -17,6 +18,7 @@ Class MVP_BaseProp : MVP_BaseVehicle Abstract
 	Override Void PostBeginPlay ()
 	{
 		Super.PostBeginPlay ();
+		//Species = Default.Species;
 		
 		If (!User_Destructible)
 		{
@@ -59,7 +61,7 @@ Class MVP_BaseTurretProp : MVP_BaseTurret
 		Tag "Military Vehicle Turret Prop Base (You really shouldn't be seeing this in-game)";
 		+NotAutoaimed;
 		+NoSpriteShadow;
-		+NeverTarget; //There should not be a reason to target a prop.
+		//+NeverTarget; //There should not be a reason to target a prop.
 		+MVP_BaseVehicle.NoRadio;
 		-CountKill;
 		-ActivateMCross;
