@@ -22,6 +22,7 @@ Class MVP_ArmyTruckProp : MVP_BaseProp
 		DamageFactor "ExplosiveImpact", 1.25;
 		DamageFactor "Explosion", 1.25;
 		DamageFactor "Explosive", 1.25;
+		DamageFactor "Grenade", 1.5;
 		DamageFactor "HitScan", 0.9; //The generic damage type of hitscan attacks.
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.9;

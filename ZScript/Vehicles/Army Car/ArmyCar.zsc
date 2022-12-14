@@ -13,6 +13,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Tag "Army Car";
 		MVP_BaseVehicle.VehicleTurret "MVP_PainRay";
 		DamageFactor "MarineGrenade", 1.25;
+		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
 		//+MissileEvenMore
 		+MVP_BaseVehicle.Transport;

@@ -27,6 +27,7 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "ExplosiveImpact", 0.65;
 		DamageFactor "Explosion", 0.65;
 		DamageFactor "Explosive", 0.65;
+		DamageFactor "Grenade", 0.6;
 		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
 		DamageFactor "Fire", 0.7;
 		//Damage factors specific to the Smart Marines.
@@ -240,9 +241,8 @@ Class MVP_APC : MVP_BaseVehicle
 				}
 				Goto See;
 		//Waiting for TG5 to finish the sprite edits of the marine crew getting out of the APC and autocannon.
-		/*The APC is supposed to explode, catch on fire, then after about a few seconds, the crew will open the hatches and front door and get out
-		then if there were any passengers left when the APC died, a random amount of them will be picked as survivors, and if any of them survive,
-		they will open the back doors and get out like they do normally. Then after some time the interiors will catch on fire.
+		/*The APC is supposed to explode, catch on fire, then after about a few seconds, the crew will open the hatches and front door and get out.
+		And THEN the existing death code below runs, where a random amount of passengers also escape.
 		*/
 		Death:
 			APC4 A 2 Bright

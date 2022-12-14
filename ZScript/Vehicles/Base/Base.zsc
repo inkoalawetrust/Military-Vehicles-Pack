@@ -53,6 +53,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		DamageFactor "ExplosiveImpact", 0.75;
 		DamageFactor "Explosion", 0.75;
 		DamageFactor "Explosive", 0.75;
+		DamageFactor "Grenade", 0.7;
 		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
 		DamageFactor "Fire", 0.8;
 		DamageFactor "Crush", 1.5;
@@ -327,6 +328,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		Mass 500;
 		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
 		DamageFactor "MarineGrenade", 0.9;
+		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
 		+NoFear; //Can't really move to run away.
 		+DontThrust;
