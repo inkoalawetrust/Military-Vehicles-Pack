@@ -740,7 +740,7 @@ Class SmartMarineWarningZone : Actor
 		If (!IsOnTurret)
 			Return False;
 		
-		If (IsOnTurret.GetInt("",ObjectArg:Other))
+		If (IsOnTurret.GetInt("IsOnTurret",ObjectArg:Other))
 			Return True;
 		
 		Return False;

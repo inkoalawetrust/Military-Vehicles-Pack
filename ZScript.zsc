@@ -32,20 +32,20 @@ Class SM_MarineChecker : EventHandler
 	//It also increases their seeing range from the default 1280 to 4096.
 	//I say this is for debugging, but it's mostly for me to screw around and make NPC battles with
 	//my marines and vehicles VS other monsters.
-	Override Void WorldThingSpawned (WorldEvent E)
+	/*Override Void WorldThingSpawned (WorldEvent E)
 	{
-		/*If (E.Thing && !E.Thing.bSeeFriendlyMonsters)
+		If (E.Thing && !E.Thing.bSeeFriendlyMonsters)
 		{
 			E.Thing.bSeeFriendlyMonsters = True;
 			E.Thing.bNoInfighting = True; //Also possibly stop monsters from killing each other.
-			E.Thing.FriendlySeeBlocks = 128;
-		}*/
-	}
+			E.Thing.FriendlySeeBlocks = 64;
+		}
+	}*/
 	
 	//Replaces the Smart Marines' own bullets with their better MVP equivalents.
 	Override Void CheckReplacement (ReplaceEvent E)
 	{
-		String MarineBullet = "SmartMarineMGBullet";
+		Name MarineBullet = "SmartMarineMGBullet";
 		
 		If (!NoCustomMarines && E.Replacee Is MarineBullet)
 			E.Replacement = "MVP_50CalBullet";
