@@ -102,11 +102,10 @@ Class MVP_Radio : Weapon
 		If (!Other) Return;
 		
 		If (Other.bDormant || MVP_BaseVehicle(Other) && MVP_BaseVehicle(Other).bNoRadio || !MarineFollowsCommands (Other) ) Return;
-		a_log ("on your feet soldier");
 		
 		//You are ordering a Smart Marine, so do the order by remotely calling Used() on the marine, and change CurrentMarineOrder manually.
 		If (Other Is CustomMarine)
-		{console.PrintfEx (PRINT_LOW,"current order is %d",invoker.currentorder-1);
+		{
 			If (Invoker.CurrentOrder == MarineGetCurrentOrder (Other)+1) Return;
 			SetMarineOrderTo (Other,Invoker.CurrentOrder-1);
 			Other.Used (Self);
@@ -120,21 +119,21 @@ Class MVP_Radio : Weapon
 		Vehicle.CurrentOrder = Invoker.CurrentOrder;
 		
 		If (Invoker.CurrentOrder == ORDER_STAY)
-		{a_log ("stay here");
+		{
 			Vehicle.ChaseTimer = 0;
 			If (Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("See")))
-				{Vehicle.SetStateLabel ("Spawn");a_log ("going to spawn");}
+				Vehicle.SetStateLabel ("Spawn");
 			Return;
 		}
 		Else If (Invoker.CurrentOrder == ORDER_WANDER)
-		{a_log ("wander around");
+		{
 			Vehicle.bDontFollowPlayers = True;
 			If (Vehicle.Target == Null)
 				Vehicle.SetStateLabel ("See");
 			Return;
 		}
 		Else If (Invoker.CurrentOrder == ORDER_FOLLOW)
-		{a_log ("follow me");
+		{
 			Vehicle.bDontFollowPlayers = False;
 			If (Player)
 				SetFriendPlayer (Player);

@@ -179,10 +179,9 @@ Class MVP_Flame : Actor
 		If (Master && Master Is "MVP_BaseVehicle")
 		{
 			MVP_BaseVehicle Vehicle = MVP_BaseVehicle(Master);
-			If (Vehicle.DeathFlames.Find(Self) != Vehicle.DeathFlames.Size()) A_Log ("I am in the array");
-			Else {A_Log ("WHY AM I NOT IN THE FUCKING ARRAY"); Return;}
+			If (Vehicle.DeathFlames.Find(Self) != Vehicle.DeathFlames.Size())
+			Else Return;
 			Vehicle.DeathFlames.Delete (Vehicle.DeathFlames.Find(Self));
-			console.printf ("there are now %d flames",Vehicle.DeathFlames.size());
 		}
 	}
 	
