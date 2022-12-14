@@ -31,7 +31,7 @@ Mixin Class MVP_UniversalFunctions
 		For (Int I = 0; I < WaterTextures.Size()-1; I++)
 			If (TexMan.CheckForTexture (SlimeTextures[I]) == Texture)
 				Return LIQUID_SLIME;
-		console.printf ("i have a %s",texman.getname(texture));
+		
 		Return LIQUID_NONE;
 	}
 	
@@ -63,7 +63,7 @@ Mixin Class MVP_UniversalFunctions
 		}
 		
 		For (Int I = 0; I < TempAllyList.Size(); I++)
-			{TempAllyList[I].bNoRadiusDmg = True;console.printf ("%s is now immune",tempallylist[i].getclassname());}
+			TempAllyList[I].bNoRadiusDmg = True;
 	}
 	
 	Void RemoveAllyExplosionImmunity()
@@ -189,24 +189,21 @@ Extend Class MVP_BaseVehicle
 	{
 		Int RandomFlames = Random (Amount.X,Amount.Y);
 		Actor Flame;
-		Vector3 SpawnPos;console.printf ("i will spawn %d flames",randomflames);
+		Vector3 SpawnPos;
 		//Spawn a random amount of flames around the APC wreck.
 		For (Int I = 0; I < RandomFlames; I++)
 		{
 			SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
 			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
-			//console.printf ("pos is %f %f %f",spawnpos.x,spawnpos.y,spawnpos.z);
 			//If the random position relative to the vehicle is valid.
 			If (Level.IsPointInLevel (Vec3Offset(SpawnPos.X,SpawnPos.Y,SpawnPos.Z)))
 				Flame = Spawn ("MVP_Flame",Vec3Offset(SpawnPos.X,SpawnPos.Y,SpawnPos.Z)); //Then spawn the flame.
-			//if (flame)console.printf ("flame pos is %f %f %f",flame.pos.x,flame.pos.y,flame.pos.z);
 			
 			If (Flame)
 			{
 				Flame.Master = Self; //So the flame knows what actor to warp to.
 				MVP_Flame(Flame).Offsets = SpawnPos;
 				Flame.ReactionTime = FRandom (Lifespan.X,LifeSpan.Y);
-				Console.Printf ("Lifespan is %d",Flame.ReactionTime);
 				DeathFlames.Push (Flame); //Add the valid flame to the list.
 			}
 		}
@@ -215,17 +212,12 @@ Extend Class MVP_BaseVehicle
 		For (Int I = DeathFlames.Size()-1; I >= 0; I--)
 			If (!DeathFlames[I]) DeathFlames.Delete(I); //Remove null entries.
 		
-		//console.printf ("the vehicle has %d flames",deathflames.size());
-		//int leflags = MWRN_WARP|MWRN_ALLIESTOO|FSP_VEHICLEDEATH ? MWRN_VEHICLEDEATH : 0;
-		//int lealtflags = MWRN_WARP|MWRN_ALLIESTOO;
-		//int lealtaltflags = MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH;
-		//console.printf ("the flags are %d, the normal flags are %d, the other flags are %d",leflags,lealtflags,lealtaltflags);
 		//Create a warning zone if any flames actually spawned.
 		If (Flags & FSP_WARNMARINES && DeathFlames.Size())
 			If (Flags & FSP_VEHICLEDEATH)
-				{A_LOG ("in da vehicle death zone");DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);}
+				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);
 			Else
-				{A_LOG ("in da zone");DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);}
+				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);
 	}
 	
 	//=====|Marine related functions|=====\\
@@ -308,7 +300,7 @@ Extend Class MVP_BaseVehicle
 		If (Flags & MWRN_WARP) WarnZone.Master = ToWho;
 		If (Flags & MWRN_ALLIESTOO) WarnZone.bHarmFriends = True;
 		If (Flags & MWRN_PAINONLY) WarnZone.bCausePain = True; //I had forgot to make the function handle this warning zone flag for two months lmfao.
-		If (Flags & MWRN_VEHICLEDEATH) {WarnZone.bSpecialFireDamage = True;a_log ("setting flag");}
+		If (Flags & MWRN_VEHICLEDEATH) WarnZone.bSpecialFireDamage = True;
 		WarnZone.MaxTargetRange = Range;
 		SmartMarineWarningZone(WarnZone).Offset = Offsets;
 		
@@ -386,17 +378,15 @@ Extend Class MVP_BaseVehicle
 				If (!CorpseTarget)
 				{
 					CorpseTarget = FindNearestCorpse();
-					a_log ("looking for corpses");
+					
 					If (!CorpseTarget) //Still no corpse found.
-						{A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));a_log ("calling a_chase");}
+						A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
 					Else
-						{MVP_MoveTowards (CorpseTarget);console.printf ("fresh corpse target is %s",corpsetarget.getclassname());}
+						MVP_MoveTowards (CorpseTarget);
 				}
 				//There is an available corpse to head to and crush.
 				Else
-				{console.printf ("corpse target is %s",corpsetarget.getclassname());
 					MVP_MoveTowards (CorpseTarget);
-				}
 			}
 			Else
 				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));

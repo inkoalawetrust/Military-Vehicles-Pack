@@ -249,7 +249,6 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				A_Explode (384,256,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
 				User_MarineAmount -= Random (0,User_MarineAmount); //Have a random amount of marines survive the explosion.
-				console.printf ("%d marines survived",user_marineamount);
 				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.5);
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);
@@ -275,7 +274,6 @@ Class MVP_APC : MVP_BaseVehicle
 				SetOrigin (OldPos,False);
 				
 				If (User_MarineAmount > 0) SmokeCounter--; //Only go to the escape state if any passengers survived to begin with.
-				console.printf ("the timer is %d", smokecounter);
 				If (SmokeCounter <= 0) Return ResolveState ("DeathEscapeLoop");
 				
 				Return State (Null);
@@ -302,7 +300,7 @@ Class MVP_APC : MVP_BaseVehicle
 
 				//Quickly get out of the burning APC.
 				If (User_MarineAmount && Random (0,6) == 2)
-				{console.printf ("marines escaping");
+				{
 					Actor Marine;
 					Marine = SpawnMarine ((-112, FRandom (10,-10),0));
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);

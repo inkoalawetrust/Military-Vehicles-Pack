@@ -67,7 +67,7 @@ Class MVP_APCProp : MVP_BaseProp
 				Turret.CopyFriendliness (Self,False);
 				Turret.SpawnFlags = SpawnFlags;
 				Turret.HandleSpawnFlags();
-				Turret.Angle = Angle;//console.printf ("what the fuck is the value of user_turretangle ? %d ? shouldn't it be FUCKING ZERO ?",user_turretangle);
+				Turret.Angle = Angle;
 				Turret.DeathAngleOffset = User_TurretAngle;
 				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (45,-90);
 				Turret.Master = Self;
@@ -461,7 +461,6 @@ Class MVP_APCWreck : MVP_APCProp
 				MVP_APCMachineGunPropDead(Turret).WreckState = HandleTurretState();
 				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
 				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
-				console.printf ("the angle is %d",turret.angle);
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
 			}

@@ -126,7 +126,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		SpawnVehicleTurret();
 		
 		If (!bFriendly) Species = 'MilitaryHostile';
-		console.printf ("hello my name is %s and my current order is %s",getclassname(),user_defaultorder);
+		
 		If (!User_DefaultOrder || User_DefaultOrder ~== "")
 		{
 			//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
@@ -144,27 +144,27 @@ Class MVP_BaseVehicle : Actor Abstract
 			If (VisibleFriends.Size() - 1 >= 0)
 			{
 				SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
-				CurrentOrder = ORDER_FOLLOW;//a_log ("following");
+				CurrentOrder = ORDER_FOLLOW;
 			}
 			//No friendplayer, or they are out of sight
 			Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
 			{
 				CurrentOrder = ORDER_WANDER;
-				bDontFollowPlayers = True;//a_log ("wandering");
+				bDontFollowPlayers = True;
 			}
 		}
 		Else If (User_DefaultOrder ~== "Follow")
 		{
-			CurrentOrder = ORDER_FOLLOW;a_log ("following");
+			CurrentOrder = ORDER_FOLLOW;
 		}
 		Else If (User_DefaultOrder ~== "Wander")
 		{
 			CurrentOrder = ORDER_WANDER;
-			bDontFollowPlayers = True;a_log ("wandering");
+			bDontFollowPlayers = True;
 		}
 		Else If (User_DefaultOrder ~== "Stay")
 		{
-			CurrentOrder = ORDER_STAY;a_log ("bing chilling");
+			CurrentOrder = ORDER_STAY;
 		}
 	}
 	
@@ -396,11 +396,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		If (Master && !(Self Is "MVP_BaseTurretProp")) //Prop turrets use DeathAngleOffset differently.
-		{
-			//Console.Printf ("Vehicle angle is %d, turret angle is %d",Master.Angle,Angle);
 			DeathAngleOffset = DeltaAngle (Master.Angle,Angle);
-			//Console.Printf ("The angle different is %d",DeathAngleOffset);
-		}
+		
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		bShootable = bNotAutoaimed = True;
 		If (bFallOnDeath) bNoSpriteShadow = False;
@@ -779,7 +776,6 @@ Class SmartMarineWarningZone : Actor
 					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
-						console.printf ("i gave the token to a %s",mobj.getclassname());
 						If (Token) Token.Master = Self;
 					}
 				}
@@ -792,7 +788,6 @@ Class SmartMarineWarningZone : Actor
 					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
-						console.printf ("i gave the token to a %s",mobj.getclassname());
 						If (Token) Token.Master = Self;
 					}
 				}

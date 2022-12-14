@@ -25,7 +25,7 @@ Extend Class MVP_BaseTurret
 		
 		If (IsDead (Self) || OnlyRelativeRotation)
 		{
-			Angle = Master.Angle+DeathAngleOffset;//console.printf ("the death angle is now %d",deathangleoffset);
+			Angle = Master.Angle+DeathAngleOffset;
 			Return;
 		}
 		
@@ -91,30 +91,25 @@ Extend Class MVP_BaseTurret
 			Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
 			Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
 			Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
-			//Console.Printf ("The pitch is %f",Pitch);
 			Target.Vel = OldVel;
 		}
 		//Target has velocity, like if it's a player or a custom actor with velocity-based movement.
 		Else
 		{
-			//A_Log ("Target has velocity");
 			Projectile.VelIntercept (Target);
 			Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
 			Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
 			Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
-			//Console.Printf ("The pitch is %f",Pitch);
 		}
 	}
 	
 	//Adds projectile spread and adjusts the projectiles' velocity accordingly. Basically just normal shooting with no prediction.
 	Void NormalProjectileFire (Actor Projectile, Vector2 SpreadHorz, Vector2 SpreadVert)
 	{
-		//a_log ("no velocity still, falling back to normal aiming");
 		Projectile.A_FaceMovementDirection();
 		Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
 		Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
 		Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
-		//Console.Printf ("The pitch is %f",Pitch);
 	}
 	
 	//The generic line of fire function used by turrets to performan additional checks.
@@ -165,35 +160,35 @@ Extend Class MVP_BaseTurret
 		{
 			Actor Mobj = EnemyFinder.Thing;
 			
-			If (!Mobj || Mobj == Avoid) {a_log ("this is who i should avoid");Continue;} //AVOID THIS TARGET.
+			If (!Mobj || Mobj == Avoid) Continue; //AVOID THIS TARGET.
 			
-			If (Mobj.bDormant || !Mobj.bIsMonster) Continue;//{a_log ("not a valid monster"); Continue;} //Don't attack dormant or non-monster actors.
+			If (Mobj.bDormant || !Mobj.bIsMonster) Continue; //Don't attack dormant or non-monster actors.
 			
-			If (!CanBeTargeted(Mobj)) {a_log ("cant target this");Continue;} //Can't be targeted. (Duh)
+			If (!CanBeTargeted(Mobj)) Continue; //Can't be targeted. (Duh)
 			
-			If (IsDead (Mobj)) {a_log ("this is dead"); Continue;} //Is dead (Duuuuuuuuuuh)
+			If (IsDead (Mobj)) Continue; //Is dead (Duuuuuuuuuuh)
 			
-			If (Origin.Distance3DSquared(Mobj) > CheckRange) {a_log ("too far away");Continue;} //Too out of reach.
+			If (Origin.Distance3DSquared(Mobj) > CheckRange) Continue; //Too out of reach.
 			
-			If (!IsHostile (Mobj)) {a_log ("not hostile");Continue;} //Actor isn't hostile.
+			If (!IsHostile (Mobj)) Continue; //Actor isn't hostile.
 			
-			If (!CheckSight(Mobj)) {a_log ("not visible");Continue;} //Actor is not visible.
+			If (!CheckSight(Mobj)) Continue; //Actor is not visible.
 			
 			TargetList.Push(Mobj); //Actor passed the checks, put it on the list of candidates.
 		}
 		
 		//If no target was found at all.
-		If (!TargetList.Size()) {a_log ("we aint found shit");Return Null;}
+		If (!TargetList.Size()) Return Null;
 		
 		//The minimum distance the new target must have from the actor to avoid is zero, so just pick a random potential target that was found.
-		If (MinAlternateTargetRange <= 0) {a_log ("just pick a different target at random");Return TargetList[Random(0,TargetList.Size()-1)];}
+		If (MinAlternateTargetRange <= 0) Return TargetList[Random(0,TargetList.Size()-1)];
 		
 		For (Int I = 0; I < TargetList.Size(); I++)
 		{
-			If (I == TargetList.Size()-1) {a_log ("no distant enough target");Return TargetList[I];} //No target that were further than the actor to avoid, so return the last candidate left.
+			If (I == TargetList.Size()-1) Return TargetList[I]; //No target that were further than the actor to avoid, so return the last candidate left.
 			
-			If (TargetList[I].Distance3DSquared(Avoid) > MinAlternateTargetRange) {a_log ("too close to the actor im avoiding");Return TargetList[I];} //Candidate is too close to the actor to avoid.
-			Else {a_log ("found alternate target");} //Found a potential target that is far enough away from the actor that must be avoided.
+			If (TargetList[I].Distance3DSquared(Avoid) > MinAlternateTargetRange) Return TargetList[I]; //Candidate is too close to the actor to avoid.
+			Else {} //Found a potential target that is far enough away from the actor that must be avoided.
 		}
 		
 		Return Null;
@@ -216,14 +211,13 @@ Class MVP_TurretRaycast : LineTracer
 			If (Shooter && Mobj == Shooter.Master) Return Trace_Skip; //Ignore the vehicle you are attached to.
 			//If you hit an actor that is not a monster or player, and is a really strong or indestructible prop.
 			If(((Mobj.bInvulnerable || Mobj.bNoDamage) && !(Mobj.bIsMonster || Mobj.Player) || !Mobj.bIsMonster && !Mobj.Player) && Mobj.bSolid && (Mobj.Health > PropHealthThreshold))
-			{console.printf ("actor on my way called %s",mobj.getclassname());
+			{
 				BadLOF = True;
 				Return Trace_Stop;
 			}
 			//If the collidable corpse of an enemy is in the way (e.g a destroyed vehicle), don't shoot.
 			Else If (Shooter && Shooter.IsHostile (Mobj) && Mobj.Health <= 0 && Mobj.bDontCorpse)
-			{console.printf ("corpse on my way");
-				BadLOF = True;
+			{
 				Return Trace_Stop;
 			}
 			//Alternatively, if you hit a monster or player that is hostile to you, or is just your target.
@@ -235,7 +229,7 @@ Class MVP_TurretRaycast : LineTracer
 		{
 			//If there is a line in the way that is set to block projectiles or everything, then don't try shooting at it pointelessly.
 			If (Results.HitLine.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKEVERYTHING))
-			{console.printf ("hitting geometry");
+			{
 				BadLOF = True;
 				Return Trace_Stop;
 			}
