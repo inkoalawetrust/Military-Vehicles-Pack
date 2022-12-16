@@ -884,7 +884,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		AirBlast:
 			TNT1 A 0 //Stop moving in the air, and add some random rotation for variety.
 			{
-				A_StartSound ("Vehicle/APC/AutocannonHit",attenuation:0.3);
+				A_StartSound ("Vehicle/APC/AutocannonHit",attenuation:0.15); //Air explosions makes sound that travels further.
 				A_Stop();
 				A_SetRenderStyle (1.0,Style_Add);
 				A_SetScale (1.5,1.5);

@@ -179,8 +179,7 @@ Class MVP_Flame : Actor
 		If (Master && Master Is "MVP_BaseVehicle")
 		{
 			MVP_BaseVehicle Vehicle = MVP_BaseVehicle(Master);
-			If (Vehicle.DeathFlames.Find(Self) != Vehicle.DeathFlames.Size())
-			Else Return;
+			If (Vehicle.DeathFlames.Find(Self) == Vehicle.DeathFlames.Size()) Return;
 			Vehicle.DeathFlames.Delete (Vehicle.DeathFlames.Find(Self));
 		}
 	}
