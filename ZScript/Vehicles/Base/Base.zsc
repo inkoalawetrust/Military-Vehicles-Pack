@@ -259,9 +259,11 @@ Class MVP_BaseVehicle : Actor Abstract
 		//ORDER_GOTOPOINT ? Perhaps, but maybe not, since I'm not sure how I could code the vehicles to head to a specified point.
 	};
 	
+	Mixin MVP_CheckFunctions;
+	
 	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
 	Const DEFAULT_HEARDISTANCE = 3072; //Exactly what it says, the default hear distance the vehicles' and turrets' A_LookEx calls use.
-	Const DEFAULT_SEEDISTANCE = 8192;
+	Const DEFAULT_SEEDISTANCE = 8192; //The default sight distance.
 	
 	//AI variables
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
@@ -604,17 +606,6 @@ Class MVP_BaseProjectile : FastProjectile
 		Return True;
 	}
 	
-	Bool HasGodMode (Actor Other)
-	{
-		//Check if it's a player in god mode.
-		Return (Other.Player && Other.Player.Cheats & (CF_GODMODE | CF_GODMODE2));
-	}
-	
-	Bool IsIndestructible (Actor Other)
-	{
-		Return (Other.bInvulnerable || Other.bNoDamage);
-	}
-	
 	Int UpdateProjectileElevation (Int FaceDown, Int FaceDown2, Int FaceStraight, Int FaceUp, Int FaceUp2)
 	{
 		If (Pitch >= 70)
@@ -644,6 +635,7 @@ Class MVP_BaseProjectile : FastProjectile
 	Actor DontCollide; //Stores an actor that will be ignored by SpecialMissileHit, this is here so deflecting projectiles to deflect dozens of time when bouncing off.
 	
 	Mixin MVP_UniversalFunctions;
+	Mixin MVP_CheckFunctions;
 	Private Int ProjectileFlags;
 	FlagDef NoTrailLine : ProjectileFlags, 0; //The projectile uses the normal FastProjectile trail spawning code.
 	Class <Actor> TrailActor;
@@ -727,6 +719,7 @@ Class SmartMarineWarningZone : Actor
 	}
 	Inventory Token;
 	Vector3 Offset;
+	Mixin MVP_CheckFunctions;
 	
 	Override Void BeginPlay ()
 	{
@@ -738,31 +731,6 @@ Class SmartMarineWarningZone : Actor
 			
 			GiveInventory (NoMarineAlert,1);
 		}
-	}
-	
-	//Cool code duplication because the warning zone isn't a vehicle of any kind.
-	Bool MarineIsOnTurret (Actor Other)
-	{
-		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
-		
-		If (!IsOnTurret)
-			Return False;
-		
-		If (IsOnTurret.GetInt("IsOnTurret",ObjectArg:Other))
-			Return True;
-		
-		Return False;
-	}
-	
-	//I'm too lazy to just put this function in the UniversalFunctions mixin xdddddddxddxxddx
-	Bool CustomMarinesAvailable()
-	{
-		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
-		
-		If (!MarineCheck.NoCustomMarines)
-			Return True;
-		Else
-			Return False;
 	}
 	
 	Override Void Tick ()

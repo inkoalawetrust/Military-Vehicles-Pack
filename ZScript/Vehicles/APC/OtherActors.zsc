@@ -68,7 +68,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			APC3 # 1
 			{
 				RotateToVehicle();
-				A_LookEx (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+				A_LookEx (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE);
 				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
 			}
 			Loop;
@@ -226,7 +226,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			APC2 # 1
 			{
 				RotateToVehicle();
-				A_LookEx (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+				A_LookEx (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE);
 				Frame = UpdateElevation (2,0,4,6); //C, A, E, G
 			}
 			Loop;

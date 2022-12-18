@@ -76,19 +76,35 @@ Mixin Class MVP_UniversalFunctions
 
 }
 
-
-//Vehicle functions
-Extend Class MVP_BaseVehicle
+//Generic status checks.
+Mixin Class MVP_CheckFunctions
 {
-	//=====|Talking in tongues|=====\\
-	//What does this do ? I have no fucking idea, Agent_Ash gave it to me to fix how much the truck slows down based on the mass of the object it hit while ramming.
-	Clearscope Double LinearMap (Double Val, Double O_Min, Double O_Max, Double N_Min, Double N_Max) 
+	Bool CustomMarinesAvailable()
 	{
-		Return (Val - O_Min) * (N_Max - N_Min) / (O_Max - O_Min) + N_Min;
+		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
+		
+		If (!MarineCheck.NoCustomMarines)
+			Return True;
+		Else
+			Return False;
 	}
 	
-	//=====|Status checks|=====\\
-	//Todo: These should probably be moved in a mixing so non-MVP_BaseVehicle classes like MVP_BaseProjectile can use them.
+	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
+	Bool MarineIsOnTurret (Actor Other)
+	{
+		If (!Other) Return False;
+		
+		Name MGMarine = "TurretMarine";
+		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		If (Other.GetClassName() == MGMarine)
+			Return True;
+		
+		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
+			Return True;
+		
+		Return False;
+	}
 	
 	Bool IsDead (Actor Other)
 	{
@@ -100,6 +116,12 @@ Extend Class MVP_BaseVehicle
 	Bool IsIndestructible (Actor Other)
 	{
 		Return (Other.bInvulnerable || Other.bNoDamage/* || (!Other.bShootable)*/);
+	}
+	
+	Bool HasGodMode (Actor Other)
+	{
+		//Check if it's a player in god mode.
+		Return (Other.Player && Other.Player.Cheats & (CF_GODMODE | CF_GODMODE2));
 	}
 	
 	Bool IsInanimateObject (Actor Other)
@@ -137,7 +159,19 @@ Extend Class MVP_BaseVehicle
 		If (!Other) Return False;
 		Return (!Other.bNoTarget && !Other.bNeverTarget && !(Other.Player && Other.Player.Cheats & CF_NOTARGET));
 	}
+}
+
+//Vehicle functions
+Extend Class MVP_BaseVehicle
+{
+	//=====|Talking in tongues|=====\\
+	//What does this do ? I have no fucking idea, Agent_Ash gave it to me to fix how much the truck slows down based on the mass of the object it hit while ramming.
+	Clearscope Double LinearMap (Double Val, Double O_Min, Double O_Max, Double N_Min, Double N_Max) 
+	{
+		Return (Val - O_Min) * (N_Max - N_Min) / (O_Max - O_Min) + N_Min;
+	}
 	
+	//=====|Status checks|=====\\
 	/*Used to check if marines can spawn in the specified position, the radius and height parameters are for vehicles like the truck,
 	that- ugh, nevermind, I can't put into words what this does.*/
 	Bool ValidPositionAt (Vector2 Offset = (0,0), Double TempRadius = 32, Double TempHeight = 56)
@@ -239,17 +273,6 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Marine related functions|=====\\
-	//Can the vehicle spawn Smart Marines ? Should probably move this to the Universal Functions mixin.
-	Bool CustomMarinesAvailable()
-	{
-		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
-		
-		If (!MarineCheck.NoCustomMarines)
-			Return True;
-		Else
-			Return False;
-	}
-	
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
 	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False)
 	{
@@ -277,23 +300,6 @@ Extend Class MVP_BaseVehicle
 			Spawnee.Master = Self;
 		
 		Return Spawnee;
-	}
-	
-	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
-	Bool MarineIsOnTurret (Actor Other)
-	{
-		If (!Other) Return False;
-		
-		Name MGMarine = "TurretMarine";
-		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
-		
-		If (Other.GetClassName() == MGMarine)
-			Return True;
-		
-		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
-			Return True;
-		
-		Return False;
 	}
 	
 	Enum MVPMarineWarnFlags
