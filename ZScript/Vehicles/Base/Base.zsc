@@ -1,5 +1,6 @@
 //To do:
 //Replace the MVP_Trail actor trails with textured particles created by A_SpawnParticleEx at some point, as textured particles have all to customization I need. And are WAY more optimized to boot.
+//Instead of using CustomMarinesAvailable() checks to not try and spawn marine tokens and make the playsim shit itself. Try checking if the token class exists to begin with.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -163,7 +164,7 @@ Class MVP_BaseVehicle : Actor Abstract
 			CurrentOrder = ORDER_WANDER;
 			bDontFollowPlayers = True;
 		}
-		Else If (User_DefaultOrder ~== "Stay")
+		Else If (User_DefaultOrder ~== "Stay" || User_DefaultOrder ~== "Stand")
 		{
 			CurrentOrder = ORDER_STAY;
 		}
@@ -174,6 +175,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		Name FearToken = "SM_IAmTheDanger";
 		Super.Tick();
 		
+		If (IsFrozen()) Return;
+		
 		If (!User_NoHeadlights)
 			HeadLightsOn = (CurSector && CurSector.LightLevel <= 104);
 		
@@ -182,8 +185,11 @@ Class MVP_BaseVehicle : Actor Abstract
 		Else
 			TurnHeadlightsOff();
 		
-		If (bScareMarines && Self) SetInventory (FearToken,1);
-		Else If (!bScareMarines && Self) TakeInventory (FearToken,INT.MAX);
+		If (CustomMarinesAvailable())
+		{
+			If (bScareMarines && Self) SetInventory (FearToken,1);
+			Else If (!bScareMarines && Self) TakeInventory (FearToken,INT.MAX);
+		}
 	}
 	
 	Override Bool CanCollideWith (Actor Other, Bool Passive)
@@ -199,7 +205,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Name FearToken = "SM_IAmTheDanger";
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
-		If (Turret) //When dead, kill the turret the same way as the vehicle died.
+		If (Turret && !IsDead(Turret)) //When dead, kill the turret the same way as the vehicle died.
 		{
 			If (Health < GetGibHealth()) //Same check Die() uses internally to check if an actor was gibbed. 
 				Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth())+1, MeansOfDeath, DMG_FORCED);
@@ -387,7 +393,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		Else If (!Target)
 			LastEnemyPosition = CurrentEnemyPosition = (0,0,0);
 		
-		If (!(MaxPitch == 0 && MinPitch == 0)) Pitch = Clamp (Pitch,MaxPitch,MinPitch);
+		If (!(MaxPitch == 0 && MinPitch == 0)) Pitch = Clamp (Pitch,MaxPitch,MinPitch); //Turrets can't move past their elevation limits.
 		
 		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
 		
@@ -726,9 +732,12 @@ Class SmartMarineWarningZone : Actor
 	{
 		Super.BeginPlay ();
 		
-		String NoMarineAlert = "SM_DontWarnOthers";
-		
-		GiveInventory (NoMarineAlert,1);
+		If (CustomMarinesAvailable())
+		{
+			String NoMarineAlert = "SM_DontWarnOthers";
+			
+			GiveInventory (NoMarineAlert,1);
+		}
 	}
 	
 	//Cool code duplication because the warning zone isn't a vehicle of any kind.
@@ -745,11 +754,24 @@ Class SmartMarineWarningZone : Actor
 		Return False;
 	}
 	
+	//I'm too lazy to just put this function in the UniversalFunctions mixin xdddddddxddxxddx
+	Bool CustomMarinesAvailable()
+	{
+		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
+		
+		If (!MarineCheck.NoCustomMarines)
+			Return True;
+		Else
+			Return False;
+	}
+	
 	Override Void Tick ()
 	{
 		Name TheMarine = "SmartMarine";
 		Name TheOtherMarine = "TurretMarine";
 		Name WarningToken = "SM_ImInDanger";
+		
+		If (IsFrozen()) Return;
 		
 		//Can be used to attach the zone to an actor.
 		If (Master)
@@ -760,6 +782,7 @@ Class SmartMarineWarningZone : Actor
 			If (!MVP_BaseVehicle(Master).DeathFlames.Size())
 				Destroy();
 		
+		If (!CustomMarinesAvailable()) Return;
 		BlockThingsIterator MarineFinder = BlockThingsIterator.Create (Self,MaxTargetRange);
 		
 		Actor Mobj;

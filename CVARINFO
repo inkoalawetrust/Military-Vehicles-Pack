@@ -1,0 +1,2 @@
+Server Bool MVP_Debug_SeeFriendlyMonsters = False; //Should monsters without SeeFriendlyMonsters have it turned on ?
+Server Int MVP_Debug_SeeFriendlyMonsters_Range = 10; //The range (In blockmap chunks) that hostile monsters affected by the above CVAR can see friendly monsters.

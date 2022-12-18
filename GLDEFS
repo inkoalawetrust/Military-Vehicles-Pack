@@ -1,107 +1,9 @@
-//Army Car death lighting
-
-PointLight CarDeath1
-{
-	Color 0.89 0.77 0.56
-	Size 192
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight CarDeath2
-{
-	Color 0.89 0.77 0.56
-	Size 160
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight CarDeath3
-{
-	Color 0.89 0.77 0.56
-	Size 128
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight CarDeath4
-{
-	Color 0.89 0.77 0.56
-	Size 96
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight CarDeath5
-{
-	Color 0.89 0.77 0.56
-	Size 64
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-Object MVP_ArmyCar
-{
-	Frame MCR1H {Light CarDeath1}
-	Frame MCR1I {Light CarDeath2}
-	Frame MCR1J {Light CarDeath3}
-	Frame MCR1K {Light CarDeath4}
-	Frame MCR1L {Light CarDeath5}
-}
-
-//Army truck death lighting
-
-PointLight TruckDeath1
-{
-	Color 0.89 0.77 0.56
-	Size 140
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight TruckDeath2
-{
-	Color 0.89 0.77 0.56
-	Size 384
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight TruckDeath3
-{
-	Color 0.89 0.77 0.56
-	Size 512
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight TruckDeath4
-{
-	Color 0.89 0.77 0.56
-	Size 256
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-PointLight TruckDeath5
-{
-	Color 0.89 0.77 0.56
-	Size 128
-	Offset 0 0 -12
-	//Attenuate 1
-}
-
-Object MVP_ArmyTruck
-{
-	Frame TRK1H {Light TruckDeath1}
-	Frame TRK1I {Light TruckDeath2}
-	Frame TRK1J {Light TruckDeath3}
-	Frame TRK1K {Light TruckDeath4}
-	Frame TRK1L {Light TruckDeath5}
-}
+//Vehicle light definitions
+#Include "ZScript/Vehicles/Army Car/ArmyCar.gl"
+#Include "ZScript/Vehicles/Army Truck/ArmyTruck.gl"
+#Include "ZScript/Vehicles/APC/APC.gl"
 
 //https://www.youtube.com/watch?v=hwVyXgbaXHs
-
 PointLight BigExplosion1
 {
 	Color 0.97 0.89 0.57
@@ -225,6 +127,49 @@ Object MVP_Explosion
 	Frame ZTXPP {Light Explosion6}
 }
 
+//Autocannon air explosion.
+PointLight AirExplosion1
+{
+	Color 1.00 0.78 0.50
+	Size 192
+}
+
+PointLight AirExplosion2
+{
+	Color 1.00 0.78 0.50
+	Size 160
+}
+
+PointLight AirExplosion3
+{
+	Color 1.00 0.78 0.50
+	Size 72
+}
+
+Object MVP_AutocannonShell
+{
+	//Airburst
+	Frame GAXPA {Light AirExplosion1}
+	Frame GAXPB {Light AirExplosion2}
+	Frame GAXPC {Light AirExplosion3}
+	
+	//Ground explosion
+	/*Frame GXPLB {Light Explosion2}
+	Frame GXPLC {Light Explosion4}
+	Frame GXPLD {Light Explosion4}
+	Frame GXPLE {Light Explosion4}
+	Frame GXPLF {Light Explosion4}
+	Frame GXPLG {Light Explosion4}
+	Frame GXPLH {Light Explosion5}
+	Frame GXPLI {Light Explosion5}
+	Frame GXPLJ {Light Explosion5}
+	Frame GXPLK {Light Explosion5}
+	Frame GXPLL {Light Explosion5}
+	Frame GXPLM {Light Explosion2}
+	Frame GXPLN {Light Explosion1}
+	Frame GXPLO {Light Explosion1}*/
+}
+
 //50Cal round lighting
 PointLight 50CalTracerLight
 {
@@ -259,7 +204,7 @@ PointLight RifleFiringLight
 	Attenuate 1
 }
 
-//Autocannon round lighting
+//30mm round lighting
 PointLight AutocannonFlash
 {
 	Color 1.00 0.30 0.00
@@ -272,6 +217,6 @@ PointLight AutocannonTracer
 {
 	Color 1.00 0.30 0.00
 	Size 56
-	Offset -200 0 0
+	Offset -56 0 0
 	Attenuate 1
 }

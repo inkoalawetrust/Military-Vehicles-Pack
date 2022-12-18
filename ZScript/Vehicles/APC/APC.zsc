@@ -1,6 +1,3 @@
-//To do:
-//Add GLDEFS entries for the APC death animation.
-
 Class MVP_APC : MVP_BaseVehicle
 {
 	Default
@@ -166,20 +163,24 @@ Class MVP_APC : MVP_BaseVehicle
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
 				
 				//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
-				If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling() && bChaseGoal))
+				Int Range = Turret.MaxTargetRange;
+				If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
 				{
-					If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
+					If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling() && bChaseGoal))
 					{
-						//Then check if you are far enough from your nearest enemy or target.
-						If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
-						|| (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
+						If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
 						{
-							If (Turret.CheckSight (Turret.Target))
+							//Then check if you are far enough from your nearest enemy or target.
+							If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
+							|| (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
 							{
-								A_StopSound (CHAN_MOVING);
-								A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
-								ChaseTimer = Random (16,48);
-								Return ResolveState ("StickAround");
+								If (Turret.CheckSight (Turret.Target))
+								{
+									A_StopSound (CHAN_MOVING);
+									A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
+									ChaseTimer = Random (16,48);
+									Return ResolveState ("StickAround");
+								}
 							}
 						}
 					}

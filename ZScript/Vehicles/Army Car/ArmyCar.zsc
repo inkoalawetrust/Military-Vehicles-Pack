@@ -270,7 +270,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);
 				
-				If (Turret)
+				If (Turret && !IsDead(Turret))
 				{
 					Turret.SetOrigin ((Turret.Pos.X,Turret.Pos.Y,Pos.Z+Height+2),False);
 					Turret.A_ChangeVelocity (FRandom (12,-12),FRandom (12,-12),FRandom (6,10),CVF_RELATIVE);
@@ -299,7 +299,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				//Spawn a random amount of flames around the car wreck.
 				SpawnDeathFlames();
 				
-				If (Turret)
+				If (Turret && !IsDead(Turret))
 				{
 					Turret.SetOrigin ((Turret.Pos.X,Turret.Pos.Y,Pos.Z+Height+2),False);
 					Turret.A_ChangeVelocity (FRandom (12,-12),FRandom (12,-12),FRandom (16,32),CVF_RELATIVE);

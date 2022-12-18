@@ -253,6 +253,12 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				A_StartSound ("Vehicle/APC/AutocannonFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
 				Actor Proj = A_SpawnProjectile ("MVP_AutocannonShell",16,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.3,-0.3),(0.45,-0.45),768);
+				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then trigger the proximity fuze in case the shell misses.
+				If (Target && IsFlying (Target) && !Target.bNoRadiusDmg)
+				{
+					Proj.Tracer = Target;
+					MVP_AutocannonShell(Proj).IsAirburst = True;
+				}
 				Frame = UpdateElevation (3,1,5,7); //D, B, F, H
 			}
 			APC2 ### 8
@@ -773,6 +779,37 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		Trail.Scale.X = Trail.Scale.Y = 1.1;
 	}
 	
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (IsFrozen()) Return;
+		
+		//If you are an airburst shell and have a specific target.
+		If (IsAirburst && Tracer && bMissile) //bMissile is removed when projectiles explode. Making this check not run on exploded shells.
+		{
+			//And are within blast range of the tracer.
+			If (Tracer.Health > 0 && Distance3DSquared (Tracer) <= 176*176)
+			{
+				FLineTraceData TracerCheck;
+				
+				LineTrace (Angle,192,Pitch,TRF_THRUHITSCAN|TRF_SOLIDACTORS|TRF_BLOCKSELF,data:TracerCheck);
+				
+				//If you aren't going to directly impact the tracer.
+				If (TracerCheck.HitActor != Tracer)
+					SmokeCounter++; //Give it another chance in the next tick.
+				Else
+					SmokeCounter = 0;
+				
+				//If you still haven't lined up to hit the tracer. Then airburst.
+				If (SmokeCounter > 1)
+				{
+					AirBursted = True;
+					ExplodeMissile();
+				}
+			}
+		}
+	}
+	
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim) Return 1;
@@ -792,7 +829,9 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -2.0 : 2.0);
 	}
 	
-	Bool HitLiquid;
+	Bool HitLiquid; //Removes the autocannon shell if it hit a liquid texture.
+	Bool IsAirburst; //Should the shell prematurely explode if it's within 150 map units of its' tracer ?
+	Bool Airbursted; //Did the shell explode in an airburst ? Ensures that airbursted shells ALWAYS go to the AirBlast state.
 	
 	States
 	{
@@ -807,6 +846,13 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		Death: //Shell hit level geometry.
 			TNT1 A 0
 			{
+				If (Airbursted) //The shell detonated mid air to hit a target that it missed.
+				{
+					A_SetScale (1.5,1.5);
+					A_SetRenderStyle (1.0,Style_Add);
+					Return ResolveState ("AirBlast");
+				}
+				
 				//The floor was hit.
 				If (Pos.Z <= FloorZ)
 				{
@@ -857,13 +903,16 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				}
 				
 				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+				
+				Return State (Null);
 			}
 			TNT1 A 0
 			{
 				A_SetScale (1.5,1.5);
 				A_SetRenderStyle (1.0,Style_Add);
 				If (Pos.Z + Height >= CeilingZ) Scale.Y = -1.5; //If a ceiling was hit, invert the explosion.
-				Else If (Pos.Z >= FloorZ+24) Return ResolveState ("AirBlast"); //If the explosion happened above 16 map units from the ground, trigger the air explosion.
+				Else If (Pos.Z >= FloorZ+24) Return ResolveState ("AirBlast"); //If the explosion happened above 24 map units from the ground, trigger the air explosion.
+				A_AttachLight ("ExplosionLight",DynamicLight.PulseLight,"FFE2B3",512,0,DYNAMICLIGHT.LF_ATTENUATE,(0,0,1),param:1.714285714285714*3.4); //Only for ground explosions !
 				//SetOrigin ((Pos.X,Pos.Z,FloorZ),False); //Otherwise stick to the ground to explode if you didn't hit level geometry too far above the ground.
 				Return State (Null);
 			}
@@ -896,7 +945,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 			GAXP B 4 Bright
 			{
 				MakeAlliesImmuneToExplosion (128);
-				A_Explode (96,128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
+				A_Explode (96,192,XF_EXPLICITDAMAGETYPE,True,48,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}
 			GAXP CDEFGHIJ 4 Bright;

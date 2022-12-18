@@ -1,0 +1,158 @@
+PointLight APCDeath1
+{
+	Color 0.86 0.80 0.65
+	Size 48
+	Offset 48 24 -2
+}
+
+PointLight APCDeath2
+{
+	Color 0.86 0.80 0.65
+	Size 128
+	Offset 48 24 -2
+}
+
+PointLight APCDeath3
+{
+	Color 0.86 0.80 0.65
+	Size 192
+	Offset 48 24 -2
+}
+
+PointLight APCDeath4
+{
+	Color 0.89 0.77 0.36
+	Size 256
+	Offset 48 24 -2
+}
+
+PointLight APCDeath5
+{
+	Color 0.89 0.77 0.36
+	Size 192
+	Offset 48 24 -2
+}
+
+PointLight APCFire1
+{
+	Color 0.99 0.55 0.15
+	Size 96
+	Offset 48 24 32
+}
+
+PointLight APCFire2
+{
+	Color 0.99 0.55 0.15
+	Size 100
+	Offset 48 24 32
+}
+
+PointLight APCFire3
+{
+	Color 0.99 0.55 0.15
+	Size 88
+	Offset 48 24 32
+}
+
+PointLight APCFire4
+{
+	Color 0.99 0.55 0.15
+	Size 80
+	Offset 48 24 32
+}
+
+//Todo: COPY AND PASTE THESE FOR THE PROP VERSION TOO !!!!!!!!!!!!!!!!
+Object MVP_APC
+{
+	//Engine explosion.
+	Frame APC4A {Light APCDeath1}
+	Frame APC4B {Light APCDeath2}
+	Frame APC4C {Light APCDeath3}
+	Frame APC4D {Light APCDeath4}
+	Frame APC4E {Light APCDeath5}
+	
+	//Engine fire
+	Frame APC4G {Light APCFire1}
+	Frame APC4H {Light APCFire2}
+	Frame APC4I {Light APCFire3}
+	Frame APC4J {Light APCFire4}
+	
+	//Opening hatches and other stuff. Whatever, just use the same lights. Nobody will really notice or care until they see this GLDEFS definition. I'm talking to you.
+	Frame APC4K {Light APCFire1}
+	Frame APC4L {Light APCFire2}
+	Frame APC4M {Light APCFire3}
+	Frame APC4N {Light APCFire4}
+	Frame APC4O {Light APCFire1}
+	Frame APC4P {Light APCFire2}
+	Frame APC4W {Light APCFire3}
+	Frame APC4R {Light APCFire4}
+	Frame APC4S {Light APCFire1}
+	Frame APC4T {Light APCFire2}
+	Frame APC4U {Light APCFire3}
+	Frame APC4V {Light APCFire4}
+	Frame APC4W {Light APCFire1}
+}
+
+//Epic code duplication, why not just be able to do "Object class1, class2, class3" ??????????????
+
+Object MVP_APCProp
+{
+	//Engine explosion.
+	Frame APC4A {Light APCDeath1}
+	Frame APC4B {Light APCDeath2}
+	Frame APC4C {Light APCDeath3}
+	Frame APC4D {Light APCDeath4}
+	Frame APC4E {Light APCDeath5}
+	
+	//Engine fire
+	Frame APC4G {Light APCFire1}
+	Frame APC4H {Light APCFire2}
+	Frame APC4I {Light APCFire3}
+	Frame APC4J {Light APCFire4}
+	
+	//Opening hatches and other stuff. Whatever, just use the same lights. Nobody will really notice or care until they see this GLDEFS definition. I'm talking to you.
+	Frame APC4K {Light APCFire1}
+	Frame APC4L {Light APCFire2}
+	Frame APC4M {Light APCFire3}
+	Frame APC4N {Light APCFire4}
+	Frame APC4O {Light APCFire1}
+	Frame APC4P {Light APCFire2}
+	Frame APC4W {Light APCFire3}
+	Frame APC4R {Light APCFire4}
+	Frame APC4S {Light APCFire1}
+	Frame APC4T {Light APCFire2}
+	Frame APC4U {Light APCFire3}
+	Frame APC4V {Light APCFire4}
+	Frame APC4W {Light APCFire1}
+}
+
+Object MVP_APCWreck
+{
+	//Engine explosion.
+	Frame APC4A {Light APCDeath1}
+	Frame APC4B {Light APCDeath2}
+	Frame APC4C {Light APCDeath3}
+	Frame APC4D {Light APCDeath4}
+	Frame APC4E {Light APCDeath5}
+	
+	//Engine fire
+	Frame APC4G {Light APCFire1}
+	Frame APC4H {Light APCFire2}
+	Frame APC4I {Light APCFire3}
+	Frame APC4J {Light APCFire4}
+	
+	//Opening hatches and other stuff. Whatever, just use the same lights. Nobody will really notice or care until they see this GLDEFS definition. I'm talking to you.
+	Frame APC4K {Light APCFire1}
+	Frame APC4L {Light APCFire2}
+	Frame APC4M {Light APCFire3}
+	Frame APC4N {Light APCFire4}
+	Frame APC4O {Light APCFire1}
+	Frame APC4P {Light APCFire2}
+	Frame APC4W {Light APCFire3}
+	Frame APC4R {Light APCFire4}
+	Frame APC4S {Light APCFire1}
+	Frame APC4T {Light APCFire2}
+	Frame APC4U {Light APCFire3}
+	Frame APC4V {Light APCFire4}
+	Frame APC4W {Light APCFire1}
+}

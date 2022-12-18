@@ -1,0 +1,57 @@
+PointLight TruckDeath1
+{
+	Color 0.89 0.77 0.56
+	Size 140
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath2
+{
+	Color 0.89 0.77 0.56
+	Size 384
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath3
+{
+	Color 0.89 0.77 0.56
+	Size 512
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath4
+{
+	Color 0.89 0.77 0.56
+	Size 256
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+PointLight TruckDeath5
+{
+	Color 0.89 0.77 0.56
+	Size 128
+	Offset 0 0 -12
+	//Attenuate 1
+}
+
+Object MVP_ArmyTruck
+{
+	Frame TRK1H {Light TruckDeath1}
+	Frame TRK1I {Light TruckDeath2}
+	Frame TRK1J {Light TruckDeath3}
+	Frame TRK1K {Light TruckDeath4}
+	Frame TRK1L {Light TruckDeath5}
+}
+
+Object MVP_ArmyTruckProp
+{
+	Frame TRK1H {Light TruckDeath1}
+	Frame TRK1I {Light TruckDeath2}
+	Frame TRK1J {Light TruckDeath3}
+	Frame TRK1K {Light TruckDeath4}
+	Frame TRK1L {Light TruckDeath5}
+}

@@ -75,6 +75,8 @@ Mixin Class MVP_UniversalFunctions
 	}
 
 }
+
+
 //Vehicle functions
 Extend Class MVP_BaseVehicle
 {
@@ -86,6 +88,7 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Status checks|=====\\
+	//Todo: These should probably be moved in a mixing so non-MVP_BaseVehicle classes like MVP_BaseProjectile can use them.
 	
 	Bool IsDead (Actor Other)
 	{
@@ -107,6 +110,21 @@ Extend Class MVP_BaseVehicle
 	Bool IsPatrolling ()
 	{
 		Return (Goal || Target Is "PatrolPoint");
+	}
+	
+	Bool IsFlying (Actor Other)
+	{
+		If (!Other) Return False;
+		
+		If (!Other.Player && Other.bFloat)
+			Return True;
+		Else If (Other.Player)
+		{
+			If (Other.bFly || Other.bFlyCheat || Other.Player.Cheats & CF_NOCLIP2)
+				Return True;
+		}
+		
+		Return False;
 	}
 	
 	Bool IsInState (StateLabel CheckFor = "Spawn")
@@ -221,7 +239,7 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Marine related functions|=====\\
-	//Can the vehicle spawn Smart Marines ?
+	//Can the vehicle spawn Smart Marines ? Should probably move this to the Universal Functions mixin.
 	Bool CustomMarinesAvailable()
 	{
 		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
@@ -330,10 +348,12 @@ Extend Class MVP_BaseVehicle
 	//Generic chase function shared by all vehicles.
 	Void MVP_Chase (Bool AttackWhenScared = False, Double FollowDist = 384, Bool NoRandomTurn = False, Bool NoChase = False, Bool CorpseSeeker = False)
 	{
+		Double PowerfulEnemyRetreatRange = (User_RetreatDistance*4)*(User_RetreatDistance*4); //Vehicles stay 4 times further away from powerful enemies than normal ones.
+		
 		//Vehicles get scared if they have a living, visible target, and are either defenseless or the target is too powerful.
 		If (!bNoFear)
 		{
-			If (Target && !CanAttack() || Target && IsPowerful (Target))
+			If (Target && !CanAttack() || Target && IsPowerful (Target) && Distance3DSquared (Target) <= PowerfulEnemyRetreatRange)
 				If (!IsDead (Target) && IsVisible(Target, True))
 				{
 					FearTimer = Random (2,64);
@@ -596,6 +616,7 @@ Extend Class MVP_BaseVehicle
 		Return NearestEnemy;
 	}
 	
+	//Maybe add flags to this to control if it should exclude actors that are too big or non-resurrectable ?
 	Actor FindNearestCorpse()
 	{
 		Array <Actor> NearbyCorpses;
@@ -611,7 +632,10 @@ Extend Class MVP_BaseVehicle
 			If (!Mobj || Mobj == Self || Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || Mobj.bDontCorpse || !CanBeTargeted (Mobj)) Continue;
 			
 			If (!Mobj.bIsMonster && !Mobj.Player) Continue; //Ignore destroyed props.
-			//Perhaps check if the found actor has a raise state instead ?
+			
+			If (!Mobj.FindState ("Raise")) Continue; //Cannot even be resurrected.
+			
+			If (Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
 			
 			If (!CheckSight (Mobj)) Continue; //And at last, check if the corpse is even visible.
 			
