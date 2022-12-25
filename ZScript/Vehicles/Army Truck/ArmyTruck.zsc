@@ -496,7 +496,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				
 				A_QuakeEx (1,1,1,35*2,0,1024,flags:QF_3D|QF_SCALEDOWN|QF_GROUNDONLY);
 				//Spawn a random amount of flames around the truck wreck.
-				SpawnDeathFlames();
+				SpawnDeathFlames(amount:(10,18));
 			}
 			TRK1 N -1;
 			Stop;

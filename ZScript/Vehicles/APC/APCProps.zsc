@@ -118,7 +118,7 @@ Class MVP_APCProp : MVP_BaseProp
 			{
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-				SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				SetOrigin (Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;
@@ -133,7 +133,7 @@ Class MVP_APCProp : MVP_BaseProp
 			{
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-				SetOrigin (Vec3Offset(32,48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				SetOrigin (Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;
@@ -489,7 +489,7 @@ Class MVP_APCWreck : MVP_APCProp
 	{
 		Vector3 OldPos = Pos;
 		Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-		SetOrigin (Vec3Offset(-32,-48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+		SetOrigin (Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 		bNoDamageThrust = True;
 		A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,False,64,damagetype:'Fire');
 		bNoDamageThrust = False;
@@ -695,6 +695,8 @@ Class MVP_APCRuin : MVP_APCWreck
 		If (User_SpawnFlames)
 			SpawnDeathFlames (lifespan:(INT.MAX,INT.MAX));
 	}
+	
+	Override Void SpawnVehicleTurret() {}
 	
 	States
 	{

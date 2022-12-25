@@ -1,5 +1,37 @@
 //$GZDB_SKIP
 //Functions that can be used outside of the MVP_BaseVehicle class.
+Mixin Class MVP_MathFunctions
+{
+	//=====|Talking in tongues|=====\\
+	//What does this do ? I have no fucking idea, Agent_Ash gave it to me to fix how much the truck slows down based on the mass of the object it hit while ramming.
+	Clearscope Double LinearMap (Double Val, Double O_Min, Double O_Max, Double N_Min, Double N_Max) 
+	{
+		Return (Val - O_Min) * (N_Max - N_Min) / (O_Max - O_Min) + N_Min;
+	}
+	
+	Enum Vec3RelFlags
+	{
+		V3R_NOANGLE = 1 << 1, //Do not rotate based on angle.
+		V3R_NOPITCH = 1 << 2, //Do not rotate based on pitch.
+		V3R_NOROLL	= 1 << 3, //Do not rotate based on roll.
+		
+		V3R_ANGLEONLY = V3R_NOPITCH|V3R_NOROLL
+	}
+	
+	//Like Vec3Offset, but also rotates the output vector based on the callers' angle.
+	Clearscope Vector3 Vec3OffsetRelative (Actor Other, Vector3 Offs, Bool NoPortal = False, Int Flags = 0)
+	{
+		Double Angle2, Pitch2, Roll2;
+		If (!(Flags & V3R_NOANGLE)) Angle2 = Other.Angle;
+		If (!(Flags & V3R_NOPITCH)) Pitch2 = Other.Pitch;
+		If (!(Flags & V3R_NOROLL)) Roll2 = Other.Roll;
+		
+		Quat Dir = Quat.FromAngles (Angle2,Pitch2,Roll2);
+		Return Level.Vec3Offset (Other.Pos,Dir * Offs,NoPortal);
+		//Return Other.Vec3Offset (Offs.X * Cos(Angle) + Offs.Y * Sin (Angle),Offs.X * Sin (Angle) - Offs.Y * Cos (Angle),Offs.Z,NoPortal);
+	}
+}
+
 Mixin Class MVP_UniversalFunctions
 {
 	Int CheckLiquid (TextureID Texture)
@@ -106,6 +138,12 @@ Mixin Class MVP_CheckFunctions
 		Return False;
 	}
 	
+	Bool CheckActorExists (String ActorClass)
+	{
+		Class<Actor> Act = ActorClass;
+		Return !!Act;
+	}
+	
 	Bool IsDead (Actor Other)
 	{
 		If (!Other) Return False;
@@ -120,7 +158,6 @@ Mixin Class MVP_CheckFunctions
 	
 	Bool HasGodMode (Actor Other)
 	{
-		//Check if it's a player in god mode.
 		Return (Other.Player && Other.Player.Cheats & (CF_GODMODE | CF_GODMODE2));
 	}
 	
@@ -164,13 +201,6 @@ Mixin Class MVP_CheckFunctions
 //Vehicle functions
 Extend Class MVP_BaseVehicle
 {
-	//=====|Talking in tongues|=====\\
-	//What does this do ? I have no fucking idea, Agent_Ash gave it to me to fix how much the truck slows down based on the mass of the object it hit while ramming.
-	Clearscope Double LinearMap (Double Val, Double O_Min, Double O_Max, Double N_Min, Double N_Max) 
-	{
-		Return (Val - O_Min) * (N_Max - N_Min) / (O_Max - O_Min) + N_Min;
-	}
-	
 	//=====|Status checks|=====\\
 	/*Used to check if marines can spawn in the specified position, the radius and height parameters are for vehicles like the truck,
 	that- ugh, nevermind, I can't put into words what this does.*/
@@ -182,7 +212,8 @@ Extend Class MVP_BaseVehicle
 		Double PrevHeight = Height;
 		
 		A_SetSize (TempRadius,TempHeight);
-		SetXYZ (Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle), Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Pos.Z)); //The same formula used to spawn marines.
+		SetXYZ (Vec3OffsetRelative (Self,(Offset,Pos.Z),flags:V3R_ANGLEONLY));
+		//SetXYZ (Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle), Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Pos.Z)); //The same formula used to spawn marines.
 		
 		Bool Ok = CheckPosition (Pos.XY);
 		
@@ -246,7 +277,7 @@ Extend Class MVP_BaseVehicle
 		For (Int I = 0; I < RandomFlames; I++)
 		{
 			SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
-			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y);
+			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y) + 8 + FRandom (0, Height - 8);
 			//If the random position relative to the vehicle is valid.
 			If (Level.IsPointInLevel (Vec3Offset(SpawnPos.X,SpawnPos.Y,SpawnPos.Z)))
 				Flame = Spawn ("MVP_Flame",Vec3Offset(SpawnPos.X,SpawnPos.Y,SpawnPos.Z)); //Then spawn the flame.
@@ -289,7 +320,8 @@ Extend Class MVP_BaseVehicle
 		
 		//[b,Spawnee] = A_SpawnItemEx (WhatToSpawn,Position.X,Position.Y,GetZAt (Position.X,Position.Y),flags:SXF_NOCHECKPOSITION | SetMaster ? SXF_SETMASTER : 0);
 		//Position = Vec2Offset (Position.X * Cos (Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle));
-		Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X * Cos(Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle),(Position.Z == 0 ? GetZAt (Position.X,Position.Y) : Position.Z)));
+		//Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X * Cos(Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle),(Position.Z == 0 ? GetZAt (Position.X,Position.Y) : Position.Z)));
+		Spawnee = Spawn (WhatToSpawn,Vec3OffsetRelative (Self,Position,flags:V3R_ANGLEONLY),ALLOW_REPLACE);
 		If (Target != Goal)
 			Spawnee.CopyFriendliness (Self,True);
 		Else
@@ -318,7 +350,7 @@ Extend Class MVP_BaseVehicle
 	Actor WarnMarines (Int Flags = MWRN_WARP, Double Range = 256, Actor ToWho = Null, Vector3 Offsets = (0,0,0))
 	{
 		If (ToWho == Null || !CustomMarinesAvailable()) Return Null;
-		Actor WarnZone = Spawn ("SmartMarineWarningZone",ToWho.Pos);
+		Actor WarnZone = Spawn ("SmartMarineWarningZone",Vec3OffsetRelative(ToWho,Offsets));
 		
 		WarnZone.CopyFriendliness (Self,False);
 		If (Flags & MWRN_WARP) WarnZone.Master = ToWho;

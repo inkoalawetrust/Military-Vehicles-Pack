@@ -185,7 +185,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		Else
 			TurnHeadlightsOff();
 		
-		If (CustomMarinesAvailable())
+		If (CheckActorExists(FearToken))
 		{
 			If (bScareMarines && Self) SetInventory (FearToken,1);
 			Else If (!bScareMarines && Self) TakeInventory (FearToken,INT.MAX);
@@ -260,6 +260,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	};
 	
 	Mixin MVP_CheckFunctions;
+	Mixin MVP_MathFunctions;
 	
 	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
 	Const DEFAULT_HEARDISTANCE = 3072; //Exactly what it says, the default hear distance the vehicles' and turrets' A_LookEx calls use.
@@ -399,7 +400,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		
 		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
 		
-		SetOrigin (Master.Vec3Offset (TurretOffsets.X * Cos(Angle) + TurretOffsets.Y * Sin (Angle),TurretOffsets.X * Sin (Angle) - TurretOffsets.Y * Cos (Angle),Master.Height+TurretOffsets.Z),True);
+		SetOrigin (Vec3OffsetRelative(Master,(TurretOffsets.XY,Master.Height+TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
+		//SetOrigin (Master.Vec3Offset (TurretOffsets.X * Cos(Angle) + TurretOffsets.Y * Sin (Angle),TurretOffsets.X * Sin (Angle) - TurretOffsets.Y * Cos (Angle),Master.Height+TurretOffsets.Z),True);
 		Floorclip = Master.Floorclip; //Copy floorclip offset for TERRAIN liquids.
 	}
 	
@@ -720,17 +722,15 @@ Class SmartMarineWarningZone : Actor
 	Inventory Token;
 	Vector3 Offset;
 	Mixin MVP_CheckFunctions;
+	Mixin MVP_MathFunctions;
 	
 	Override Void BeginPlay ()
 	{
 		Super.BeginPlay ();
 		
-		If (CustomMarinesAvailable())
-		{
-			String NoMarineAlert = "SM_DontWarnOthers";
-			
+		String NoMarineAlert = "SM_DontWarnOthers";
+		If (CheckActorExists(NoMarineAlert))
 			GiveInventory (NoMarineAlert,1);
-		}
 	}
 	
 	Override Void Tick ()
@@ -744,13 +744,14 @@ Class SmartMarineWarningZone : Actor
 		//Can be used to attach the zone to an actor.
 		If (Master)
 			//SetOrigin (Master.Pos,True);
-			SetOrigin (Master.Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle),Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Offset.Z),True); //Copied from SpawnMarine().
+			//SetOrigin (Master.Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle),Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Offset.Z),True); //Copied from SpawnMarine().
+			SetOrigin (Vec3OffsetRelative (Master,Offset),True);
 		
 		If (bSpecialFireDamage && Master && Master Is "MVP_BaseVehicle") //If you are set to disappear when the vehicle has no death flames left. 
 			If (!MVP_BaseVehicle(Master).DeathFlames.Size())
 				Destroy();
 		
-		If (!CustomMarinesAvailable()) Return;
+		If (!CheckActorExists(WarningToken)) Return;
 		BlockThingsIterator MarineFinder = BlockThingsIterator.Create (Self,MaxTargetRange);
 		
 		Actor Mobj;

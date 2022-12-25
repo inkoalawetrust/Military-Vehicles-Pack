@@ -253,7 +253,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			#### G 17
 			{
 				//Store the marines spawned in an array, just in case they need to be kept track of.
-				Marines[0] = SpawnMarine ((Default.Radius*0.70,56,0),True); //Front left door.
+				Marines[0] = SpawnMarine ((Default.Radius*0.70,-56,0),True); //Front left door.
 				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-56,0),True); //Back right door.
 				Marines[2] = SpawnMarine ((-Default.Radius*0.75,56,0),True); //Back left door.
 				User_NoMarines = True;

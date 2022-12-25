@@ -173,6 +173,7 @@ Class MVP_Flame : Actor
 	}
 	
 	Vector3 Offsets;
+	Mixin MVP_MathFunctions;
 	
 	Protected Void RemoveFromList()
 	{
@@ -205,7 +206,8 @@ Class MVP_Flame : Actor
 		
 		//Stick to your master, if any.
 		If (Master)
-			SetOrigin (Master.Vec3Offset(Offsets.X,Offsets.Y,Offsets.Z),True);
+			SetOrigin(Vec3OffsetRelative (Master,Offsets,flags:V3R_ANGLEONLY),True);
+			//SetOrigin (Master.Vec3Offset(Offsets.X,Offsets.Y,Offsets.Z),True);
 		
 		If (!InStateSequence(CurState,ResolveState ("Death")))
 		{
@@ -265,7 +267,6 @@ Class MVP_Tracer : Actor
 		//Super.Tick(); //Not needed, at most I may copy over the state progression code for missile smoke trails.
 		If (GetAge() >= ReactionTime)
 			Destroy();
-		
 	}
 	
 	Double SpawnOffsetX, SpawnOffsetY, SpawnOffsetZ;

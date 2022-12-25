@@ -523,7 +523,7 @@ Class MVP_ArmyCarRuin : MVP_ArmyCarWreck
 		Super.PostBeginPlay ();
 		
 		If (User_SpawnFlames)
-			SpawnDeathFlames();
+			SpawnDeathFlames(lifespan:(INT.MAX,INT.MAX));
 	}
 	
 	States

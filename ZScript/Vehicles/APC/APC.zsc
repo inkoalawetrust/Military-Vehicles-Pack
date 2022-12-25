@@ -163,7 +163,8 @@ Class MVP_APC : MVP_BaseVehicle
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
 				
 				//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
-				Int Range = Turret.MaxTargetRange;
+				Int Range;
+				If (Turret) Range = Turret.MaxTargetRange;
 				If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
 				{
 					If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling() && bChaseGoal))
@@ -249,7 +250,8 @@ Class MVP_APC : MVP_BaseVehicle
 			APC4 A 2 Bright
 			{
 				A_Explode (384,256,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
-				User_MarineAmount -= Random (0,User_MarineAmount); //Have a random amount of marines survive the explosion.
+				User_MarineAmount -= Random (0,User_MarineAmount-1); //Have a random amount of marines survive the explosion.
+				If (Random (0,255) < 16) User_MarineAmount = 0; //Small chance for nobody to have survived.
 				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.5);
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);
@@ -260,7 +262,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				A_StartSound ("SFX/Fire",flags:CHANF_LOOPING|CHANF_OVERLAP,attenuation:0.65);
 				SmokeCounter = Random (8,64); //Might as well make this otherwise useless variable useful.
-				WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(-32,-48,24));
+				WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(32,-48,24));
 			}
 			//Fall through
 		DeathFlameLoop:
@@ -268,7 +270,8 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-				SetOrigin (Vec3Offset(-32,-48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				
+				SetOrigin (Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;
@@ -286,21 +289,22 @@ Class MVP_APC : MVP_BaseVehicle
 			APC4 L 10 Bright;
 			APC4 M 16 Bright A_StartSound ("Vehicle/ArmyTruck/BackSlam",flags:CHANF_OVERLAP,attenuation:0.8);
 			APC4 N Random (6,14) Bright A_StartSound ("Vehicle/ArmyTruck/BackOpen",flags:CHANF_OVERLAP,attenuation:0.75);
-			APC4 O 5 Bright;
+			APC4 O 5 Bright {SmokeCounter = Random (4,16);}
 			APC4 P 4 Bright A_StartSound ("Vehicle/ArmyTruck/BackSlam",flags:CHANF_OVERLAP,attenuation:0.8);
 			APC4 QRS 8 Bright;
 			APC4 TUVW 5 Bright
 			{
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-				SetOrigin (Vec3Offset(-32,-48,24),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				SetOrigin (Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				spawn ("techlamp",pos);
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;
 				SetOrigin (OldPos,False);
 
 				//Quickly get out of the burning APC.
-				If (User_MarineAmount && Random (0,6) == 2)
+				If (User_MarineAmount && SmokeCounter <= 0)
 				{
 					Actor Marine;
 					Marine = SpawnMarine ((-112, FRandom (10,-10),0));
@@ -308,7 +312,10 @@ Class MVP_APC : MVP_BaseVehicle
 					Marine.DamageMobj (Target,Target,Random (24,96),DeathType,DMG_NO_PAIN|DMG_THRUSTLESS); //Harm the marine by a random amount, the source being the APC's killer.
 					WarnSpecificMarine (Marine);
 					User_MarineAmount--;
+					SmokeCounter = Random (4,16); //Each marine has a random amount of time before they get out too.
 				}
+				
+				SmokeCounter--;
 			}
 			Goto DeathEscapeLoop+9;
 		XDeath:

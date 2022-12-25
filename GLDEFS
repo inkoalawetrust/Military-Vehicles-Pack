@@ -176,7 +176,7 @@ PointLight 50CalTracerLight
 	Color 1.00 0.30 0.00
 	Size 48
 	Offset -64 0 0
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight 50CalFiringLight
@@ -193,7 +193,7 @@ PointLight RifleTracerLight
 	Color 1.00 0.30 0.00
 	Size 32
 	Offset -32 0 0
-	Attenuate 1
+	//Attenuate 1
 }
 
 PointLight RifleFiringLight
@@ -218,5 +218,5 @@ PointLight AutocannonTracer
 	Color 1.00 0.30 0.00
 	Size 56
 	Offset -56 0 0
-	Attenuate 1
+	//Attenuate 1
 }
