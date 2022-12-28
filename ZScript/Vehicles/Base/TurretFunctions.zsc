@@ -30,17 +30,20 @@ Extend Class MVP_BaseTurret
 		
 		If ((!Target || NoTargetCheck))
 		{
-			//If the angle and pitch difference are too small, just start snapping to the vehicles' direction.
+			If (AbsAngle (Master.Angle, Angle) < 0.75) LastEnemyDelay = 0; //Snap back into the vehicles' position if the angle difference is small enough.
+			
+			//If the pitch difference is too small, just start snapping to the vehicles' direction.
 			If (!LastEnemyDelay || Abs (Master.Pitch - Pitch) < 0.75)
 				Pitch = Master.Pitch;
 			Else
 				Pitch += (Master.Pitch - Pitch) * 0.15;
 			
-			If (!LastEnemyDelay || AbsAngle (Master.Angle, Angle) < 0.75)
+			If (!LastEnemyDelay)
 				Angle = Master.Angle;
 			Else
 			{
-				A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
+				If (AbsAngle (Master.Angle, Angle) > 0.6)
+					A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
 				Angle += DeltaAngle (Angle, Master.Angle) * 0.15;
 			}
 		}
@@ -58,7 +61,7 @@ Extend Class MVP_BaseTurret
 	//Projectile: The projectile to spawn.
 	//SpreadHorz/SpreadVert: Maximum and minimum horizontal and vertical spread, stored in Vector2s.
 	//MinDist: The minimum distance below which target prediction won't be used. And the projectile will be fired straight at the target instead.
-	Void HandleTargetPrediction (Actor Projectile, Vector2 SpreadHorz, Vector2 SpreadVert, Double MinDist)
+	Void HandleTargetPrediction (Actor Projectile, Vector2 SpreadHorz = (0,0), Vector2 SpreadVert = (0,0), Double MinDist = 1024)
 	{
 		Vector3 OldVel;
 		If (!Projectile || !Target) Return;

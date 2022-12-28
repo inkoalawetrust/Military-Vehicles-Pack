@@ -1,6 +1,5 @@
 //To do:
 //Replace the MVP_Trail actor trails with textured particles created by A_SpawnParticleEx at some point, as textured particles have all to customization I need. And are WAY more optimized to boot.
-//Instead of using CustomMarinesAvailable() checks to not try and spawn marine tokens and make the playsim shit itself. Try checking if the token class exists to begin with.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -401,6 +400,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
 		
 		SetOrigin (Vec3OffsetRelative(Master,(TurretOffsets.XY,Master.Height+TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
+		A_Stop();
 		//SetOrigin (Master.Vec3Offset (TurretOffsets.X * Cos(Angle) + TurretOffsets.Y * Sin (Angle),TurretOffsets.X * Sin (Angle) - TurretOffsets.Y * Cos (Angle),Master.Height+TurretOffsets.Z),True);
 		Floorclip = Master.Floorclip; //Copy floorclip offset for TERRAIN liquids.
 	}
@@ -634,7 +634,7 @@ Class MVP_BaseProjectile : FastProjectile
 		LIQUID_SLIME = 5
 	};
 	
-	Actor DontCollide; //Stores an actor that will be ignored by SpecialMissileHit, this is here so deflecting projectiles to deflect dozens of time when bouncing off.
+	Actor DontCollide; //Stores an actor that will be ignored by SpecialMissileHit, this is here so deflecting projectiles don't deflect dozens of times when bouncing off.
 	
 	Mixin MVP_UniversalFunctions;
 	Mixin MVP_CheckFunctions;

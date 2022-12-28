@@ -561,6 +561,7 @@ Extend Class MVP_BaseVehicle
 			If (Mobj == CorpseTarget) CorpseTarget = Null; //If the corpse you crushed was one you were targeting already, then remove the pointer to it.
 			If (!IsDead (Mobj)) Continue; //Actor isn't dead already.
 			If (Mobj.bDontGib) Continue; //Has already been crushed.
+			If (Mobj.Pos.Z > Mobj.FloorZ) Continue; //Corpse is off the ground. Like if it's falling.
 			If (Mobj.Default.bFloat) Continue; //Don't crush floating corpses, particularly recently killed Lost Souls, which end up producing floating gibs.
 			If (Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
 			If (Distance3DSquared (Mobj) > ((Radius*2)*1.75) * ((Radius*2)*1.75)) Continue;
@@ -672,6 +673,8 @@ Extend Class MVP_BaseVehicle
 			If (!Mobj.bIsMonster && !Mobj.Player) Continue; //Ignore destroyed props.
 			
 			If (!Mobj.FindState ("Raise")) Continue; //Cannot even be resurrected.
+			
+			If (Mobj.Pos.Z > Mobj.FloorZ) Continue; //Corpse is off the ground. Like if it's falling.
 			
 			If (Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
 			
