@@ -44,7 +44,7 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 - Has the (Optional) ability to ram enemies, causing a ton of melee damage based on the speed at which it hits. The truck only rams enemies once it has no marines left inside. And if it hits any ally, it simply pushes them out of the way, all marines will try to run away from the truck while it's ramming.
 - Includes multiple different prop versions of the truck, from different versions of the truck when it is destroyed, to a configurable prop of the normal, non-destroyed truck.
 
-### The APC (WIP)
+### The APC
 ![](https://i.imgur.com/bajJ0B1m.jpg)
 - Has 1500 health and decent durability against a range of damage types, particularly the "Explosion" "ExplosiveImpact" and "Grenade" "MarineGrenade" damage types.
 - Can carry up to 8 marines, the marine deploying is more or less the same as on the Army Truck.
