@@ -3,6 +3,7 @@
 Extend Class MVP_BaseTurret
 {
 	//Conditionally change the turrets' sprites based on pitch.
+	//TODO: Move to UniversalFunctions for both turrets and projectiles to be able to use it.
 	Int UpdateElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
 	{
 		If (Pitch >= 6 && Pitch >= 0)

@@ -13,7 +13,7 @@ PitchTo() function written by Boondorl.
 
 =====<Vehicles>=====
 All vehicle sprites are entirely made by me (Inkoalawetrust) unless otherwise specified.
-APC death sprites partially edited by TG5, he drew the marines jumping out of the APC.
+Di-Cokka sprites made by me, however the actual design is from Metal Slug.
 Original APC sprites by Gorman Freebmane: https://drive.google.com/file/d/1ETjHquh0woyRwo2sGBOOFPRHoIxC_xD5/view?usp=share_link
 
 =====<SFX>=====
@@ -22,6 +22,7 @@ Large explosion (MCR3A0-MCR3G0) made by Inkoalawetrust.
 Spark sprites (SPKYA-SPKYF) made by Tormentor667 and Solarsnowfall.
 Air Explosion 1 sprites by Gorman Freebmane.
 Liquid explosion sprites are from Metal Slug.
+Di-Cokka firing, projectile, and debris sprites are from Metal Slug.
 
 =====<Other>=====
 Radio/Walkie-talkie sprites (RADI*) made by Doom Nukem. World sprite (RADIZ0) by mark#8218.
@@ -63,6 +64,8 @@ APC machine gun sound is from Call of Duty 2, machine gun impact sound is from t
 APC small machine gun fire sounds are from Half-Life 1, small machine gun impact sound is from the 2020 GDC sound library.
 Autocannon shell explosion sound (AutocannonHit.ogg) is from Call of Duty 2.
 Autocannon firing sound (AutocannonFire.ogg) is from Call of Duty United Offensive.
+
+Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|Sounds|==============|
 
 

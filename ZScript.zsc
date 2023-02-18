@@ -21,6 +21,8 @@ Version "4.10.0"
 	#Include "ZScript/Vehicles/APC/APC.zsc"
 	#Include "ZScript/Vehicles/APC/APCProps.zsc" //The APC's OtherActors.zsc is already too long without the props.
 	#Include "ZScript/Vehicles/APC/OtherActors.zsc"
+	//MISSION 01 START
+	#Include "ZScript/Vehicles/Di-Cokka/Di-Cokka.zsc"
 
 
 //Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.

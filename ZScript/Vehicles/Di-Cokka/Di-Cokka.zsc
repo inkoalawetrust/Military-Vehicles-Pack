@@ -1,0 +1,62 @@
+//Placeholder, currently just serves as a test for making my sprites finally work with palette translations.
+Class MVP_DiCokka : MVP_BaseVehicle
+{
+	Default
+	{
+		//$Sprite MSV1[1
+		XScale 0.9;
+		YScale 0.75;
+		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
+		//Translation "64:79=112:127", "2:2=127:127"; //Green tonk.
+		//Desaturated green tonk, looks way better.
+		//Translation "64:79=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "144:151=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "236:239=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "1:1=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "2:2=%[0.00,0.00,0.00]:[0.00,1.01,0.50]";
+		//Ditto, but white.
+		//Translation "64:79=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "144:151=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "236:239=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "1:1=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "2:2=%[0.00,0.00,0.00]:[2.00,2.00,2.00]";
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		TurretOffsets = (0,0,-3);
+		Super.PostBeginPlay();
+	}
+	States
+	{
+		Spawn:
+			MSV1 V 1 NoDelay;
+			MSV1 A 0
+			{
+				Switch (Random (1,3))
+				{
+					Case 1:
+						Break;
+					Case 2:
+						If (Turret) Turret.A_SetTranslation ('DiCokka_Green');
+						A_SetTranslation ('DiCokka_Green');
+						Break;
+					Case 3:
+						If (Turret) Turret.A_SetTranslation ('DiCokka_White');
+						A_SetTranslation ('DiCokka_White');
+						Break;
+					Default:
+						Break;
+				}
+			}
+			MSV1 V -1;
+			Stop;
+	}
+}
+
+Class MVP_DiCokkaTurret : MVP_BaseTurret
+{
+	Default
+	{
+		XScale 0.9;
+		YScale 0.75;
+	}
+		States
+	{
+	Spawn:
+			MSV1 Y -1;
+			Stop;
+	}
+}

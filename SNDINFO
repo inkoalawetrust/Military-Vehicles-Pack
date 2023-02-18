@@ -1,5 +1,7 @@
 //Generic sound effects
 
+SFX/MSExplosion1 "Sounds/Vehicles/Di-Cokka/MSExplosion1.ogg"
+SFX/MSExplosion2 "Sounds/Vehicles/Di-Cokka/MSExplosion2.ogg"
 SFX/BigExplosion "Sounds/SFX/BigExplosion.ogg"
 SFX/Explosion "Sounds/SFX/Explosion.ogg" //Maybe get more explosion sounds, and turn SFX/Explosion into a random sound ?
 SFX/LiquidExplosion "Sounds/SFX/WaterBoom.ogg"
@@ -16,6 +18,12 @@ SFX/BulletRicochet3 "Sounds/SFX/BulletRicochet3.ogg"
 SFX/BulletRicochet4 "Sounds/SFX/BulletRicochet4.ogg"
 //SFX/BulletRicochet5 "Sounds/SFX/BulletRicochet5.ogg"
 Weapon/RadioCall "Sounds/SFX/RadioCall.ogg"
+
+$Random SFX/MSExplosion
+{
+	SFX/MSExplosion1
+	SFX/MSExplosion2
+}
 
 $Random SFX/WaterHit
 {
@@ -48,6 +56,8 @@ $Limit SFX/BulletRicochet1 0
 $Limit SFX/BulletRicochet2 0
 $Limit SFX/BulletRicochet3 0
 $Limit SFX/BulletRicochet4 0
+$Limit SFX/MSExplosion1 0
+$Limit SFX/MSExplosion2 0
 //$Limit BulletRicochet5 0
 $Limit Weapon/RadioCall 0
 
@@ -115,3 +125,19 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/APC/TurretTurn 1 256
 	$Limit Vehicle/APC/AutocannonFire 0
 	$Limit Vehicle/APC/AutocannonHit 0
+	
+	//Di-Cokka
+	Vehicle/Di-Cokka/Shoot "Sounds/Vehicles/Di-Cokka/Fire.ogg"
+	Vehicle/Di-Cokka/Move "Sounds/Vehicles/Di-Cokka/TrackMove1.ogg"
+	Vehicle/Di-Cokka/AltMove "Sounds/Vehicles/Di-Cokka/TrackMove2.ogg"
+	Vehicle/Di-Cokka/Idle "Sounds/Vehicles/Di-Cokka/CokkaIdle.ogg"
+	Vehicle/Di-Cokka/Pain "Sounds/Vehicles/Di-Cokka/CokkaPain.ogg"
+	Vehicle/Di-Cokka/Death "Sounds/Vehicles/Di-Cokka/FallApart.ogg"
+	Vehicle/Di-Cokka/MetalHit "Sounds/Vehicles/Di-Cokka/MetalHit.ogg"
+	$Limit Vehicle/Di-Cokka/Shoot 0
+	$Limit Vehicle/Di-Cokka/Move 0
+	$Limit Vehicle/Di-Cokka/AltMove 0
+	$Limit Vehicle/Di-Cokka/Idle 0
+	$Limit Vehicle/Di-Cokka/Pain 0
+	$Limit Vehicle/Di-Cokka/Death 0
+	$Limit Vehicle/Di-Cokka/MetalHit 0

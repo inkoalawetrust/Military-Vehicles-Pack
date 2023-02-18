@@ -107,15 +107,16 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			}
 			APC3 # 1
 			{
-				//If you have no target, or it's dead, or it's too high up or low doown for you too shoot.
-				If (!Target || IsDead (Target) || Pitch < MaxPitch || Pitch > MaxPitch)
-				{
+				//If you have no target, or it's dead, or it's too high up or low down for you to shoot.
+				//TODO: These pitch checks are shit, they cause the turrets to look for a new target every single shot, fix them.
+				If (!Target || IsDead (Target))// || Pitch < MaxPitch || Pitch > MaxPitch)
+				{a_log ("no target");
 					A_ClearTarget();
 					LookForPlayers (True); //Look for a new target.
 				}
 				
 				If (!TurretLOFCheck (12,ignoreactors:True))
-				{
+				{a_log ("the lof check is false");
 					A_ClearTarget();
 					Return ResolveState ("See");
 				}

@@ -466,7 +466,7 @@ Extend Class MVP_BaseVehicle
 		If (User_ChaseTime > 0)
 		{
 			If (ChaseTimer >= User_ChaseTime)
-			{
+			{a_log ("giving up chase");
 				A_ClearTarget();
 				ChaseTimer = 0;
 				//Vehicles ordered to stay also go back to standing still once the timer runs out.
