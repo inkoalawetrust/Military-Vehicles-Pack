@@ -2,6 +2,7 @@
 #Include "ZScript/Vehicles/Army Car/ArmyCar.gl"
 #Include "ZScript/Vehicles/Army Truck/ArmyTruck.gl"
 #Include "ZScript/Vehicles/APC/APC.gl"
+#Include "ZScript/Vehicles/Di-Cokka/Di-Cokka.gl"
 
 //https://www.youtube.com/watch?v=hwVyXgbaXHs
 PointLight BigExplosion1

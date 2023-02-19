@@ -61,7 +61,6 @@ PointLight APCFire4
 	Offset 48 24 32
 }
 
-//Todo: COPY AND PASTE THESE FOR THE PROP VERSION TOO !!!!!!!!!!!!!!!!
 Object MVP_APC
 {
 	//Engine explosion.
@@ -94,7 +93,6 @@ Object MVP_APC
 }
 
 //Epic code duplication, why not just be able to do "Object class1, class2, class3" ??????????????
-
 Object MVP_APCProp
 {
 	//Engine explosion.

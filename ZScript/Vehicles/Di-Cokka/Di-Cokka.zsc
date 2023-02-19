@@ -1,17 +1,26 @@
+
+class pink2 :demon replaces demon
+{
+default{+invulnerable;}
+}
 //Placeholder, currently just serves as a test for making my sprites finally work with palette translations.
 Class MVP_DiCokka : MVP_BaseVehicle
 {
 	Default
 	{
+		//$Title Di-Cokka
+		//$Category Vehicles/Di-Cokka
 		//$Sprite MSV1[1
 		XScale 0.9;
 		YScale 0.75;
 		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
-		//Translation "64:79=112:127", "2:2=127:127"; //Green tonk.
-		//Desaturated green tonk, looks way better.
-		//Translation "64:79=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "144:151=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "236:239=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "1:1=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "2:2=%[0.00,0.00,0.00]:[0.00,1.01,0.50]";
-		//Ditto, but white.
-		//Translation "64:79=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "144:151=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "236:239=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "1:1=%[0.00,0.00,0.00]:[2.00,2.00,2.00]", "2:2=%[0.00,0.00,0.00]:[2.00,2.00,2.00]";
+		PainChance 50;
+		PainChance "Autocannon", 65;
+		PainChance "RifleBullet", 40;
+		PainChance "MarineHMG", 30;
+		PainChance "MarineRifle", 45;
+		PainThreshold 10;
+		-NoPain; //This vehicle CAN feel pain.
 	}
 	
 	Override Void PostBeginPlay ()

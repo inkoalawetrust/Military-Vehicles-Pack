@@ -3,8 +3,7 @@
 Extend Class MVP_BaseTurret
 {
 	//Conditionally change the turrets' sprites based on pitch.
-	//TODO: Move to UniversalFunctions for both turrets and projectiles to be able to use it.
-	Int UpdateElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
+	Int UpdateTurretElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
 	{
 		If (Pitch >= 6 && Pitch >= 0)
 			Return FaceDown;
@@ -115,35 +114,6 @@ Extend Class MVP_BaseTurret
 		Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
 	}
 	
-	//The generic line of fire function used by turrets to performan additional checks.
-	//HeightOffset is, well, the offset from the callers' Z position at which the cast will be shot.
-	//PropHealthThreshold is the maximum amount of health that a destructible blocking decoration can have and still return true.
-	//IgnoreActors makes the raycast ignore powerful enough or indestructible props in the way. Nor check for still-solid corpses, e.g vehicle wrecks.
-	//IgnoreLinedefs makes the raycast ignore projectile blocking lines.
-	Bool TurretLOFCheck (Double HeightOffset = 16, Int PropHealthThreshold = 400, Bool IgnoreActors = False, Bool IgnoreLinedefs = False)
-	{
-		Let Check = New ("MVP_TurretRaycast");
-		
-		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch)); //Fire the ray at wherever the actor is facing.
-		
-		Check.Shooter = Self;
-		Check.IgnoreActors = IgnoreActors;
-		Check.IgnoreLinedefs = IgnoreLinedefs;
-		Check.PropHealthThreshold = PropHealthThreshold;
-		Check.Trace ((Pos.X,Pos.Y,Pos.Z+HeightOffset),CurSector,Direction,MaxTargetRange,0);
-		
-		If (Check.BadLOF)
-		{
-			bDontStayAround = True;
-			Check.Destroy();
-			Return False;
-		}
-		
-		bDontStayAround = False;
-		Check.Destroy();
-		Return True;
-	}
-	
 	//This function can be used by turrets to make them able to pick different targets from their master, instead of chasing or firing at the same target.
 	//The Avoid parameter specifies the actor to avoid targeting, Origin specifies the actor the search starts around, and CheckRange is the search range.
 	/*MinAlternateTargetRange specifies how far the new target must be from the actor that must be avoided. A value of 0 or less makes it just randomly
@@ -198,49 +168,59 @@ Extend Class MVP_BaseTurret
 	}
 }
 
-//Todo: Fix a big caused by the blocking actor check returning BadLOF even when it hits an enemy actor. Caused by actors that are invulnerable.
-Class MVP_TurretRaycast : LineTracer
+Class MVP_LOFRaycast : LineTracer
 {
-	Bool BadLOF; //If true, there is something standing in the turrets' line of fire.
-	Bool IgnoreActors, IgnoreLinedefs; //Tells the raycast what checks to perform.
-	Int PropHealthThreshold; //The threshold over which a non-indestructible solid prop is considered too strong for the turret to bother shooting through.
+	Mixin MVP_CheckFunctions;
+	Bool BadLOF; //If true, there is something standing in the shooters' line of fire.
 	Actor Shooter; //The actor firing the raycast.
-	Override ETraceStatus TraceCallback ()
+	
+	//Should the actor shoot at the prop ?
+	//Other: The actor to check.
+	//HealthThreshold: If the props' health is at or below this value, then shoot.
+	Bool CanShootAtProp (Actor Other, Int HealthThreshold = 400)
 	{
-		Actor Mobj = Results.HitActor;
+		If (!Other || !Shooter) Return False;
+		If (HealthThreshold <= 0) Return False; //No health limit specified.
 		
-		If (!IgnoreActors && Results.HitType == Trace_HitActor)
-		{
-			If (Shooter && Mobj == Shooter.Master) Return Trace_Skip; //Ignore the vehicle you are attached to.
-			//If you hit an actor that is not a monster or player, and is a really strong or indestructible prop.
-			If(((Mobj.bInvulnerable || Mobj.bNoDamage) && !(Mobj.bIsMonster || Mobj.Player) || !Mobj.bIsMonster && !Mobj.Player) && Mobj.bSolid && (Mobj.Health > PropHealthThreshold))
-			{
-				BadLOF = True;
-				Return Trace_Stop;
-			}
-			//If the collidable corpse of an enemy is in the way (e.g a destroyed vehicle), don't shoot.
-			Else If (Shooter && Shooter.IsHostile (Mobj) && Mobj.Health <= 0 && Mobj.bDontCorpse)
-			{
-				Return Trace_Stop;
-			}
-			//Alternatively, if you hit a monster or player that is hostile to you, or is just your target.
-			Else If (Shooter && (Mobj.bIsMonster || Mobj.Player) && (Shooter.IsHostile (Mobj) || Mobj == Shooter.Target))
-				Return Trace_Stop;
-		}
+		//Actor is an destructible inanimate object. And it's health is at or below the minimum threshold.
+		If (IsInanimateObject (Other) && !IsIndestructible (Other) && Other.Health <= HealthThreshold)
+			Return True;
 		
-		If (!IgnoreLinedefs && Results.HitType == Trace_HitWall)
-		{
-			//If there is a line in the way that is set to block projectiles or everything, then don't try shooting at it pointelessly.
-			If (Results.HitLine.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKEVERYTHING))
-			{
-				BadLOF = True;
-				Return Trace_Stop;
-			}
-			//If it isn't blocking the projectile, then ignore it.
-			Else
-				Return Trace_Skip;
-		}
+		Return False;
+	}
+	
+	//Is the other actor a corpse that is still collidable ?
+	Bool IsSolidCorpse (Actor Other)
+	{
+		If (!Other) Return False;
 		
-		Return Trace_Skip;
+		If (!IsDead (Other)) Return False;
+		
+		If (!Other.bDontCorpse) Return False;
+		
+		Return True;
+	}
+	
+	Enum BLITWFlags
+	{
+		BLITW_HitscansToo = 1 << 0,
+		BLITW_HitscansOnly= 1 << 1
+	}
+	//Is the line the trace went through blocking ?
+	Bool BlockingLineInTheWay (Line Blocking, Int Flags)
+	{
+		If (!Blocking) Return False;
+		
+		If (!Flags)
+			If (Blocking.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKEVERYTHING))
+				Return True;
+		Else If (Flags & BLITW_HitscansToo)
+			If (Blocking.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKHITSCAN | Line.ML_BLOCKEVERYTHING))
+				Return True;
+		Else If (Flags & BLITW_HitscansOnly)
+			If (Blocking.Flags & (Line.ML_BLOCKHITSCAN | Line.ML_BLOCKEVERYTHING))
+				Return True;
+		
+		Return False;
 	}
 }

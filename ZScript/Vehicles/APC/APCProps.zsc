@@ -212,7 +212,7 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 			APC3 # 1
 			{
 				RotateToVehicle(False,True);
-				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
+				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
 			Loop;
 		Death:
@@ -243,7 +243,7 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 			APC3 N 1 RotateToVehicle(False,True);
 			Wait;
 		GenericFreezeDeath:
-			APC3 # 0 {Frame = UpdateElevation (3,0,6,9); /*D, A, G, J*/}
+			APC3 # 0 {Frame = UpdateTurretElevation (3,0,6,9); /*D, A, G, J*/}
 			Goto Super::GenericFreezeDeath;
 	}
 }
@@ -279,7 +279,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 			APC2 # 1
 			{
 				RotateToVehicle(False,True);
-				Frame = UpdateElevation (2,0,4,6); //C, A, E, G
+				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
 			Loop;
 		Death:
@@ -318,7 +318,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 			APC2 U 1 RotateToVehicle(False,True);
 			Wait;
 		GenericFreezeDeath:
-			APC2 # 0 {Frame = UpdateElevation (2,0,4,6); /*C, A, E, G*/}
+			APC2 # 0 {Frame = UpdateTurretElevation (2,0,4,6); /*C, A, E, G*/}
 			Goto Super::GenericFreezeDeath;
 	}
 }
@@ -354,7 +354,7 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 			APC2 # 1
 			{
 				RotateToVehicle(False,True);
-				Frame = UpdateElevation (10,8,12,14); //K, I, M, O
+				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
 			Loop;
 		Death:
@@ -389,7 +389,7 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 			}
 			Stop;
 		GenericFreezeDeath:
-			APC2 # 0 {Frame = UpdateElevation (10,8,12,14); /*K, I, M, O*/}
+			APC2 # 0 {Frame = UpdateTurretElevation (10,8,12,14); /*K, I, M, O*/}
 			Goto Super::GenericFreezeDeath;
 
 	}

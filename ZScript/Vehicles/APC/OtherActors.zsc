@@ -18,11 +18,33 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		+MissileMore;
 		+MVP_BaseVehicle.ScareMarines;
 	}
+	
+	Bool MGLOFCheck()
+	{
+		Let Check = New ("MVP_APCMachineGunLOFCheck");
+		
+		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		
+		Check.Shooter = Self;
+		Check.Trace ((Pos.X,Pos.Y,Pos.Z+12),CurSector,Direction,MaxTargetRange,0);
+		
+		If (Check.BadLOF)
+		{
+			bDontStayAround = True;
+			Check.Destroy();
+			Return False;
+		}
+		
+		bDontStayAround = False;
+		Check.Destroy();
+		Return True;
+	}
+	
 	Override Bool ShouldAttack ()
 	{
 		If (!Target) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && TurretLOFCheck (12,ignoreactors:True) && !IsDead (Target) && IsHostile (Target))
+		If (Target != Self && MVP_CheckMissileRange(Target) && MGLOFCheck() && !IsDead (Target) && IsHostile (Target))
 		{
 			SetStateLabel ("Fire");
 			Return True;
@@ -69,7 +91,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			{
 				RotateToVehicle();
 				A_LookEx (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE);
-				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
+				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
 			Loop;
 		See:
@@ -80,14 +102,14 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
 				MVP_Chase (NoChase:True);
 				UpdateLastEnemyTimer();
-				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
+				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
 			Loop;
 		Fire:
 			APC3 ###### 1
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
+				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Right shot
 			{
@@ -95,7 +117,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				A_StartSound ("Vehicle/APC/MGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
-				Frame = UpdateElevation (4,1,7,10); //E, B, H, K
+				Frame = UpdateTurretElevation (4,1,7,10); //E, B, H, K
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Left shot
 			{
@@ -103,7 +125,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				A_StartSound ("Vehicle/APC/MGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
-				Frame = UpdateElevation (5,2,8,11); //F, C, I, L
+				Frame = UpdateTurretElevation (5,2,8,11); //F, C, I, L
 			}
 			APC3 # 1
 			{
@@ -115,7 +137,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 					LookForPlayers (True); //Look for a new target.
 				}
 				
-				If (!TurretLOFCheck (12,ignoreactors:True))
+				If (!MGLOFCheck())
 				{a_log ("the lof check is false");
 					A_ClearTarget();
 					Return ResolveState ("See");
@@ -123,7 +145,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				
 				HandleChaseTimer();
 				
-				Frame = UpdateElevation (3,0,6,9); //D, A, G, J
+				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 				Return State (Null);
 			}
 			APC3 # 0 A_MonsterRefire (128,"See");
@@ -156,8 +178,38 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			APC3 N 1 RotateToVehicle(True);
 			Wait;
 		GenericFreezeDeath:
-			APC3 # 0 {Frame = UpdateElevation (3,0,6,9); /*D, A, G, J*/}
+			APC3 # 0 {Frame = UpdateTurretElevation (3,0,6,9); /*D, A, G, J*/}
 			Goto Super::GenericFreezeDeath;
+	}
+}
+
+Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
+{
+	Override ETraceStatus TraceCallback()
+	{
+		Actor Mobj = Results.HitActor;
+		
+		If (!Shooter) {console.printf ("no shooter !?");Return Trace_Stop;} //Not sure if this should return BadLOF too.
+		
+		If (Mobj == Shooter.Master) {console.printf ("skipped vehicle body");Return Trace_Skip;}
+		
+		Bool IsEnemy = Shooter.IsHostile(Mobj); //Caching
+		
+		//The machine gun turret can't shoot through solid enemy corpses that strong.
+		If (IsEnemy && IsSolidCorpse (Mobj) && Mobj.SpawnHealth() >= 500 )
+		{console.printf ("A VEHICLE WRECK IS IN THE WAY");
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Self explanatory.
+		If (BlockingLineInTheWay (Results.HitLine,0))
+		{console.printf ("a line is in the way.");
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		Return Trace_Skip;
 	}
 }
 
@@ -207,11 +259,32 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		TurretOffsets = Original;
 	}
 	
+	Bool AutocannonLOFCheck()
+	{
+		Let Check = New ("MVP_ProjectileLOFCheck");
+		
+		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		
+		Check.Shooter = Self;
+		Check.Trace ((Pos.X,Pos.Y,Pos.Z+12),CurSector,Direction,MaxTargetRange,0);
+		
+		If (Check.BadLOF)
+		{
+			bDontStayAround = True;
+			Check.Destroy();
+			Return False;
+		}
+		
+		bDontStayAround = False;
+		Check.Destroy();
+		Return True;
+	}
+	
 	Override Bool ShouldAttack ()
 	{
 		If (!Target) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && TurretLOFCheck (12) && !IsDead (Target) && IsHostile (Target))
+		If (Target != Self && MVP_CheckMissileRange(Target) && AutocannonLOFCheck() && !IsDead (Target) && IsHostile (Target))
 		{
 			SetStateLabel ("Fire");
 			Return True;
@@ -228,7 +301,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			{
 				RotateToVehicle();
 				A_LookEx (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE);
-				Frame = UpdateElevation (2,0,4,6); //C, A, E, G
+				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
 			Loop;
 		See:
@@ -239,14 +312,14 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
 				MVP_Chase (NoChase:True);
 				UpdateLastEnemyTimer();
-				Frame = UpdateElevation (2,0,4,6); //C, A, E, G
+				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
 			Loop;
 		Fire:
 			APC2 ###### 1
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				Frame = UpdateElevation (2,0,4,6); //C, A, E, G
+				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
 			APC2 # 3 Light ("AutocannonFlash") Bright
 			{
@@ -260,7 +333,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 					Proj.Tracer = Target;
 					MVP_AutocannonShell(Proj).IsAirburst = True;
 				}
-				Frame = UpdateElevation (3,1,5,7); //D, B, F, H
+				Frame = UpdateTurretElevation (3,1,5,7); //D, B, F, H
 			}
 			APC2 ### 8
 			{
@@ -271,7 +344,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 					LookForPlayers (True); //Look for a new target.
 				}
 				
-				If (!TurretLOFCheck())
+				If (!AutocannonLOFCheck())
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");
@@ -279,7 +352,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				
 				HandleChaseTimer();
 				
-				Frame = UpdateElevation (2,0,4,6); //C, A, E, G
+				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 				Return State (Null);
 			}
 			APC2 # 0 A_MonsterRefire (10,"See");
@@ -320,8 +393,52 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			APC2 U 1 RotateToVehicle(True);
 			Wait;
 		GenericFreezeDeath:
-			APC2 # 0 {Frame = UpdateElevation (2,0,4,6); /*C, A, E, G*/}
+			APC2 # 0 {Frame = UpdateTurretElevation (2,0,4,6); /*C, A, E, G*/}
 			Goto Super::GenericFreezeDeath;
+	}
+}
+
+Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
+{
+	Int PropHealthThreshold;
+	Override ETraceStatus TraceCallback()
+	{
+		If (PropHealthThreshold == 0) PropHealthThreshold = 400; //Default value, since it can't be set with a normal variable decleration.
+		Actor Mobj = Results.HitActor;
+		
+		If (!Shooter) Return Trace_Stop;
+		
+		If (Mobj == Shooter.Master) Return Trace_Skip;
+		
+		//Indestructible prop in the way.
+		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj) || !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,4000))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Destructible prop, but far too strong to shoot through in a timely manner.
+		If (!IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Solid corpse of an enemy in the way, shell can't go through.
+		If (Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Self explanatory.
+		If (BlockingLineInTheWay (Results.HitLine,0))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		Return Trace_Skip;
 	}
 }
 
@@ -363,11 +480,33 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		MissileState = FindState ("Fire");
 	}
 	
+	Bool SmallMGLOFCheck()
+	{
+		Let Check = New ("MVP_ProjectileLOFCheck");
+		
+		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		
+		Check.Shooter = Self;
+		Check.PropHealthThreshold = 150;
+		Check.Trace ((Pos.X,Pos.Y,Pos.Z+8),CurSector,Direction,MaxTargetRange,0);
+		
+		If (Check.BadLOF)
+		{
+			bDontStayAround = True;
+			Check.Destroy();
+			Return False;
+		}
+		
+		bDontStayAround = False;
+		Check.Destroy();
+		Return True;
+	}
+	
 	Override Bool ShouldAttack ()
 	{
 		If (!Target) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && TurretLOFCheck (8,150) && !IsDead (Target) && IsHostile (Target))
+		If (Target != Self && MVP_CheckMissileRange(Target) && SmallMGLOFCheck() && !IsDead (Target) && IsHostile (Target))
 		{
 			SetStateLabel ("Fire");
 			Return True;
@@ -383,7 +522,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			{
 				RotateToVehicle();
 				A_LookEx (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE);
-				Frame = UpdateElevation (10,8,12,14); //K, I, M, O
+				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
 			Loop;
 		See:
@@ -394,14 +533,14 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
 				MVP_Chase (NoChase:True);
 				UpdateLastEnemyTimer();
-				Frame = UpdateElevation (10,8,12,14); //K, I, M, O
+				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
 			Loop;
 		Fire:
 			APC2 ###### 1
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				Frame = UpdateElevation (10,8,12,14); //K, I, M, O
+				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
 			APC2 # 4 Light ("RifleFiringLight") Bright
 			{
@@ -415,7 +554,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				
 				Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",8,flags:CMF_AIMDIRECTION,Pitch);
 				HandleTargetPrediction (Proj,(0.4,-0.4),(0.55,-0.55),1024);
-				Frame = UpdateElevation (11,9,13,15); //L, J, N, P
+				Frame = UpdateTurretElevation (11,9,13,15); //L, J, N, P
 			}
 			APC2 # 1
 			{
@@ -435,7 +574,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 						Target = NewTarget;
 				}
 				
-				If (!TurretLOFCheck (8,150))
+				If (!SmallMGLOFCheck())
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");
@@ -443,7 +582,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				
 				HandleChaseTimer();
 				
-				Frame = UpdateElevation (10,8,12,14); //K, I, M, O
+				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 				Return State (Null);
 			}
 			APC2 # 0 A_MonsterRefire (128,"See");
@@ -482,7 +621,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			}
 			Stop;
 		GenericFreezeDeath:
-			APC2 # 0 {Frame = UpdateElevation (10,8,12,14); /*K, I, M, O*/}
+			APC2 # 0 {Frame = UpdateTurretElevation (10,8,12,14); /*K, I, M, O*/}
 			Goto Super::GenericFreezeDeath;
 	}
 }

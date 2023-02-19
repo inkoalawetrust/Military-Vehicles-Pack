@@ -110,7 +110,7 @@ Class MVP_APC : MVP_BaseVehicle
 		If (Health <= SpawnHealth()/4)
 			bMissileMore = bMissileEvenMore = True;
 		
-		If (CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
+		If (CheckMissileRange() && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (User_MarineAmount > 0)
 			{
@@ -157,7 +157,7 @@ Class MVP_APC : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound ("Vehicle/APC/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
-				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling()); //Use this for the eponymous MVP_Chase property.
+				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous MVP_Chase property.
 				
 				MVP_Chase (True,512,NoRandomTurn,False,(User_CrushMode == CRUSH_ACTIVE ? True : False));
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
@@ -167,7 +167,7 @@ Class MVP_APC : MVP_BaseVehicle
 				If (Turret) Range = Turret.MaxTargetRange;
 				If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
 				{
-					If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling() && bChaseGoal))
+					If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling(Self) && bChaseGoal))
 					{
 						If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
 						{

@@ -608,6 +608,7 @@ Class MVP_BaseProjectile : FastProjectile
 		Return True;
 	}
 	
+	//Has different values than UpdateTurretElevation().
 	Int UpdateProjectileElevation (Int FaceDown, Int FaceDown2, Int FaceStraight, Int FaceUp, Int FaceUp2)
 	{
 		If (Pitch >= 70)
@@ -723,6 +724,24 @@ Class SmartMarineWarningZone : Actor
 	Vector3 Offset;
 	Mixin MVP_CheckFunctions;
 	Mixin MVP_MathFunctions;
+	
+	//Cool copy and paste courtesy of the god forsaken scope system.
+	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
+	Bool MarineIsOnTurret (Actor Other)
+	{
+		If (!Other) Return False;
+		
+		Name MGMarine = "TurretMarine";
+		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		If (Other.GetClassName() == MGMarine)
+			Return True;
+		
+		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
+			Return True;
+		
+		Return False;
+	}
 	
 	Override Void BeginPlay ()
 	{

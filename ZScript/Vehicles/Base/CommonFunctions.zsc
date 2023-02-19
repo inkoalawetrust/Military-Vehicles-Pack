@@ -121,23 +121,6 @@ Mixin Class MVP_CheckFunctions
 			Return False;
 	}
 	
-	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
-	Bool MarineIsOnTurret (Actor Other)
-	{
-		If (!Other) Return False;
-		
-		Name MGMarine = "TurretMarine";
-		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
-		
-		If (Other.GetClassName() == MGMarine)
-			Return True;
-		
-		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
-			Return True;
-		
-		Return False;
-	}
-	
 	Bool CheckActorExists (String ActorClass)
 	{
 		Class<Actor> Act = ActorClass;
@@ -166,9 +149,10 @@ Mixin Class MVP_CheckFunctions
 		Return (!Other.bIsMonster && !Other.Player);
 	}
 	
-	Bool IsPatrolling ()
+	Bool IsPatrolling (Actor Other)
 	{
-		Return (Goal || Target Is "PatrolPoint");
+		If (!Other) Return False;
+		Return (Other.Goal || Other.Target Is "PatrolPoint");
 	}
 	
 	Bool IsFlying (Actor Other)
@@ -186,9 +170,10 @@ Mixin Class MVP_CheckFunctions
 		Return False;
 	}
 	
-	Bool IsInState (StateLabel CheckFor = "Spawn")
+	Bool IsInState (Actor Other, StateLabel CheckFor = "Spawn")
 	{
-		Return (InStateSequence(CurState,ResolveState (CheckFor)));
+		If (!Other) Return False; 
+		Return (Other.InStateSequence(Other.CurState,Other.FindState (CheckFor)));
 	}
 	
 	Bool CanBeTargeted (Actor Other)
@@ -304,6 +289,23 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Marine related functions|=====\\
+	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
+	Bool MarineIsOnTurret (Actor Other)
+	{
+		If (!Other) Return False;
+		
+		Name MGMarine = "TurretMarine";
+		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
+		
+		If (Other.GetClassName() == MGMarine)
+			Return True;
+		
+		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
+			Return True;
+		
+		Return False;
+	}
+	
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
 	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False)
 	{
@@ -418,7 +420,7 @@ Extend Class MVP_BaseVehicle
 			
 			//Vehicles try to stay away from enemies that are too close.
 			Actor OldTarget;
-			If (!(IsPatrolling() && bChaseGoal)) NearestEnemy = FindNearestEnemy (User_RetreatDistance); //Only retreat from enemies if NOT set to patrol AND ignore targets.
+			If (!(IsPatrolling(Self) && bChaseGoal)) NearestEnemy = FindNearestEnemy (User_RetreatDistance); //Only retreat from enemies if NOT set to patrol AND ignore targets.
 			//Have a close enemy, and not already retreating by something like a powerful target.
 			If (NearestEnemy && !AlreadyRetreating)
 			{
@@ -430,7 +432,7 @@ Extend Class MVP_BaseVehicle
 				Target = OldTarget;
 			}
 			//Archvile trolling mode activated.
-			Else If (!Target && !IsPatrolling() && !NearestEnemy && CurrentOrder == ORDER_WANDER && CorpseSeeker)
+			Else If (!Target && !IsPatrolling(Self) && !NearestEnemy && CurrentOrder == ORDER_WANDER && CorpseSeeker)
 			{
 				//Don't have a corpse to crush already.
 				If (!CorpseTarget)
@@ -477,7 +479,7 @@ Extend Class MVP_BaseVehicle
 				}
 			}
 			
-			If (!IsPatrolling())
+			If (!IsPatrolling(Self))
 			{
 				If (!Target || Target && !CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
 					ChaseTimer++;

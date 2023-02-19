@@ -70,7 +70,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Override Bool ShouldAttack()
 	{
-		If (!User_NoMarines && DeployTimer <= 0 && CheckMissileRange() && Target != Goal && !(IsPatrolling() && bChaseGoal))
+		If (!User_NoMarines && DeployTimer <= 0 && CheckMissileRange() && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			SetStateLabel ("DeployMarines");
 			Return True; //Tell MVP_Chase to end.
@@ -107,7 +107,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				User.GiveInventory ("RocketAmmo",1);
 				User_SupplyAmount--;
 				//Only go back to spawn and wait there if the car ISN'T already stopped to drop troops.
-				If (!IsInState ("DeployMarines") && !IsInState ("Spawn") && !IsPatrolling())
+				If (!IsInState (Self,"DeployMarines") && !IsInState (Self,"Spawn") && !IsPatrolling(Self))
 				{
 					WaitTimer = 35*2;
 					SetStateLabel ("Spawn");
@@ -123,7 +123,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 					A_StartSound ("Vehicle/ArmyCar/Crate");
 					User.GiveBody (25,100); //Basically acts like the vanilla Medikit.
 					User_SupplyAmount--;
-					If (!IsInState ("DeployMarines") && !IsInState ("Spawn") && !IsPatrolling())
+					If (!IsInState (Self,"DeployMarines") && !IsInState (Self,"Spawn") && !IsPatrolling(Self))
 					{
 						WaitTimer = 35*2;
 						SetStateLabel ("Spawn");
@@ -137,7 +137,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StartSound ("Vehicle/ArmyCar/Crate");
 				User.GiveInventory ("GreenArmor",1);
 				User_SupplyAmount--;
-				If (!IsInState ("DeployMarines") && !IsInState ("Spawn") && !IsPatrolling())
+				If (!IsInState (Self,"DeployMarines") && !IsInState (Self,"Spawn") && !IsPatrolling(Self))
 				{
 					WaitTimer = 35*2;
 					SetStateLabel ("Spawn");
@@ -182,7 +182,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				If (WaitTimer <= 0) A_LookEx (0,0,DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 				bStandStill = False;
 				
-				If (!IsPatrolling() && Target && WaitTimer <= 0)
+				If (!IsPatrolling(Self) && Target && WaitTimer <= 0)
 					SetStateLabel ("See");
 			}
 			Loop;
@@ -194,12 +194,12 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				LookExParams ArmyCarSight;
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
-				Bool NoRandomTurn = ((!Target || User_NoMarines) && !IsPatrolling()); //Return this bool in the NoRandomTurn parameter of MVP_Chase
+				Bool NoRandomTurn = ((!Target || User_NoMarines) && !IsPatrolling(Self)); //Return this bool in the NoRandomTurn parameter of MVP_Chase
 
 				MVP_Chase (NoRandomTurn:NoRandomTurn);
 				
 				//If you have dropped your marines, still have a turret the RNG is on your side, AND neither the turret or vehicle have a powerful target.
-				If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4 && (Target || Turret && Turret.Target) && !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && !(IsPatrolling() && bChaseGoal))
+				If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4 && (Target || Turret && Turret.Target) && !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && !(IsPatrolling(Self) && bChaseGoal))
 				{
 					//Then check if you are far enough from your nearest enemy or target.
 					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
