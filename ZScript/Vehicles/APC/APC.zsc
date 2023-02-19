@@ -277,7 +277,7 @@ Class MVP_APC : MVP_BaseVehicle
 				bNoDamageThrust = False;
 				SetOrigin (OldPos,False);
 				
-				If (User_MarineAmount > 0) SmokeCounter--; //Only go to the escape state if any passengers survived to begin with.
+				If (User_MarineAmount >= 1) SmokeCounter--; //Only go to the escape state if any passengers survived to begin with.
 				If (SmokeCounter <= 0) Return ResolveState ("DeathEscapeLoop");
 				
 				Return State (Null);

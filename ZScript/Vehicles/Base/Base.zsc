@@ -705,7 +705,7 @@ Class MVP_Headlight : DynamicLight
 //HarmFriends: Gives the warning to marines that are on the same side as the warning zone too, for stuff like indiscriminate AOE attacks. Use CopyFriendliness to make the zone share the allegience of its' creator.
 //CausePain: Specifies to marines that the AOE attack just causes pain, so they won't run away if on a turret, where they don't feel pain to begin with. This is basically only here because of the Army Car's pain ray.
 //SpecialFireDamage: Makes it so if the zone is attached to a vehicle, then it will destroy itself once the vehicle has no flames left from it being destroyed.
-//Todo: Fix the really fucking stupid bug where when the zone alerts a marine, it will sometimes also alert other friendly NPCs and also make them target said zone.
+//FIXME: Fix the really fucking stupid bug where when the zone alerts a marine, it will sometimes also alert other friendly NPCs and also make them target said zone.
 Class SmartMarineWarningZone : Actor
 {
 	Default

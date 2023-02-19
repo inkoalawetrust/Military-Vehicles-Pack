@@ -195,6 +195,13 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 		
 		Bool IsEnemy = Shooter.IsHostile(Mobj); //Caching
 		
+		//HACK: Super fucking hacky code that stops the MG from trying to shoot through indestructible props. By directly and EXCLUSIVELY checking if the actor is an unbreakable vehicle prop.
+		If (Mobj Is "MVP_BaseProp" && MVP_BaseProp(Mobj).User_Destructible == False)
+		{console.printf ("low quality rips");
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
 		//The machine gun turret can't shoot through solid enemy corpses that strong.
 		If (IsEnemy && IsSolidCorpse (Mobj) && Mobj.SpawnHealth() >= 500 )
 		{console.printf ("A VEHICLE WRECK IS IN THE WAY");
@@ -411,7 +418,7 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		If (Mobj == Shooter.Master) Return Trace_Skip;
 		
 		//Indestructible prop in the way.
-		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj) || !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,4000))
+		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj) || !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,400))
 		{
 			BadLOF = True;
 			Return Trace_Stop;
