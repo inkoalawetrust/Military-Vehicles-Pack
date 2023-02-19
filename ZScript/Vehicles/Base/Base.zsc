@@ -390,7 +390,6 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		{
 			LastEnemyPosition = CurrentEnemyPosition;
 			CurrentEnemyPosition = Target.Pos;
-			//CurrentEnemyPosition = ((1-(1./35)) * LastEnemyPosition) + ((1./35) * CurrentEnemyPosition);
 		}
 		Else If (!Target)
 			LastEnemyPosition = CurrentEnemyPosition = (0,0,0);
@@ -401,7 +400,6 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		
 		SetOrigin (Vec3OffsetRelative(Master,(TurretOffsets.XY,Master.Height+TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
 		A_Stop();
-		//SetOrigin (Master.Vec3Offset (TurretOffsets.X * Cos(Angle) + TurretOffsets.Y * Sin (Angle),TurretOffsets.X * Sin (Angle) - TurretOffsets.Y * Cos (Angle),Master.Height+TurretOffsets.Z),True);
 		Floorclip = Master.Floorclip; //Copy floorclip offset for TERRAIN liquids.
 	}
 	

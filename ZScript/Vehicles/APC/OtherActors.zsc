@@ -43,6 +43,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	Override Bool ShouldAttack ()
 	{
 		If (!Target) Return False;
+		If (IsOverPitchLimits()) Return False;
 		
 		If (Target != Self && MVP_CheckMissileRange(Target) && MGLOFCheck() && !IsDead (Target) && IsHostile (Target))
 		{
@@ -130,15 +131,16 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			APC3 # 1
 			{
 				//If you have no target, or it's dead, or it's too high up or low down for you to shoot.
-				//TODO: These pitch checks are shit, they cause the turrets to look for a new target every single shot, fix them.
-				If (!Target || IsDead (Target))// || Pitch < MaxPitch || Pitch > MaxPitch)
-				{a_log ("no target");
+				If (!Target || IsDead (Target))
+				{
 					A_ClearTarget();
 					LookForPlayers (True); //Look for a new target.
 				}
 				
+				If (IsOverPitchLimits()) A_ClearTarget();
+				
 				If (!MGLOFCheck())
-				{a_log ("the lof check is false");
+				{
 					A_ClearTarget();
 					Return ResolveState ("See");
 				}
@@ -290,6 +292,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 	Override Bool ShouldAttack ()
 	{
 		If (!Target) Return False;
+		If (IsOverPitchLimits()) Return False;
 		
 		If (Target != Self && MVP_CheckMissileRange(Target) && AutocannonLOFCheck() && !IsDead (Target) && IsHostile (Target))
 		{
@@ -350,6 +353,8 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 					A_ClearTarget();
 					LookForPlayers (True); //Look for a new target.
 				}
+				
+				If (IsOverPitchLimits()) A_ClearTarget();
 				
 				If (!AutocannonLOFCheck())
 				{
@@ -512,6 +517,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 	Override Bool ShouldAttack ()
 	{
 		If (!Target) Return False;
+		If (IsOverPitchLimits()) Return False;
 		
 		If (Target != Self && MVP_CheckMissileRange(Target) && SmallMGLOFCheck() && !IsDead (Target) && IsHostile (Target))
 		{
@@ -565,8 +571,8 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			}
 			APC2 # 1
 			{
-				//If you have no target, or it's dead, or it's too high up or low doown for you too shoot.
-				If (!Target || IsDead (Target) || Pitch < MaxPitch || Pitch > MaxPitch || Master && Target == Master.Target)
+				//If you have no target, or it's dead.
+				If (!Target || IsDead (Target))
 				{
 					A_ClearTarget();
 					LookForPlayers (True); //Look for a new target.
@@ -580,6 +586,8 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 					If (NewTarget)
 						Target = NewTarget;
 				}
+				
+				If (IsOverPitchLimits()) A_ClearTarget();
 				
 				If (!SmallMGLOFCheck())
 				{
