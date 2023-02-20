@@ -197,6 +197,7 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 		
 		Bool IsEnemy = Shooter.IsHostile(Mobj); //Caching
 		
+		//FIXME: The problem is simply that the bullets' ripper level lower than the ripper levels of the Army Car and APC. So add a rip level check instead.
 		//HACK: Super fucking hacky code that stops the MG from trying to shoot through indestructible props. By directly and EXCLUSIVELY checking if the actor is an unbreakable vehicle prop.
 		If (Mobj Is "MVP_BaseProp" && MVP_BaseProp(Mobj).User_Destructible == False)
 		{console.printf ("low quality rips");
@@ -671,7 +672,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		If (!Victim || Victim && Victim == DontCollide) Return 1;
 		If (Victim.bSolid && !Victim.bShootable) Return 1; //Don't stop at decorations that normally block projectiles.
 		
-		If (Target && (Victim.bIsMonster || Victim.Player) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.
 		If ((HasGodMode(Victim) || IsIndestructible(Victim) && !IsInanimateObject(Victim)) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10),attenuation:0.75)) {bRipper = False; Return 1;}

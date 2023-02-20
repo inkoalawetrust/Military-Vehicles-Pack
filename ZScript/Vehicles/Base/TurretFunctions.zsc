@@ -177,6 +177,9 @@ Extend Class MVP_BaseTurret
 	}
 }
 
+//FIXME: Instead of the LOF checks passing MaxTargetRange to the tracer, they should pass the actual distance
+//from the shooter to the target. Since the range is about 10000 MU by default. Which I suspect is what
+//makes the APC sometimes not shoot, as sometimes the debug prints report that a line was somehow hit.
 Class MVP_LOFRaycast : LineTracer
 {
 	Mixin MVP_CheckFunctions;

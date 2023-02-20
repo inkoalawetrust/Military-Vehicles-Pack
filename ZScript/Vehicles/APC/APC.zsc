@@ -119,6 +119,7 @@ Class MVP_APC : MVP_BaseVehicle
 			}
 		}
 		
+		//Why is this even here ? No fucking clue, this is why I comment half the codebase.
 		bFrightened = AlreadyRetreating = bMissileMore = bMissileEvenMore = False;
 		NearestEnemy = Null;
 		Return False;
@@ -246,6 +247,7 @@ Class MVP_APC : MVP_BaseVehicle
 		/*The APC is supposed to explode, catch on fire, then after about a few seconds, the crew will open the hatches and front door and get out.
 		And THEN the existing death code below runs, where a random amount of passengers also escape.
 		*/
+		//FIXME: Fix the bug that causes a single marine to drop out of APCs with a marine ammount set to -1.
 		Death:
 			APC4 A 2 Bright
 			{

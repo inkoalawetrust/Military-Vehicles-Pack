@@ -1,56 +1,116 @@
+//TODO:
+//Make it so the turret rises up and then down to shoot. Might not do this, since unlike in Metal Slug, the Di-Cokka can aim up and down here.
+//In MS, the Di-Cokka can fire a burst of 3 shells, maybe add this as a somewhat rare alt attack ?
+//Make a system where damage to turrets can be passed to the hull they are on. Make this support turrets on turrets too.
+//Make pain inflicted on the hull pass to the turret, and vice versa. The hull stops, and the turret plays the knockback animation.
+/*The normal turret pain state will only be half the knockback animation. The other half should only trigger by sufficient damage. 
+  No idea how to check for this, maybe by checking the CurStates' NextState in a DamageMobj override ?*/
+//Maybe add fire particles for when the Di-Cokkas' health is low ? Like actual textured particles, not actors.
 
-class pink2 :demon replaces demon
-{
-default{+invulnerable;}
-}
-//Placeholder, currently just serves as a test for making my sprites finally work with palette translations.
+//The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
 Class MVP_DiCokka : MVP_BaseVehicle
 {
 	Default
 	{
 		//$Title Di-Cokka
 		//$Category Vehicles/Di-Cokka
-		//$Sprite MSV1[1
+		//$Sprite MSV1Z1
+		Health 600;
+		GibHealth 200;
+		CameraHeight 32;
+		//DeathHeight 32; TODO: This will change as the Di-Cokkas' hull sinks down.
+		FriendlySeeBlocks 64; //Same as the default despite being an armed vehicle. Because it's shells are much slower.
+		MaxTargetRange 8192;
+		MaxStepHeight 24;
+		Mass 10000;
 		XScale 0.9;
 		YScale 0.75;
+		Tag "Type II AFV \"Di-Cokka\"";
 		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
+		MVP_BaseVehicle.MaxCorpseRadius 24; //Only crushes human sized objects. And only incidentally.
+		MVP_BaseVehicle.MaxCorpseHeight 60;
+		
+		-NoPain; //This vehicle CAN feel pain.
 		PainChance 50;
 		PainChance "Autocannon", 65;
 		PainChance "RifleBullet", 40;
 		PainChance "MarineHMG", 30;
 		PainChance "MarineRifle", 45;
 		PainThreshold 10;
-		-NoPain; //This vehicle CAN feel pain.
+		
+		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
+		DamageFactor "Melee", 1;
+		DamageFactor "Electric", 1;
+		DamageFactor "ExplosiveImpact", 1;
+		DamageFactor "Explosion", 1;
+		DamageFactor "Explosive", 1;
+		DamageFactor "Grenade", 1;
+		DamageFactor "HitScan", 1; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 1;
+		DamageFactor "Crush", 1;
+		DamageFactor "Disintegrate", 1;
+		DamageFactor "Railgun", 1;
+		DamageFactor "Falling", 1;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 1;
+		DamageFactor "MarineGrenade", 1;
+		DamageFactor "MarineRifle", 1;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 1;
+		DamageFactor "RifleBullet", 1;
+	}
+	
+	String User_Color; //The Di-Cokkas' color.
+	Bool User_TargetPrediction; //If the Di-Cokka should be able to lead its' shots. By default it doesn't.
+	
+	Override Void SpawnVehicleTurret ()
+	{
+		Super.SpawnVehicleTurret();
+		
+		If (Turret) Turret.bNoTargetPrediction = !User_TargetPrediction;
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		//If (Health <= SpawnHealth()/4) //Do fire particle spawning here when the vehicle is weakened enough.
 	}
 	
 	Override Void PostBeginPlay ()
 	{
-		TurretOffsets = (0,0,-3);
+		TurretOffsets = (0,0,5.75);
 		Super.PostBeginPlay();
+		SpawnDiCokkaHeadlights();
+		
+		//Copied from how the Smart Marines' color variable is handled.
+		If (!User_Color || User_Color ~== ""){} //Don't run the code if User_Color is empty.
+		Else
+		{
+			//Handles the random color choice that is performed if the color name given is "Random".
+			If (User_Color ~== "Random")
+			{
+				Static Const String ColorArray[] = {"White","Black","Yellow","Orange","Green","Default"}; //Contains all the valid color names.
+				
+				User_Color = ColorArray[Random(0,ColorArray.Size()-1)]; //Randomly picks a color string.
+			}
+			
+			If (!(User_Color ~== "Default"))
+			{
+				A_SetTranslation (String.Format("DiCokka_%s", User_Color));
+				If (Turret) Turret.A_SetTranslation (String.Format("DiCokka_%s", User_Color));
+			}
+			Else
+			{
+				A_SetTranslation ('');
+				If (Turret) Turret.A_SetTranslation ('');
+			}
+		}
 	}
 	States
 	{
 		Spawn:
-			MSV1 V 1 NoDelay;
-			MSV1 A 0
-			{
-				Switch (Random (1,3))
-				{
-					Case 1:
-						Break;
-					Case 2:
-						If (Turret) Turret.A_SetTranslation ('DiCokka_Green');
-						A_SetTranslation ('DiCokka_Green');
-						Break;
-					Case 3:
-						If (Turret) Turret.A_SetTranslation ('DiCokka_White');
-						A_SetTranslation ('DiCokka_White');
-						Break;
-					Default:
-						Break;
-				}
-			}
-			MSV1 V -1;
+			MSV1 A -1;
 			Stop;
 	}
 }
@@ -59,13 +119,82 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 {
 	Default
 	{
+		Health 300;
 		XScale 0.9;
 		YScale 0.75;
+		Mass 2000;
+		//DeathHeight 32; Make it the same as whatever height I decide on.
+		FriendlySeeBlocks 48;
+		MaxTargetRange 6144;
+		
+		//Copied from the hull.
+		-NoPain; //This vehicle CAN feel pain.
+		PainChance 50;
+		PainChance "Autocannon", 65;
+		PainChance "RifleBullet", 40;
+		PainChance "MarineHMG", 30;
+		PainChance "MarineRifle", 45;
+		PainThreshold 10;
+		
+		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
+		DamageFactor "Melee", 1;
+		DamageFactor "Electric", 1;
+		DamageFactor "ExplosiveImpact", 1;
+		DamageFactor "Explosion", 1;
+		DamageFactor "Explosive", 1;
+		DamageFactor "Grenade", 1;
+		DamageFactor "HitScan", 1; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 1;
+		DamageFactor "Crush", 1;
+		DamageFactor "Disintegrate", 1;
+		DamageFactor "Railgun", 1;
+		DamageFactor "Falling", 1;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 1;
+		DamageFactor "MarineGrenade", 1;
+		DamageFactor "MarineRifle", 1;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 1;
+		DamageFactor "RifleBullet", 1;
 	}
-		States
+	
+	Override Bool ShouldAttack()
 	{
-	Spawn:
-			MSV1 Y -1;
-			Stop;
+		Super.ShouldAttack();
+		//If (Health <= SpawnHealth()/4)
+			//Increase triple shot chance perhaps ?
+		
+		If (MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target)) //TODO: Add a custom LOF check, or the generic one.
+		{
+			SetStateLabel ("Fire");
+			Return True;
+		}
+		
+		Return False;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		MissileState = FindState ("Fire");
+	}
+	
+	Override Void Tick()
+	{
+		Double OldAngle = Angle;
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		
+		If (AbsAngle (Angle,OldAngle) >= 2 && LastEnemyDelay)
+			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.85);
+	}
+	
+	States
+	{
+		Spawn:
+				MSV1 G -1 nodelay {if (bnotargetprediction) a_log ("no aim ?");}
+				Stop;
 	}
 }

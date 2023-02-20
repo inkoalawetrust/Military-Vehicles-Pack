@@ -1,4 +1,5 @@
-//Headlight definitions, separated from CommonFunctions for organization. This should probably just be turned into a virtual function.
+//TODO: Turn this into a virtual function.
+//Headlight definitions, separated from CommonFunctions for organization.
 Extend Class MVP_BaseVehicle
 {
 	//Vehicle specific functions, the headlight spawn spots have been made into generic functions, so that they are accesible by the prop versions of each vehicle.
@@ -98,5 +99,9 @@ Extend Class MVP_BaseVehicle
 		HeadLights[3].SpotInnerAngle = 40;
 		Headlights[3].SpotOuterAngle = 80;
 	}
-
+	
+	Void SpawnDiCokkaHeadlights()
+	{
+		
+	}
 }

@@ -78,7 +78,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	}
 	
 	//Handles spawning each vehicles' turret, if they have any.
-	//To do, pass spawn health modifications such as from the health UDMF property to turrets as well.
+	//TODO: Pass spawn health modifications such as from the health UDMF property to turrets as well.
 	Virtual Void SpawnVehicleTurret ()
 	{
 		If (VehicleTurret)
@@ -97,6 +97,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
+	//NOTE: Maybe have this check for SECF_NOATTACK sectors ? Or not, since it would trigger vehicles to run away from enemies in them.
 	//Used by MVP_Chase to check for all the different methods each vehicle has to attack.
 	Virtual Bool CanAttack()
 	{
@@ -380,6 +381,15 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	}
 	
 	Override Bool CanAttack() {Return True;} //Yes.
+	
+	//Default turret checks. Is there even a target to shoot, and can it be aimed at ?
+	Override Bool ShouldAttack ()
+	{
+		If (!Target) Return False;
+		If (IsOverPitchLimits()) Return False;
+		
+		Return True;
+	}
 	
 	Override Void Tick()
 	{
