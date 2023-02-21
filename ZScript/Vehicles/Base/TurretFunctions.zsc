@@ -177,9 +177,8 @@ Extend Class MVP_BaseTurret
 	}
 }
 
-//FIXME: Instead of the LOF checks passing MaxTargetRange to the tracer, they should pass the actual distance
-//from the shooter to the target. Since the range is about 10000 MU by default. Which I suspect is what
-//makes the APC sometimes not shoot, as sometimes the debug prints report that a line was somehow hit.
+//This is the base class for making custom LineTracer-based line of fire checks for vehicles. This is better than the old method of a do-all LOF check method.
+//It contains some basic LOF-related checks methods. Along with access to the MVPs' generic actor checks.
 Class MVP_LOFRaycast : LineTracer
 {
 	Mixin MVP_CheckFunctions;
@@ -213,10 +212,22 @@ Class MVP_LOFRaycast : LineTracer
 		Return True;
 	}
 	
+	//Useful for ripper projectiles, returns false if the actor hit can be ripped.
+	Bool CantRipActor (Actor Other, Int RipLevel)
+	{
+		Bool NoRipMin = !Other.RipLevelMin;
+		Bool NoRipMax = !Other.RipLevelMax;
+		
+		If (!NoRipMin && Other.RipLevelMin > RipLevel || !NoRipMax && Other.RipLevelMax < RipLevel)
+			Return True;
+		
+		Return False;
+	}
+	
 	Enum BLITWFlags
 	{
-		BLITW_HitscansToo = 1 << 0,
-		BLITW_HitscansOnly= 1 << 1
+		BLITW_HitscansToo 	= 1 << 0,	//Check for hitscan blocking lines too.
+		BLITW_HitscansOnly	= 1 << 1	//Check ONLY for hitscan blocking lines.
 	}
 	//Is the line the trace went through blocking ?
 	Bool BlockingLineInTheWay (Line Blocking, Int Flags)
@@ -234,5 +245,54 @@ Class MVP_LOFRaycast : LineTracer
 				Return True;
 		
 		Return False;
+	}
+}
+
+//Generic projectile LOF check for non-ripping projectiles, should be applicable to most projectiles.
+Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
+{
+	Int PropHealthThreshold;
+	Override ETraceStatus TraceCallback()
+	{
+		If (PropHealthThreshold == 0) PropHealthThreshold = 400; //Default value, since it can't be set with a normal variable decleration.
+		Actor Mobj = Results.HitActor;
+		
+		If (!Shooter) Return Trace_Stop;
+		
+		If (Mobj == Shooter.Master) Return Trace_Skip;
+		
+		//The target is in the line of fire. Shoot them anyway.
+		If (Mobj == Shooter.Target)
+			Return Trace_Stop;
+		
+		//Indestructible prop in the way.
+		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj) || !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,400))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Destructible prop, but far too strong to shoot through in a timely manner.
+		If (!IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Solid corpse of an enemy in the way, shell can't go through.
+		If (Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Self explanatory.
+		If (BlockingLineInTheWay (Results.HitLine,0))
+		{
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		Return Trace_Skip;
 	}
 }

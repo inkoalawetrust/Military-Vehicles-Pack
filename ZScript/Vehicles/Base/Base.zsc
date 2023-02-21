@@ -1,5 +1,6 @@
 //To do:
 //Replace the MVP_Trail actor trails with textured particles created by A_SpawnParticleEx at some point, as textured particles have all to customization I need. And are WAY more optimized to boot.
+//Probably add code to make vehicles run away from targets that are too high up for their turrets to shoot at, allowing them to fire at it.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default

@@ -245,15 +245,13 @@ Class MVP_APC : MVP_BaseVehicle
 				Goto See;
 		//Waiting for TG5 to finish the sprite edits of the marine crew getting out of the APC and autocannon.
 		/*The APC is supposed to explode, catch on fire, then after about a few seconds, the crew will open the hatches and front door and get out.
-		And THEN the existing death code below runs, where a random amount of passengers also escape.
-		*/
-		//FIXME: Fix the bug that causes a single marine to drop out of APCs with a marine ammount set to -1.
+		And THEN the existing death code below runs, where a random amount of passengers also escape.*/
 		Death:
 			APC4 A 2 Bright
 			{
 				A_Explode (384,256,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
-				User_MarineAmount -= Random (0,User_MarineAmount-1); //Have a random amount of marines survive the explosion.
-				If (Random (0,255) < 16) User_MarineAmount = 0; //Small chance for nobody to have survived.
+				If (User_MarineAmount > 1) User_MarineAmount -= Random (0,User_MarineAmount-1); //Have a random amount of marines survive the explosion.
+				If (Random (0,255) < 16) User_MarineAmount = -1; //Small chance for nobody to have survived.
 				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.5);
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);

@@ -6,6 +6,7 @@
 /*The normal turret pain state will only be half the knockback animation. The other half should only trigger by sufficient damage. 
   No idea how to check for this, maybe by checking the CurStates' NextState in a DamageMobj override ?*/
 //Maybe add fire particles for when the Di-Cokkas' health is low ? Like actual textured particles, not actors.
+//Make the turret create a warning zone when its' about to fire, that warps to wherever its' aiming. To warn marines to avoid the firing spot.
 
 //The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
 Class MVP_DiCokka : MVP_BaseVehicle

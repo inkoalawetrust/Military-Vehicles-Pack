@@ -36,6 +36,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		
 		If (WarningZone) WarningZone.Destroy();
 	}
+	
 	States
 	{
 		Spawn:

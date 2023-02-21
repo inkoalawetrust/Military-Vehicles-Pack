@@ -105,7 +105,6 @@ Mixin Class MVP_UniversalFunctions
 		
 		TempAllyList.Clear();
 	}
-
 }
 
 //Generic status checks.
