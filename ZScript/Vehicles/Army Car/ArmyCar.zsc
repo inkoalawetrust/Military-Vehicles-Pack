@@ -86,6 +86,24 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Return False;
 	}
 	
+	Override Bool StayStillAndShoot (Actor CheckSightFrom)
+	{
+		//If you have dropped your marines, still have a turret the RNG is on your side, AND neither the turret or vehicle have a powerful target.
+		If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4 && (Target || Turret && Turret.Target)
+		&& !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && !(IsPatrolling(Self) && bChaseGoal))
+		{
+			If (MVP_BaseVehicle.StayStillAndShoot(CheckSightFrom))
+			{a_log ("taking a break");
+				A_StopSound (CHAN_MOVING);
+				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
+				ChaseTimer = Random (16,32);
+				SetStateLabel ("StickAround");
+				Return True;
+			}
+		}
+		Return False;
+	}
+	
 	/*Supply system:
 	This is the code that makes the car give different types of items to the player when they use it,
 	you can change what kind of items each supply type uses by adding more User.GiveInventory lines for each type, or replace the existing ones.
@@ -204,23 +222,6 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Bool NoRandomTurn = ((!Target || User_NoMarines) && !IsPatrolling(Self)); //Return this bool in the NoRandomTurn parameter of MVP_Chase
 
 				MVP_Chase (NoRandomTurn:NoRandomTurn);
-				
-				//If you have dropped your marines, still have a turret the RNG is on your side, AND neither the turret or vehicle have a powerful target.
-				If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4 && (Target || Turret && Turret.Target) && !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && !(IsPatrolling(Self) && bChaseGoal))
-				{
-					//Then check if you are far enough from your nearest enemy or target.
-					If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
-					&& (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
-					{
-						If (Turret.CheckSight (Turret.Target))
-						{
-							A_StopSound (CHAN_MOVING);
-							A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
-							ChaseTimer = Random (16,32);
-							Return ResolveState ("StickAround");
-						}
-					}
-				}
 				
 				MinMissileChance = Default.MinMissileChance;
 				bFrightened = bMissileMore = AlreadyRetreating = False;

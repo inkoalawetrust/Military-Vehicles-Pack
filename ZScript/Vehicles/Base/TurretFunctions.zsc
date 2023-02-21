@@ -7,7 +7,6 @@ Extend Class MVP_BaseTurret
 	{
 		If (MaxPitch == 0 && MinPitch == 0) Return ELEVATION_INBOUNDS; //No elevation limits.
 		Double Diff = 0.1; //The turret pitch is clamped every tick, so this small difference allows them to still stop shooting.
-		console.printf ("my pitch is %d",pitch);
 		If (Pitch-Diff < MaxPitch) Return ELEVATION_TOOHIGH;
 		If (Pitch+Diff > MinPitch) Return ELEVATION_TOOLOW;
 		Return ELEVATION_INBOUNDS;
@@ -269,7 +268,7 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		
 		//Indestructible prop in the way.
 		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj) || !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,400))
-		{
+		{//console.printf ("an indestructible prop is in the way");
 			BadLOF = True;
 			Return Trace_Stop;
 		}

@@ -228,6 +228,7 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 }
 
 //Somewhat based on the MG.
+//FIXME: Fix a bug that causes the autocannon to fire super fast if an indestructible prop is in the way instead of stopping firing.
 Class MVP_APCAutocannon : MVP_APCMachineGun
 {
 	Default

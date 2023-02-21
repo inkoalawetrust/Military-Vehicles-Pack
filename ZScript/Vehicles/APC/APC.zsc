@@ -132,6 +132,33 @@ Class MVP_APC : MVP_BaseVehicle
 		Return False;
 	}
 	
+	Override Bool StayStillAndShoot (Actor CheckSightFrom)
+	{
+		//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
+		Int Range;
+		If (Turret) Range = Turret.MaxTargetRange;
+		Else Range = MaxTargetRange;
+		If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
+		{
+			If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && Turret.ElevationState == Turret.ELEVATION_INBOUNDS
+			&& !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling(Self) && bChaseGoal))
+			{
+				If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 40 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
+				{a_log ("running check");
+					If (MVP_BaseVehicle.StayStillAndShoot (CheckSightFrom)) //Run basic distance checks.
+					{a_log ("bing chilling");
+						A_StopSound (CHAN_MOVING);
+						A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
+						ChaseTimer = Random (16,48);
+						SetStateLabel ("StickAround");
+						Return True;
+					}
+				}
+			}
+		}
+		Return False;
+	}
+	
 	Int MarinesToSpawn, Recursions, DeployTimer;
 	
 	Int User_MarineAmount;
@@ -169,32 +196,6 @@ Class MVP_APC : MVP_BaseVehicle
 				
 				MVP_Chase (True,512,NoRandomTurn,False,(User_CrushMode == CRUSH_ACTIVE ? True : False));
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
-				
-				//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
-				Int Range;
-				If (Turret) Range = Turret.MaxTargetRange;
-				If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
-				{
-					If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && Turret.ElevationState == Turret.ELEVATION_INBOUNDS
-					&& !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling(Self) && bChaseGoal))
-					{
-						If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
-						{
-							//Then check if you are far enough from your nearest enemy or target.
-							If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (User_RetreatDistance*User_RetreatDistance)*1.2)
-							|| (Target && Distance3DSquared (Target) >= (User_RetreatDistance*User_RetreatDistance)*1.2))
-							{
-								If (Turret.CheckSight (Turret.Target))
-								{
-									A_StopSound (CHAN_MOVING);
-									A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
-									ChaseTimer = Random (16,48);
-									Return ResolveState ("StickAround");
-								}
-							}
-						}
-					}
-				}
 				
 				Return State (Null);
 			}

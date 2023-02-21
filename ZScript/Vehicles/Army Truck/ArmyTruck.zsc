@@ -227,6 +227,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		Return False;
 	}
 	
+	Override Bool StayStillAndShoot(Actor CheckSightFrom) {Return False;} //Do not.
+	
 	Bool IsThrustable (Actor Other)
 	{
 		Return (!Other.bDontThrust && !Other.bDontBlast);

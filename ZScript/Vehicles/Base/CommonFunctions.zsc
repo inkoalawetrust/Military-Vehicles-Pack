@@ -431,6 +431,7 @@ Extend Class MVP_BaseVehicle
 	
 	//=====|Vehicle behaviors|=====\\
 	//Generic chase function shared by all vehicles.
+	//TODO: Turn AttackWhenScared, NoRandomTurn, NoChase, CorpseSeeker into a flag field instead.
 	Void MVP_Chase (Bool AttackWhenScared = False, Double FollowDist = 384, Bool NoRandomTurn = False, Bool NoChase = False, Bool CorpseSeeker = False)
 	{
 		Double PowerfulEnemyRetreatRange = (User_RetreatDistance*4)*(User_RetreatDistance*4); //Vehicles stay 4 times further away from powerful enemies than normal ones.
@@ -507,6 +508,10 @@ Extend Class MVP_BaseVehicle
 			Else
 				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
 		}
+		
+		Actor CheckFrom = Turret;
+		If (!CheckFrom) CheckFrom = Self; 
+		If (StayStillAndShoot (CheckFrom)) Return;
 		
 		If (ShouldAttack()) //Run the unique attack decision code of the vehicle.
 		{

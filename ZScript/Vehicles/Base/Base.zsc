@@ -1,6 +1,5 @@
 //TODO:
 //Replace the MVP_Trail actor trails with textured particles created by A_SpawnParticleEx at some point, as textured particles have all to customization I need. And are WAY more optimized to boot.
-//Generize the code that makes the Army Car and APC stop to have their turrets attack the target. Currently it's just copy and pasted between the two.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -98,6 +97,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
+	//Used to neatly order the spawning of headlights in vehicle definitions. You could just as easily do the spawning in PostBeginPlay()
 	Virtual Void SpawnHeadlights(){}
 	
 	//NOTE: Maybe have this check for SECF_NOATTACK sectors ? Or not, since it would trigger vehicles to run away from enemies in them.
@@ -110,6 +110,22 @@ Class MVP_BaseVehicle : Actor Abstract
 	//Called in the middle of MVP_Chase to handle the unique attack decision code of each vehicle.
 	Virtual Bool ShouldAttack()
 	{
+		Return False;
+	}
+	
+	//Should the vehicle stay still and attack ? The base actor class simply houses the most basic conditional check for this.
+	//CheckSightFrom is the actor whose sight to their target is checked, to determine if the vehicle can shoot.
+	Virtual Bool StayStillAndShoot (Actor CheckSightFrom)
+	{
+		Double Distance = (User_RetreatDistance > 0) ? User_RetreatDistance : 512; //Fall back to a distance of 512 MU if the vehicle is set to not retreat.
+		//Check if you are far enough from your nearest enemy or target.
+		a_logint (distance);
+		If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (Distance*Distance)*1.2)
+		&& (Target && Distance3DSquared (Target) >= (Distance*Distance)*1.2))
+		{
+			If (CheckSightFrom.CheckSight (CheckSightFrom.Target))
+				Return True;
+		}
 		Return False;
 	}
 	
@@ -236,7 +252,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Super.Activate(Activator);
 		
-		If (Turret) //Pass it down to turets as well.
+		If (Turret) //Pass it down to turrets as well.
 			Turret.Activate (Activator);
 	}
 	
@@ -244,7 +260,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Super.Deactivate(Activator);
 		
-		If (Turret) //Pass it down to turets as well.
+		If (Turret) //Pass it down to turrets as well.
 			Turret.Deactivate (Activator);
 	}
 	
@@ -409,6 +425,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		Return True;
 	}
 	
+	Override Bool StayStillAndShoot(Actor CheckSightFrom) {Return False;} //Turrets already can't move lol.
+	
 	Override Void Tick()
 	{
 		Super.Tick();
@@ -426,8 +444,6 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		
 		ElevationState = IsOverPitchLimits();
 		If (ElevationState != ELEVATION_INBOUNDS) Pitch = Clamp (Pitch,MaxPitch,MinPitch); //Turrets can't move past their elevation limits.
-		
-		console.printf ("the elevation state is %d",elevationstate);
 		
 		If (!Master || IsDead(Self) && bFallOnDeath) Return;
 		
