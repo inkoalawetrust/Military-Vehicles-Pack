@@ -1,6 +1,6 @@
-//To do:
+//TODO:
 //Replace the MVP_Trail actor trails with textured particles created by A_SpawnParticleEx at some point, as textured particles have all to customization I need. And are WAY more optimized to boot.
-//Probably add code to make vehicles run away from targets that are too high up for their turrets to shoot at, allowing them to fire at it.
+//Generize the code that makes the Army Car and APC stop to have their turrets attack the target. Currently it's just copy and pasted between the two.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -274,7 +274,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
 	Actor NearestEnemy; //The enemy closest to the vehicle, if any.
 	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
-	Bool AlreadyRetreating; //The vehicle is already running away from something that doesn't involve the enemy avoiding code, so don't both to run from nearby enemies.
+	Bool AlreadyRetreating; //The vehicle is already running away from something that doesn't involve the enemy avoiding code, so don't bother to run from nearby enemies.
 	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight. Is also used to determine how long turreted vehicles stay in one place.
 	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
 	Int CurrentOrder; //The current order the vehicle is following.
@@ -315,9 +315,9 @@ Class MVP_BaseVehicle : Actor Abstract
 				If (Target)
 					Angle += RandomPick (75,80,85,90,95,10,105);
 			}
-			#### # 4 //If an enemy has gotten too close or enough time has passed, then stop standing around.
+			#### # 4 //If an enemy has gotten too close, the turret can't attack, or enough time has passed, then stop standing around.
 			{
-				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4) || IsDead (Turret))
+				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4) || !Turret.CanAttack())
 				{
 					ChaseTimer = 0;
 					Return ResolveState ("See");
@@ -370,6 +370,14 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Vector3 LastEnemyPosition; //Used by the target prediction. If the turret has a target with no velocity, it grabs their last position every tick to compare it to the current position.
 	Vector3 CurrentEnemyPosition;
 	
+	Enum ElevationStates
+	{
+		ELEVATION_TOOHIGH = -1, //The turret is aiming too high up.
+		ELEVATION_INBOUNDS = 0,	//The turret is within its' elevation limits.
+		ELEVATION_TOOLOW = 1	//The turret is aiming too low down.
+	}
+	Int ElevationState; //Look above for possible elevation states.
+	
 	Override Void PostBeginPlay ()
 	{
 		Actor.PostBeginPlay ();
@@ -384,13 +392,19 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		User_ChaseTime = 30*4;
 	}
 	
-	Override Bool CanAttack() {Return True;} //Yes.
+	Override Bool CanAttack()
+	{
+		If (IsDead(Self)) Return False; 
+		If (ElevationState != ELEVATION_INBOUNDS) Return False;
+		
+		Return True;
+	}
 	
-	//Default turret checks. Is there even a target to shoot, and can it be aimed at ?
+	//Default turret checks. Is there even a target to shoot, and can the turret attack ?
 	Override Bool ShouldAttack ()
 	{
 		If (!Target) Return False;
-		If (IsOverPitchLimits()) Return False;
+		If (!CanAttack()) Return False;
 		
 		Return True;
 	}
@@ -408,9 +422,14 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		Else If (!Target)
 			LastEnemyPosition = CurrentEnemyPosition = (0,0,0);
 		
-		If (!(MaxPitch == 0 && MinPitch == 0)) Pitch = Clamp (Pitch,MaxPitch,MinPitch); //Turrets can't move past their elevation limits.
+		If (IsFrozen()) Return;
 		
-		If (!Master || IsFrozen() || IsDead(Self) && bFallOnDeath) Return;
+		ElevationState = IsOverPitchLimits();
+		If (ElevationState != ELEVATION_INBOUNDS) Pitch = Clamp (Pitch,MaxPitch,MinPitch); //Turrets can't move past their elevation limits.
+		
+		console.printf ("the elevation state is %d",elevationstate);
+		
+		If (!Master || IsDead(Self) && bFallOnDeath) Return;
 		
 		SetOrigin (Vec3OffsetRelative(Master,(TurretOffsets.XY,Master.Height+TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
 		A_Stop();

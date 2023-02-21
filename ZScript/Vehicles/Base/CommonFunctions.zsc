@@ -476,6 +476,17 @@ Extend Class MVP_BaseVehicle
 				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0)); //So move away from the nearest enemy.
 				Target = OldTarget;
 			}
+			//If the vehicle turrets' target is too high, move away from it to allow the turret to shoot it.
+			Else If (Turret && Turret.Target && Turret.ElevationState == Turret.ELEVATION_TOOHIGH)
+			{
+				a_log ("moving back to let the turret shoot");
+				OldTarget = Target;
+				Target = Turret.Target;
+				bFrightened = True;
+				FearTimer = Random (8,32);
+				A_Chase (Null,Null,CHF_DONTIDLE | (NoRandomTurn ? CHF_NORANDOMTURN : 0));
+				Target = OldTarget;
+			}
 			//Archvile trolling mode activated.
 			Else If (!Target && !IsPatrolling(Self) && !NearestEnemy && CurrentOrder == ORDER_WANDER && CorpseSeeker)
 			{

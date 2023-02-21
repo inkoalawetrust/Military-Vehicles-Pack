@@ -2,13 +2,15 @@
 //Functions and code exclusive to the turret class.
 Extend Class MVP_BaseTurret
 {
-	//Returns true if the turret is over its' elevation limits.
-	Bool IsOverPitchLimits()
+	//Is the turrets' target too high or to low over the turrets' elevation limits ?
+	Int IsOverPitchLimits()
 	{
-		If (MaxPitch == 0 && MinPitch == 0) Return False; //No elevation limits.
+		If (MaxPitch == 0 && MinPitch == 0) Return ELEVATION_INBOUNDS; //No elevation limits.
 		Double Diff = 0.1; //The turret pitch is clamped every tick, so this small difference allows them to still stop shooting.
-	console.printf ("my pitch is %d",pitch);
-		Return (Pitch-Diff < MaxPitch || Pitch+Diff > MinPitch);
+		console.printf ("my pitch is %d",pitch);
+		If (Pitch-Diff < MaxPitch) Return ELEVATION_TOOHIGH;
+		If (Pitch+Diff > MinPitch) Return ELEVATION_TOOLOW;
+		Return ELEVATION_INBOUNDS;
 	}
 	
 	//Conditionally change the turrets' sprites based on pitch.

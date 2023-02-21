@@ -175,7 +175,8 @@ Class MVP_APC : MVP_BaseVehicle
 				If (Turret) Range = Turret.MaxTargetRange;
 				If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
 				{
-					If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling(Self) && bChaseGoal))
+					If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && Turret.ElevationState == Turret.ELEVATION_INBOUNDS
+					&& !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling(Self) && bChaseGoal))
 					{
 						If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
 						{
