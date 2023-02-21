@@ -287,6 +287,52 @@ Extend Class MVP_BaseVehicle
 				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);
 	}
 	
+	//High quality code rips.
+	Enum DynamicLightArgs
+	{
+	   LIGHT_RED = 0,
+	   LIGHT_GREEN = 1,
+	   LIGHT_BLUE = 2,
+	   LIGHT_INTENSITY = 3,
+	   LIGHT_SECONDARY_INTENSITY = 4,
+	   LIGHT_SCALE = 3,
+	}
+	
+	//VHSF = Vehicle Headlight Spawn Function
+	Enum HeadlightSpawnFlags
+	{
+		VHSF_BACKLIGHT = 1 << 0 //Is this a backlight ? If yes, the angle it faces relative to the vehicle is inverted, so that it faces behind the vehicle.
+	}
+	
+	//Spawns a headlight with the specified parameters. Then returns a pointer to it.
+	//AttachTo: The actor to attach the headlight to, this is just the caller usually.
+	//Offsets: The XYZ offsets to pass to the light. This doesn't call SetOffset() on the dynamic light because m_Ofs doesn't change before PostBeginPlay().
+	//Flags: The flags to pass to the headlight.
+	//LightColor: The RGB color of the headlight. This isn't a Color variable since that's not what dynamic light actors use. Default is white.
+	//Intensity: The intensity of the headlight. Default is 256.
+	//SpotlightAngles: The inner (X) and outer (Y) angle of the headlight. Default is (10,25), the default of the DynamicLight class.
+	MVP_Headlight SpawnVehicleHeadlight (Actor AttachTo, Vector3 Offsets, Int Flags = 0, Vector3 LightColor = (255,255,255), Double Intensity = 256, Vector2 SpotlightAngles = (10,25))
+	{
+		If (!AttachTo) AttachTo = Self; //Just in case.
+		MVP_Headlight Headlight = MVP_Headlight(Spawn ("MVP_Headlight",Pos,ALLOW_REPLACE));
+		
+		Headlight.Target = AttachTo; //Dynamic light actors use their target pointer to store who they are attached to.
+		Headlight.Offset = Offsets;
+		If (Flags & VHSF_BACKLIGHT) Headlight.IsBacklight = True;
+		
+		//XYZ = RGB
+		Headlight.Args[LIGHT_RED] = LightColor.X;
+		Headlight.Args[LIGHT_GREEN] = LightColor.Y;
+		Headlight.Args[LIGHT_BLUE] = LightColor.Z;
+		Headlight.Args[LIGHT_INTENSITY] = Intensity;
+		
+		//X is the inner angle. Y is the outer angle.
+		Headlight.SpotInnerAngle = SpotlightAngles.X;
+		Headlight.SpotOuterAngle = SpotlightAngles.Y;
+		
+		Return Headlight;
+	}
+	
 	//=====|Marine related functions|=====\\
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)

@@ -56,9 +56,16 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 	{
 		Super.PostBeginPlay();
 		
-		SpawnArmyTruckHeadlights();
 		MissileState = FindState ("DeployMarines");
 		MeleeState = FindState ("ChargeLoop"); //Most actual ramming code runs in Slam() below, not this state.
+	}
+	
+	Override Void SpawnHeadlights ()
+	{
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,28,8),intensity:384));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,-28,8),intensity:384));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,-28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
 	}
 	
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)

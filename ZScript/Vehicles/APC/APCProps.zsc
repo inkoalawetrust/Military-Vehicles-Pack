@@ -35,8 +35,6 @@ Class MVP_APCProp : MVP_BaseProp
 	{
 		TurretOffsets = (0.1,0,4.25);
 		Super.PostBeginPlay();
-		
-		SpawnAPCHeadlights();
 	}
 	
 	//Handle spawning either the autocannon or MG turret prop.
@@ -75,6 +73,14 @@ Class MVP_APCProp : MVP_BaseProp
 				Turret.TurretOffsets = TurretOffsets;
 			}
 		}
+	}
+	
+	Override Void SpawnHeadlights ()
+	{
+		Headlights.Push (SpawnVehicleHeadlight (Self,(112,20,16),intensity:384));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(112,-20,16),intensity:384));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(128,32,12),VHSF_BACKLIGHT,(255,0,0),48,(40,80)));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(128,-32,12),VHSF_BACKLIGHT,(255,0,0),48,(40,80)));
 	}
 	
 	Bool User_OpenDoors; //Should the APC have its' back doors open ?
@@ -439,6 +445,8 @@ Class MVP_APCWreck : MVP_APCProp
 		
 		Return 0; //WRECK_DEAD
 	}
+	
+	Override Void SpawnHeadlights(){}
 	
 	Override Void PostBeginPlay ()
 	{

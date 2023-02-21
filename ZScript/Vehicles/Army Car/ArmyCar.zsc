@@ -26,7 +26,6 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		
 		If (HasSupplies()) SetTag ("Army Car (Open Trunk)");
 		
-		SpawnArmyCarHeadlights();
 		MissileState = FindState ("DeployMarines"); //Car uses a custom ranged attack state, these states are set so that internal flags like AvoidMelee work properly.
 	}
 	
@@ -55,6 +54,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	{
 		If (User_PainRay)
 			Super.SpawnVehicleTurret();
+	}
+	
+	Override Void SpawnHeadlights ()
+	{
+		Headlights.Push(SpawnVehicleHeadlight(Self,(64,28,8)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(64,-28,8)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(40,28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(40,-28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
 	}
 	
 	Override Void UserVariableDefaults()

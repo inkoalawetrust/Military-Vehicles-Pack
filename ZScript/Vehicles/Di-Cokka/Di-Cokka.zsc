@@ -71,6 +71,11 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		If (Turret) Turret.bNoTargetPrediction = !User_TargetPrediction;
 	}
 	
+	Override Void SpawnHeadlights () //TODO: Only spawn front headlights.
+	{
+		
+	}
+	
 	Override Void Tick()
 	{
 		Super.Tick();
@@ -82,7 +87,6 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	{
 		TurretOffsets = (0,0,5.75);
 		Super.PostBeginPlay();
-		SpawnDiCokkaHeadlights();
 		
 		//Copied from how the Smart Marines' color variable is handled.
 		If (!User_Color || User_Color ~== ""){} //Don't run the code if User_Color is empty.

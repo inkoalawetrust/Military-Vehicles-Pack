@@ -33,11 +33,12 @@ Class MVP_ArmyTruckProp : MVP_BaseProp
 		DamageFactor "RifleBullet", 0.95;
 	}
 	
-	Override Void PostBeginPlay ()
+	Override Void SpawnHeadlights ()
 	{
-		Super.PostBeginPlay();
-		
-		SpawnArmyTruckHeadlights();
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,28,8),intensity:384));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,-28,8),intensity:384));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(128,-28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
 	}
 	
 	Bool User_OpenBackDoor;

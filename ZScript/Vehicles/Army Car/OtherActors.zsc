@@ -253,8 +253,6 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 		TurretOffsets = (0,0,1.25);
 		Super.PostBeginPlay();
 		If (User_SupplyAmount <= 0) User_SupplyAmount = 5;
-		
-		SpawnArmyCarHeadlights();
 	}
 	
 	Override Void SpawnVehicleTurret ()
@@ -267,6 +265,14 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 			Else
 				Turret.Angle += FRandom (0,360);
 		}
+	}
+	
+	Override Void SpawnHeadlights ()
+	{
+		Headlights.Push(SpawnVehicleHeadlight(Self,(64,28,8)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(64,-28,8)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(40,28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
+		Headlights.Push(SpawnVehicleHeadlight(Self,(40,-28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
 	}
 	
 	/*Supply system:

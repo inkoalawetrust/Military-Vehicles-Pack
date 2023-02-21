@@ -43,7 +43,6 @@ Class MVP_APC : MVP_BaseVehicle
 		TurretOffsets = (0.1,0,4.25);
 		Super.PostBeginPlay();
 		
-		SpawnAPCHeadlights();
 		MissileState = FindState ("DeployMarines");
 	}
 	
@@ -91,6 +90,14 @@ Class MVP_APC : MVP_BaseVehicle
 				SetTag ("Armored Personnel Carrier (Autocannon)");
 			}
 		}
+	}
+	
+	Override Void SpawnHeadlights ()
+	{
+		Headlights.Push (SpawnVehicleHeadlight (Self,(112,20,16),intensity:384));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(112,-20,16),intensity:384));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(128,32,12),VHSF_BACKLIGHT,(255,0,0),48,(40,80)));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(128,-32,12),VHSF_BACKLIGHT,(255,0,0),48,(40,80)));
 	}
 	
 	Override Void UserVariableDefaults()

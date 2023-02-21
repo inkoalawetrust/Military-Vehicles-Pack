@@ -98,6 +98,8 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
+	Virtual Void SpawnHeadlights(){}
+	
 	//NOTE: Maybe have this check for SECF_NOATTACK sectors ? Or not, since it would trigger vehicles to run away from enemies in them.
 	//Used by MVP_Chase to check for all the different methods each vehicle has to attack.
 	Virtual Bool CanAttack()
@@ -127,6 +129,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		Super.PostBeginPlay();
 		UserVariableDefaults();
 		SpawnVehicleTurret();
+		SpawnHeadlights();
 		
 		If (!bFriendly) Species = 'MilitaryHostile';
 		
@@ -682,16 +685,22 @@ Class MVP_Headlight : DynamicLight
 		+DynamicLight.Spot;
 	}
 	
-	Bool Active; //The actual internal m_active variable that reports if a dynamic light is on, isn't exposed to ZScript.
-	Vector3 Offset; //X = Side to side, Y = Back and front, Z = Up and down
+	Bool Active; //The actual internal m_Active variable that reports if a dynamic light is on isn't exposed to ZScript.
+	Vector3 Offset; //This needs to be here because SetOffset() doesn't work right after a dynamic light spawns.
 	Bool IsBacklight;
 	
 	Override Void Tick()
 	{
-		If (Master && MVP_BaseVehicle(Master).HeadlightsOn)
-			Warp (Master,Offset.X,Offset.Y,Offset.Z,IsBacklight ? 180 : 0);
+		//The actual location offsets of the lights are handled by the internal m_Ofs variable.
+		If (Target && MVP_BaseVehicle(Target).HeadlightsOn)
+		{
+			SetOrigin (Target.Pos, True);
+			Angle = IsBackLight ? Target.Angle-180 : Target.Angle;
+			Pitch = Target.Pitch;
+		}
 	}
 	
+	//White by default.
 	Override Void BeginPlay()
 	{
 		Super.BeginPlay();
@@ -706,6 +715,7 @@ Class MVP_Headlight : DynamicLight
 	{
 		Super.PostBeginPlay();
 		Deactivate(Self); //Off by default.
+		SetOffset(Offset);
 	}
 }
 
