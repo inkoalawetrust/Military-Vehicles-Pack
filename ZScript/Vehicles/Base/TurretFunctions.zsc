@@ -268,7 +268,7 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		
 		//Indestructible prop in the way.
 		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj) || !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,400))
-		{//console.printf ("an indestructible prop is in the way");
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}

@@ -75,11 +75,11 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Return (User_NoMarines || User_PainRay);
 	}
 	
-	Override Bool ShouldAttack()
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!User_NoMarines && DeployTimer <= 0 && CheckMissileRange() && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
-			SetStateLabel ("DeployMarines");
+			If (!NoStateJump) SetStateLabel ("DeployMarines");
 			Return True; //Tell MVP_Chase to end.
 		}
 		
@@ -220,8 +220,8 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				LookExParams ArmyCarSight;
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
 				Bool NoRandomTurn = ((!Target || User_NoMarines) && !IsPatrolling(Self)); //Return this bool in the NoRandomTurn parameter of MVP_Chase
-
-				MVP_Chase (NoRandomTurn:NoRandomTurn);
+				
+				MVP_Chase ((NoRandomTurn ? MVPC_NORANDOMTURN : 0));
 				
 				MinMissileChance = Default.MinMissileChance;
 				bFrightened = bMissileMore = AlreadyRetreating = False;

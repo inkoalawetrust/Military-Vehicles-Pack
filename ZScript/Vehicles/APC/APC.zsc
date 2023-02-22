@@ -112,7 +112,7 @@ Class MVP_APC : MVP_BaseVehicle
 		Return (User_MarineAmount > 0 || Turret && !IsDead(Turret));
 	}
 	
-	Override Bool ShouldAttack()
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (Health <= SpawnHealth()/4)
 			bMissileMore = bMissileEvenMore = True;
@@ -121,7 +121,7 @@ Class MVP_APC : MVP_BaseVehicle
 		{
 			If (User_MarineAmount > 0)
 			{
-				SetStateLabel ("DeployMarines");
+				If (!NoStateJump) SetStateLabel ("DeployMarines");
 				Return True;
 			}
 		}
@@ -194,7 +194,7 @@ Class MVP_APC : MVP_BaseVehicle
 				
 				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous MVP_Chase property.
 				
-				MVP_Chase (True,512,NoRandomTurn,False,(User_CrushMode == CRUSH_ACTIVE ? True : False));
+				MVP_Chase (MVPC_ATTACKWHENSCARED|(NoRandomTurn ? MVPC_NORANDOMTURN : 0)|(User_CrushMode == CRUSH_ACTIVE ? MVPC_CORPSESEEKER : 0),512);
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
 				
 				Return State (Null);

@@ -28,7 +28,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		MissileState = FindState ("PainAttack");
 	}
 	
-	Override Bool ShouldAttack() {Return True;}
+	Override Bool ShouldAttack(Bool NoStateJump) {Return True;}
 	
 	Override Void OnDestroy()
 	{

@@ -41,13 +41,13 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Return True;
 	}
 	
-	Override Bool ShouldAttack ()
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!Super.ShouldAttack()) Return False;
+		If (!MVP_BaseTurret.ShouldAttack()) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && MGLOFCheck() && !IsDead (Target) && IsHostile (Target))
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target)&& MGLOFCheck())
 		{
-			SetStateLabel ("Fire");
+			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
 		}
 		
@@ -101,7 +101,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
-				MVP_Chase (NoChase:True);
+				MVP_Chase (MVPC_NOCHASE);
 				UpdateLastEnemyTimer();
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
@@ -193,9 +193,9 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 	{
 		Actor Mobj = Results.HitActor;
 		
-		If (!Shooter) {console.printf ("no shooter !?");Return Trace_Stop;} //Not sure if this should return BadLOF too.
+		If (!Shooter) Return Trace_Stop; //Not sure if this should return BadLOF too.
 		
-		If (Mobj == Shooter || Mobj == Shooter.Master) {console.printf ("skipped vehicle body");Return Trace_Skip;}
+		If (Mobj == Shooter || Mobj == Shooter.Master) Return Trace_Skip;
 		
 		//The target is in the line of fire. Shoot them anyway.
 		If (Mobj == Shooter.Target)
@@ -228,7 +228,6 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 }
 
 //Somewhat based on the MG.
-//FIXME: Fix a bug that causes the autocannon to fire super fast if an indestructible prop is in the way instead of stopping firing.
 Class MVP_APCAutocannon : MVP_APCMachineGun
 {
 	Default
@@ -298,13 +297,13 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		Return True;
 	}
 	
-	Override Bool ShouldAttack ()
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!Super.ShouldAttack()) Return False;
+		If (!MVP_BaseTurret.ShouldAttack()) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && AutocannonLOFCheck() && !IsDead (Target) && IsHostile (Target))
-		{
-			SetStateLabel ("Fire");
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && AutocannonLOFCheck())
+		{a_log ("i am going to shoot");
+			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
 		}
 		
@@ -324,11 +323,11 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			Loop;
 		See:
 			APC2 # 1
-			{
+			{a_log ("cannon in the see state");
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
-				MVP_Chase (NoChase:True);
+				MVP_Chase (MVPC_NOCHASE);
 				UpdateLastEnemyTimer();
 				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
@@ -345,7 +344,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				A_StartSound ("Vehicle/APC/AutocannonFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
 				Actor Proj = A_SpawnProjectile ("MVP_AutocannonShell",16,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.3,-0.3),(0.45,-0.45),768);
-				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then trigger the proximity fuze in case the shell misses.
+				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then use the proximity fuze.
 				If (Target && IsFlying (Target) && !Target.bNoRadiusDmg)
 				{
 					Proj.Tracer = Target;
@@ -355,8 +354,8 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			}
 			APC2 ### 8
 			{
-				//If you have no target, or it's dead, or it's too high up or low doown for you too shoot.
-				If (!Target || IsDead (Target) || Pitch < MaxPitch || Pitch > MaxPitch)
+				//If you have no target, or it's dead.
+				If (!Target || IsDead (Target))
 				{
 					A_ClearTarget();
 					LookForPlayers (True); //Look for a new target.
@@ -479,13 +478,13 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		Return True;
 	}
 	
-	Override Bool ShouldAttack ()
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!Super.ShouldAttack()) Return False;
+		If (!MVP_BaseTurret.ShouldAttack()) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && SmallMGLOFCheck() && !IsDead (Target) && IsHostile (Target))
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && SmallMGLOFCheck())
 		{
-			SetStateLabel ("Fire");
+			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
 		}
 		
@@ -504,11 +503,11 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			Loop;
 		See:
 			APC2 # 1
-			{
+			{a_log ("small mg in the see state");
 				A_FaceTarget (6,6,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
-				MVP_Chase (NoChase:True);
+				MVP_Chase (MVPC_NOCHASE);
 				UpdateLastEnemyTimer();
 				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
@@ -523,11 +522,11 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				
-				//Play at half the volume if the autocannon is playing its' firing sound.
-				If (!Master)
-					A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);
-				Else If (Master && Master.IsActorPlayingSound (CHAN_WEAPON))
-					A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,0.75,0.4);
+				//Play at half the volume if the autocannon is playing its' firing sound. To emphasize its' volume.
+				If (Master && Master.IsActorPlayingSound (CHAN_WEAPON))
+					{A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,0.75,0.4);a_log ("quiet");}
+				Else
+					{A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);a_log ("normal");}
 				
 				Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",8,flags:CMF_AIMDIRECTION,Pitch);
 				HandleTargetPrediction (Proj,(0.4,-0.4),(0.55,-0.55),1024);
@@ -659,6 +658,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 	
 	Void Do50BMGSplash (Int LiquidType, Bool UpsideDown = False)
 	{
+		If (LiquidType == LIQUID_NONE) Return;
 		HitLiquid = True;
 		Actor Splash = SpawnLiquidSplash (LiquidType,volume:0.4,1.0);
 		
@@ -675,52 +675,10 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 			{
 				//The floor was hit.
 				If (Pos.Z <= FloorZ)
-				{
-					Switch (CheckLiquid (FloorPic))
-					{
-						Case LIQUID_WATER:
-							Do50BMGSplash (LIQUID_WATER);
-							Break;
-						Case LIQUID_NUKAGE:
-							Do50BMGSplash (LIQUID_NUKAGE);
-							Break;
-						Case LIQUID_BLOOD:
-							Do50BMGSplash (LIQUID_BLOOD);
-							Break;
-						Case LIQUID_LAVA:
-							Do50BMGSplash (LIQUID_LAVA);
-							Break;
-						Case LIQUID_SLIME:
-							Do50BMGSplash (LIQUID_SLIME);
-							Break;
-						Default:
-							Break;
-					}
-				}
+					Do50BMGSplash(CheckLiquid(CeilingPic));
 				//The ceiling was hit.
 				Else If (Pos.Z + Height >= CeilingZ)
-				{
-					Switch (CheckLiquid (CeilingPic))
-					{
-						Case LIQUID_WATER:
-							Do50BMGSplash (LIQUID_WATER,True);
-							Break;
-						Case LIQUID_NUKAGE:
-							Do50BMGSplash (LIQUID_NUKAGE,True);
-							Break;
-						Case LIQUID_BLOOD:
-							Do50BMGSplash (LIQUID_BLOOD,True);
-							Break;
-						Case LIQUID_LAVA:
-							Do50BMGSplash (LIQUID_LAVA,True);
-							Break;
-						Case LIQUID_SLIME:
-							Do50BMGSplash (LIQUID_SLIME,True);
-							Break;
-						Default:
-							Break;
-					}
-				}
+					Do50BMGSplash(CheckLiquid(CeilingPic),True);
 				
 				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
 				Else A_StartSound ("Vehicle/APC/MGImpact");
@@ -763,6 +721,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 	
 	Void DoRifleSplash (Int LiquidType, Bool UpsideDown = False)
 	{
+		If (LiquidType == LIQUID_NONE) Return;
 		HitLiquid = True;
 		Actor Splash = SpawnLiquidSplash (LiquidType,"SFX/WaterHit",1.0,1.0);
 		
@@ -805,52 +764,10 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 			{
 				//The floor was hit.
 				If (Pos.Z <= FloorZ)
-				{
-					Switch (CheckLiquid (FloorPic))
-					{
-						Case LIQUID_WATER:
-							DoRifleSplash (LIQUID_WATER);
-							Break;
-						Case LIQUID_NUKAGE:
-							DoRifleSplash (LIQUID_NUKAGE);
-							Break;
-						Case LIQUID_BLOOD:
-							DoRifleSplash (LIQUID_BLOOD);
-							Break;
-						Case LIQUID_LAVA:
-							DoRifleSplash (LIQUID_LAVA);
-							Break;
-						Case LIQUID_SLIME:
-							DoRifleSplash (LIQUID_SLIME);
-							Break;
-						Default:
-							Break;
-					}
-				}
+					DoRifleSplash(CheckLiquid(CeilingPic));
 				//The ceiling was hit.
 				Else If (Pos.Z + Height >= CeilingZ)
-				{
-					Switch (CheckLiquid (CeilingPic))
-					{
-						Case LIQUID_WATER:
-							DoRifleSplash (LIQUID_WATER,True);
-							Break;
-						Case LIQUID_NUKAGE:
-							DoRifleSplash (LIQUID_NUKAGE,True);
-							Break;
-						Case LIQUID_BLOOD:
-							DoRifleSplash (LIQUID_BLOOD,True);
-							Break;
-						Case LIQUID_LAVA:
-							DoRifleSplash (LIQUID_LAVA,True);
-							Break;
-						Case LIQUID_SLIME:
-							DoRifleSplash (LIQUID_SLIME,True);
-							Break;
-						Default:
-							Break;
-					}
-				}
+					DoRifleSplash(CheckLiquid(CeilingPic),True);
 				
 				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
 				Else A_StartSound ("Vehicle/APC/SmallMGImpact");
@@ -942,6 +859,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 	
 	Void DoAutocannonSplash (Int LiquidType, Bool UpsideDown = False)
 	{
+		If (LiquidType == LIQUID_NONE) Return;
 		HitLiquid = True;
 		Actor Splash = SpawnLiquidSplash (LiquidType,explosiondamage:96,48,0,'Explosive', True);
 		
@@ -974,52 +892,10 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				
 				//The floor was hit.
 				If (Pos.Z <= FloorZ)
-				{
-					Switch (CheckLiquid (FloorPic))
-					{
-						Case LIQUID_WATER:
-							DoAutocannonSplash (LIQUID_WATER);
-							Break;
-						Case LIQUID_NUKAGE:
-							DoAutocannonSplash (LIQUID_NUKAGE);
-							Break;
-						Case LIQUID_BLOOD:
-							DoAutocannonSplash (LIQUID_BLOOD);
-							Break;
-						Case LIQUID_LAVA:
-							DoAutocannonSplash (LIQUID_LAVA);
-							Break;
-						Case LIQUID_SLIME:
-							DoAutocannonSplash (LIQUID_SLIME);
-							Break;
-						Default:
-							Break;
-					}
-				}
+					DoAutocannonSplash(CheckLiquid(CeilingPic));
 				//The ceiling was hit.
 				Else If (Pos.Z + Height >= CeilingZ)
-				{
-					Switch (CheckLiquid (CeilingPic))
-					{
-						Case LIQUID_WATER:
-							DoAutocannonSplash (LIQUID_WATER,True);
-							Break;
-						Case LIQUID_NUKAGE:
-							DoAutocannonSplash (LIQUID_NUKAGE,True);
-							Break;
-						Case LIQUID_BLOOD:
-							DoAutocannonSplash (LIQUID_BLOOD,True);
-							Break;
-						Case LIQUID_LAVA:
-							DoAutocannonSplash (LIQUID_LAVA,True);
-							Break;
-						Case LIQUID_SLIME:
-							DoAutocannonSplash (LIQUID_SLIME,True);
-							Break;
-						Default:
-							Break;
-					}
-				}
+					DoAutocannonSplash(CheckLiquid(CeilingPic),True);
 				
 				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
 				

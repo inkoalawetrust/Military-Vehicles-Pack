@@ -108,7 +108,8 @@ Class MVP_BaseVehicle : Actor Abstract
 	}
 	
 	//Called in the middle of MVP_Chase to handle the unique attack decision code of each vehicle.
-	Virtual Bool ShouldAttack()
+	//NoStateJump: If true, then the vehicle should not call SetStateLabel.
+	Virtual Bool ShouldAttack(Bool NoStateJump = False)
 	{
 		Return False;
 	}
@@ -119,7 +120,6 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Double Distance = (User_RetreatDistance > 0) ? User_RetreatDistance : 512; //Fall back to a distance of 512 MU if the vehicle is set to not retreat.
 		//Check if you are far enough from your nearest enemy or target.
-		a_logint (distance);
 		If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (Distance*Distance)*1.2)
 		&& (Target && Distance3DSquared (Target) >= (Distance*Distance)*1.2))
 		{
@@ -417,7 +417,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	}
 	
 	//Default turret checks. Is there even a target to shoot, and can the turret attack ?
-	Override Bool ShouldAttack ()
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!Target) Return False;
 		If (!CanAttack()) Return False;
