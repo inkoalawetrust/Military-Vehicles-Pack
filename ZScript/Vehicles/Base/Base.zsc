@@ -1,5 +1,6 @@
 //TODO:
-//Replace the MVP_Trail actor trails with textured particles created by A_SpawnParticleEx at some point, as textured particles have all to customization I need. And are WAY more optimized to boot.
+//Rename LastEnemyDelay and DeathAngleOffset to something more generic. Like TurretRotationOffset and TurretSnapDelay.
+
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -227,6 +228,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		If (Turret && !IsDead(Turret)) //When dead, kill the turret the same way as the vehicle died.
 		{
+			Turret.bTransferDamage = False; //Turn the flag off so that the turret can die after the vehicle itself does.
 			If (Health < GetGibHealth()) //Same check Die() uses internally to check if an actor was gibbed. 
 				Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth())+1, MeansOfDeath, DMG_FORCED);
 			Else
@@ -355,6 +357,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		RipLevelMin 2;
 		MaxStepHeight 0;
 		Mass 500;
+		MVP_BaseTurret.TurnAmount 0.15;
+		MVP_BaseTurret.TurnSoundRadius 0.6;
 		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "Grenade", 0.9;
@@ -376,15 +380,22 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	FlagDef FallOnDeath : TurretFlags, 0; //Turret stops being attached to its' vehicle after dying.
 	FlagDef DontStayAround : TurretFlags, 1; //Used to make the turret not make the vehicle stop to sit around and let the turret shoot, even if the latter has a target.
 	FlagDef NoTargetPrediction : TurretFlags, 2; //The turret will not calculate its' targets' movement and lead its' shots.
+	FlagDef TransferDamage : TurretFlags, 3; //The turret will transfer damage taken to its' master (The vehicle it's on). Instead of taking any of its' own.
 	
-	Double MaxPitch, MinPitch;
-	Property MaximumPitch : MaxPitch;
-	Property MinimumPitch : MinPitch;
+	Double MaxPitch, MinPitch, TurnAmount, TurnSoundRadius;
+	Sound TurnSound;
+	Property MaximumPitch : MaxPitch; //The maximum pitch the turret can go up to.
+	Property MinimumPitch : MinPitch; //The minimum pitch the turret can go down to.
+	Property TurnAmount : TurnAmount; //How much the turret turns to face the vehicle when it's not snapping into position.
+	Property TurnSoundRadius : TurnSoundRadius; //How much the turret has to turn since last tick for the sound to play.
+	Property TurnSound : TurnSound;
 	
 	Int LastEnemyDelay; //Used for the turret rotating code, to make it so the turret snaps back to the vehicle after some time of not having a target.
 	Double DeathAngleOffset; //Offsets the rotation of the turrets by this amount when they are killed. Also used by turret props.
 	Vector3 LastEnemyPosition; //Used by the target prediction. If the turret has a target with no velocity, it grabs their last position every tick to compare it to the current position.
 	Vector3 CurrentEnemyPosition;
+	
+	Double OldAngle; //The turrets' angle in the last tick.
 	
 	Enum ElevationStates
 	{
@@ -429,6 +440,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Override Void Tick()
 	{
+		OldAngle = Angle;
 		Super.Tick();
 		
 		//Keeps track of the current targets' position for the target prediction code.
@@ -461,6 +473,14 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		bShootable = bNotAutoaimed = True;
 		If (bFallOnDeath) bNoSpriteShadow = False;
 		LastEnemyDelay = 0;
+	}
+	
+	Override Int DamageMobj (Actor Inflictor, Actor Source, Int Damage, Name MOD, Int Flags, Double Angle)
+	{
+		If (bTransferDamage && Master)
+			Return Master.DamageMobj (Inflictor, Source, Damage, MOD, Flags, Angle);
+		
+		Return Super.DamageMobj (Inflictor, Source, Damage, MOD, Flags, Angle);
 	}
 	
 	Override Void OnDestroy()

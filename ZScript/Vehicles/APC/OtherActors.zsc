@@ -12,9 +12,12 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		FriendlySeeBlocks 80; //A bit over 10000 map unit sight range, useful for vehicles with actual guns to attack with.
 		MVP_BaseTurret.MaximumPitch -60;
 		MVP_BaseTurret.MinimumPitch 20;
+		MVP_BaseTurret.TurnSoundRadius 2;
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
 		DamageFactor "Autocannon", 0.8;
+		AttackSound "Vehicle/APC/MGFire";
+		MVP_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
 		+MissileMore;
 		+MVP_BaseVehicle.ScareMarines;
 	}
@@ -61,7 +64,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		MissileState = FindState ("Fire");
 	}
 	
-	Override Void Tick()
+	/*Override Void Tick()
 	{
 		Double OldAngle = Angle;
 		Super.Tick();
@@ -70,7 +73,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		
 		If (AbsAngle (Angle,OldAngle) >= 2 && LastEnemyDelay)
 			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
-	}
+	}*/
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
@@ -111,22 +114,25 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
+				RotateToVehicle (RTVF_SOUNDONLY);
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Right shot
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				A_StartSound ("Vehicle/APC/MGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+				//A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
 				Frame = UpdateTurretElevation (4,1,7,10); //E, B, H, K
+				RotateToVehicle (RTVF_SOUNDONLY);
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Left shot
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				A_StartSound ("Vehicle/APC/MGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+				//A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
 				Frame = UpdateTurretElevation (5,2,8,11); //F, C, I, L
+				RotateToVehicle (RTVF_SOUNDONLY);
 			}
 			APC3 # 1
 			{
@@ -148,13 +154,14 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				HandleChaseTimer();
 				
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
+				RotateToVehicle (RTVF_SOUNDONLY);
 				Return State (Null);
 			}
 			APC3 # 0 A_MonsterRefire (128,"See");
 			Goto Fire+6;
 		Death:
 			APC3 M 0 {Actor Boom = Spawn ("MVP_Explosion",Pos); Boom.bNoGravity = True;}
-			APC3 M 1 RotateToVehicle(True);
+			APC3 M 1 RotateToVehicle(RTVF_NOTARGETCHECK);
 			Wait;
 		XDeath:
 			APC3 N 0
@@ -177,7 +184,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				
 				A_SpawnItemEx ("MVP_DestroyedMGTurretGun",16,0,12,FRandom (16,32),FRandom (-6,6),FRandom (2,6));
 			}
-			APC3 N 1 RotateToVehicle(True);
+			APC3 N 1 RotateToVehicle(RTVF_NOTARGETCHECK);
 			Wait;
 		GenericFreezeDeath:
 			APC3 # 0 {Frame = UpdateTurretElevation (3,0,6,9); /*D, A, G, J*/}
@@ -239,15 +246,17 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		Mass 1000;
 		Tag "Autocannon Turret";
 		Obituary "%o was blown up by an autocannon";
+		AttackSound "Vehicle/APC/AutocannonFire";
 		MVP_BaseVehicle.VehicleTurret "MVP_APCMGTurret";
 		MVP_BaseTurret.MaximumPitch -50;
 		MVP_BaseTurret.MinimumPitch 20;
+		MVP_BaseTurret.TurnSoundRadius 4;
 		+MissileEvenMore;
 	}
 	
 	Bool FocusFire; //Turned on by the APC, then passed over to the small MG on the autocannon.
 	
-	Override Void Tick()
+	/*Override Void Tick()
 	{
 		Double OldAngle = Angle;
 		MVP_BaseTurret.Tick();
@@ -256,7 +265,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		
 		If (AbsAngle (Angle,OldAngle) >= 4 && LastEnemyDelay)
 			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
-	}
+	}*/
 	
 	Override Void PostBeginPlay ()
 	{
@@ -341,7 +350,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			APC2 # 3 Light ("AutocannonFlash") Bright
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				A_StartSound ("Vehicle/APC/AutocannonFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
 				Actor Proj = A_SpawnProjectile ("MVP_AutocannonShell",16,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.3,-0.3),(0.45,-0.45),768);
 				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then use the proximity fuze.
@@ -385,7 +394,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				Boom.MeleeRange = 64;
 				Boom.bNoGravity = True;
 			}
-			APC2 Q 1 RotateToVehicle (True);
+			APC2 Q 1 RotateToVehicle (RTVF_NOTARGETCHECK);
 			Wait;
 		XDeath:
 			APC2 U 0
@@ -409,7 +418,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				
 				A_SpawnItemEx ("MVP_APCHatch",-12,6,24,FRandom (6,-6),FRandom (6,-6),FRandom (18,24));
 			}
-			APC2 U 1 RotateToVehicle(True);
+			APC2 U 1 RotateToVehicle(RTVF_NOTARGETCHECK);
 			Wait;
 		GenericFreezeDeath:
 			APC2 # 0 {Frame = UpdateTurretElevation (2,0,4,6); /*C, A, E, G*/}
@@ -435,6 +444,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		MVP_BaseTurret.MinimumPitch 20;
 		Obituary "%o found out that rifle rounds are more dangerous than in the movies";
 		Tag "7.62mm Turret";
+		AttackSound "Vehicle/APC/SmallMGFire";
 		DamageType "RifleBullet";
 		DamageFactor "Autocannon", 0.95;
 		DamageFactor "Melee", 0.4;
@@ -524,9 +534,9 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				
 				//Play at half the volume if the autocannon is playing its' firing sound. To emphasize its' volume.
 				If (Master && Master.IsActorPlayingSound (CHAN_WEAPON))
-					{A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,0.75,0.4);a_log ("quiet");}
+					{A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,0.75,0.4);a_log ("quiet");}
 				Else
-					{A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);a_log ("normal");}
+					{A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);a_log ("normal");}
 				
 				Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",8,flags:CMF_AIMDIRECTION,Pitch);
 				HandleTargetPrediction (Proj,(0.4,-0.4),(0.55,-0.55),1024);
@@ -576,7 +586,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 					Angle = Master.Angle;
 					DeathAngleOffset = 0; //Also remove the angle offset relative to the autocannon that was collected in Die().
 				}
-				RotateToVehicle (True);
+				RotateToVehicle (RTVF_NOTARGETCHECK);
 				Actor Boom = Spawn ("MVP_Explosion",Pos);
 				Boom.Scale *= 0.4;
 				Boom.SetDamage (24);
@@ -584,8 +594,8 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				Boom.MeleeRange = 0;
 				Boom.bNoGravity = True;
 			}
-			APC2 WWWWWWWWWWWWWW 2 RotateToVehicle (True);
-			APC2 X 1 RotateToVehicle (True);
+			APC2 WWWWWWWWWWWWWW 2 RotateToVehicle (RTVF_NOTARGETCHECK);
+			APC2 X 1 RotateToVehicle (RTVF_NOTARGETCHECK);
 			Wait;
 		XDeath:
 			TNT1 A 0
@@ -662,7 +672,9 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		HitLiquid = True;
 		Actor Splash = SpawnLiquidSplash (LiquidType,volume:0.4,1.0);
 		
-		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -0.5 : 0.5);
+		Double Size = FRandom (0.3,0.7);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.bXFlip = Random (False,True);
 	}
 	
 	States
@@ -675,7 +687,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 			{
 				//The floor was hit.
 				If (Pos.Z <= FloorZ)
-					Do50BMGSplash(CheckLiquid(CeilingPic));
+					Do50BMGSplash(CheckLiquid(FloorPic));
 				//The ceiling was hit.
 				Else If (Pos.Z + Height >= CeilingZ)
 					Do50BMGSplash(CheckLiquid(CeilingPic),True);
@@ -725,7 +737,9 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		HitLiquid = True;
 		Actor Splash = SpawnLiquidSplash (LiquidType,"SFX/WaterHit",1.0,1.0);
 		
-		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -0.25 : 0.25);
+		Double Size = FRandom (0.2,0.3);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.bXFlip = Random (False,True);
 	}
 	
 	Override Void TrailSpawn (Actor Trail)
@@ -764,7 +778,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 			{
 				//The floor was hit.
 				If (Pos.Z <= FloorZ)
-					DoRifleSplash(CheckLiquid(CeilingPic));
+					DoRifleSplash(CheckLiquid(FloorPic));
 				//The ceiling was hit.
 				Else If (Pos.Z + Height >= CeilingZ)
 					DoRifleSplash(CheckLiquid(CeilingPic),True);
@@ -863,7 +877,9 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		HitLiquid = True;
 		Actor Splash = SpawnLiquidSplash (LiquidType,explosiondamage:96,48,0,'Explosive', True);
 		
-		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -2.0 : 2.0);
+		Double Size = FRandom (1.8,2.2);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.bXFlip = Random (False,True);
 	}
 	
 	Bool HitLiquid; //Removes the autocannon shell if it hit a liquid texture.
@@ -892,7 +908,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				
 				//The floor was hit.
 				If (Pos.Z <= FloorZ)
-					DoAutocannonSplash(CheckLiquid(CeilingPic));
+					DoAutocannonSplash(CheckLiquid(FloorPic));
 				//The ceiling was hit.
 				Else If (Pos.Z + Height >= CeilingZ)
 					DoAutocannonSplash(CheckLiquid(CeilingPic),True);

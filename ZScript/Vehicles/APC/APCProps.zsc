@@ -217,13 +217,13 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 			APC3 A 0;
 			APC3 # 1
 			{
-				RotateToVehicle(False,True);
+				RotateToVehicle(RTVF_RELATIVEONLY);
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
 			Loop;
 		Death:
 			APC3 M 0 {Actor Boom = Spawn ("MVP_Explosion",Pos); Boom.bNoGravity = True;}
-			APC3 M 1 RotateToVehicle(False,True);
+			APC3 M 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Wait;
 		XDeath:
 			APC3 N 0
@@ -246,7 +246,7 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 				
 				A_SpawnItemEx ("MVP_DestroyedMGTurretGun",16,0,12,FRandom (16,32),FRandom (-6,6),FRandom (2,6));
 			}
-			APC3 N 1 RotateToVehicle(False,True);
+			APC3 N 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Wait;
 		GenericFreezeDeath:
 			APC3 # 0 {Frame = UpdateTurretElevation (3,0,6,9); /*D, A, G, J*/}
@@ -284,7 +284,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 			APC2 A 0;
 			APC2 # 1
 			{
-				RotateToVehicle(False,True);
+				RotateToVehicle(RTVF_RELATIVEONLY);
 				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
 			Loop;
@@ -297,7 +297,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 				Boom.MeleeRange = 64;
 				Boom.bNoGravity = True;
 			}
-			APC2 Q 1 RotateToVehicle (False,True);
+			APC2 Q 1 RotateToVehicle (RTVF_RELATIVEONLY);
 			Wait;
 		XDeath:
 			APC2 U 0
@@ -321,7 +321,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 				
 				A_SpawnItemEx ("MVP_APCHatch",-12,6,24,FRandom (6,-6),FRandom (6,-6),FRandom (18,24));
 			}
-			APC2 U 1 RotateToVehicle(False,True);
+			APC2 U 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Wait;
 		GenericFreezeDeath:
 			APC2 # 0 {Frame = UpdateTurretElevation (2,0,4,6); /*C, A, E, G*/}
@@ -359,7 +359,7 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 			APC2 I 0;
 			APC2 # 1
 			{
-				RotateToVehicle(False,True);
+				RotateToVehicle(RTVF_RELATIVEONLY);
 				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
 			Loop;
@@ -372,7 +372,7 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 					Angle = Master.Angle;
 					DeathAngleOffset = 0; //Also remove the angle offset relative to the autocannon that was collected in Die().
 				}
-				RotateToVehicle (False,True);
+				RotateToVehicle (RTVF_RELATIVEONLY);
 				Actor Boom = Spawn ("MVP_Explosion",Pos);
 				Boom.Scale *= 0.4;
 				Boom.SetDamage (24);
@@ -380,8 +380,8 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 				Boom.MeleeRange = 0;
 				Boom.bNoGravity = True;
 			}
-			APC2 WWWWWWWWWWWWWW 2 RotateToVehicle (False,True);
-			APC2 X 1 RotateToVehicle (False,True);
+			APC2 WWWWWWWWWWWWWW 2 RotateToVehicle (RTVF_RELATIVEONLY);
+			APC2 X 1 RotateToVehicle (RTVF_RELATIVEONLY);
 			Wait;
 		XDeath:
 			TNT1 A 0
@@ -569,7 +569,7 @@ Class MVP_APCMachineGunPropDead : MVP_APCMachineGunProp
 				
 				Return State (Null);
 			}
-			APC3 M 1 RotateToVehicle(False,True);
+			APC3 M 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Wait;
 		Gibbed:
 			APC3 N 0
@@ -586,10 +586,10 @@ Class MVP_APCMachineGunPropDead : MVP_APCMachineGunProp
 				
 				//A_SpawnItemEx ("MVP_DestroyedMGTurretGun",16,0,12,FRandom (16,32),FRandom (-6,6),FRandom (2,6));
 			}
-			APC3 N 1 RotateToVehicle(False,True);
+			APC3 N 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Wait;
 		GibbedNoFire:
-			APC3 N 1 RotateToVehicle(False,True);
+			APC3 N 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Loop;
 	}
 }
@@ -635,7 +635,7 @@ Class MVP_APCAutocannonPropDead : MVP_APCAutocannonProp
 			}
 			APC2 Q 1
 			{
-				RotateToVehicle(False,True);
+				RotateToVehicle(RTVF_RELATIVEONLY);
 				
 				If (HatchOpen)
 					Frame = 19; //T
@@ -658,10 +658,10 @@ Class MVP_APCAutocannonPropDead : MVP_APCAutocannonProp
 				
 				//A_SpawnItemEx ("MVP_APCHatch",-12,6,24,FRandom (6,-6),FRandom (6,-6),FRandom (18,24));
 			}
-			APC2 U 1 RotateToVehicle(False,True);
+			APC2 U 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Wait;
 		GibbedNoFire:
-			APC2 U 1 RotateToVehicle(False,True);
+			APC2 U 1 RotateToVehicle(RTVF_RELATIVEONLY);
 			Loop;
 	}
 }
@@ -678,7 +678,7 @@ Class MVP_APCMGTurretPropDead : MVP_APCMGTurretProp
 	States
 	{
 		Spawn:
-			APC2 X 1 RotateToVehicle (False,True);
+			APC2 X 1 RotateToVehicle (RTVF_RELATIVEONLY);
 			Loop;
 	}
 }

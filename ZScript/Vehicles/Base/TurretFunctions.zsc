@@ -27,18 +27,41 @@ Extend Class MVP_BaseTurret
 		Return FaceStraight;
 	}
 	
+	Enum TurretRotationFlags
+	{
+		RTVF_NOTARGETCHECK	= 1 << 0, //The turret will apply its' rotation mechanics even without a target.
+		RTVF_RELATIVEONLY	= 1 << 1, //The turret will only rotate relative to its' masters' angle + its' DeathAngleOffset, even if the turret isn't destroyed.
+		RTVF_SOUNDONLY		= 1 << 2, //Only handle the sound related mechanics.
+		RTVF_ALTSOUNDLOGIC	= 1 << 3, //Play the turn sound when the angle difference between the last and current tick is bigger tha TurnSoundRadius.
+	}
+	
 	//Makes the turret rotate back over time to the direction that the vehicle is facing. Instead of snapping back instantly.
-	Void RotateToVehicle (Bool NoTargetCheck = False, Bool OnlyRelativeRotation = False)
+	//By default, the turn sound plays when LastEnemyDelay is 0, and only for as long as the angle difference between the turret and vehicle is big enough.
+	//What this means in practice is that the sound by default only plays when the turret is rotating back to its' vehicle after a fight.
+	Void RotateToVehicle (Int Flags = 0)
 	{
 		If (!Master) Return;
 		
-		If (IsDead (Self) || OnlyRelativeRotation)
+		/*If (Flags & RTVF_SOUNDONLY)
+		{
+			If (TurnSound && AbsAngle (Master.Angle, Angle) > TurnSoundRadius)
+					A_StartSound (TurnSound,attenuation:0.8);
+			Return;
+		}
+		
+		If (Flags & RTVF_ALTSOUNDLOGIC)
+		{
+			If (AbsAngle (Angle,OldAngle) >= TurnSoundRadius && LastEnemyDelay)
+				A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
+		}*/
+		
+		If (IsDead (Self) || Flags & RTVF_RELATIVEONLY)
 		{
 			Angle = Master.Angle+DeathAngleOffset;
 			Return;
 		}
 		
-		If ((!Target || NoTargetCheck))
+		If ((!Target || Flags & RTVF_NOTARGETCHECK))
 		{
 			If (AbsAngle (Master.Angle, Angle) < 0.75) LastEnemyDelay = 0; //Snap back into the vehicles' position if the angle difference is small enough.
 			
@@ -46,15 +69,18 @@ Extend Class MVP_BaseTurret
 			If (!LastEnemyDelay || Abs (Master.Pitch - Pitch) < 0.75)
 				Pitch = Master.Pitch;
 			Else
-				Pitch += (Master.Pitch - Pitch) * 0.15;
+				Pitch += (Master.Pitch - Pitch) * TurnAmount;
 			
 			If (!LastEnemyDelay)
+			{
 				Angle = Master.Angle;
+				//If (IsActorPlayingSound (CHAN_BODY,TurnSound)) A_StopSound (CHAN_BODY); //DEBUG: For debugging the di-cokka's extreme pain turret turn.
+			}
 			Else
 			{
-				If (AbsAngle (Master.Angle, Angle) > 0.6)
-					A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
-				Angle += DeltaAngle (Angle, Master.Angle) * 0.15;
+				//If (!(Flags & RTVF_ALTSOUNDLOGIC) && TurnSound && AbsAngle (Master.Angle, Angle) > TurnSoundRadius)
+				//	A_StartSound (TurnSound,attenuation:0.8);
+				Angle += DeltaAngle (Angle, Master.Angle) * TurnAmount;
 			}
 		}
 	}

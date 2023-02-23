@@ -17,6 +17,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		Obituary "%o was ran over by a truck.";
 		Tag "Army Truck";
+		ActiveSound "Vehicle/ArmyTruck/Moving";
+		DeathSound "SFX/Explosion";
 		DamageFactor "Melee", 0.4;
 		DamageFactor "Electric", 0.3;
 		DamageFactor "ExplosiveImpact", 1.25;
@@ -311,7 +313,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			TRK1 AABBCCDD 2
 			{
 				A_StopSound (CHAN_IDLING);
-				A_StartSound ("Vehicle/ArmyTruck/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
 				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous MVP_Chase property.
 				
@@ -479,7 +481,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			TRK1 H 7 Bright
 			{
 				A_Explode (384,256,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
-				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.5);
+				A_StartSound (DeathSound,CHAN_BODY,attenuation:0.5);
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);
 				

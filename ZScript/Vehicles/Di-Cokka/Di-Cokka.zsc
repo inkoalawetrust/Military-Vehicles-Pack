@@ -1,11 +1,10 @@
 //TODO:
 //Make it so the turret rises up and then down to shoot. Might not do this, since unlike in Metal Slug, the Di-Cokka can aim up and down here.
 //In MS, the Di-Cokka can fire a burst of 3 shells, maybe add this as a somewhat rare alt attack ?
-//Make a system where damage to turrets can be passed to the hull they are on. Make this support turrets on turrets too.
-//Make pain inflicted on the hull pass to the turret, and vice versa. The hull stops, and the turret plays the knockback animation.
-/*The normal turret pain state will only be half the knockback animation. The other half should only trigger by sufficient damage. 
+/*Make pain inflicted on the hull pass to the turret, and vice versa. The hull stops, and the turret plays the knockback animation.
+  The normal turret pain state will only be half the knockback animation. The other half should only trigger by sufficient damage. 
   No idea how to check for this, maybe by checking the CurStates' NextState in a DamageMobj override ?*/
-//Maybe add fire particles for when the Di-Cokkas' health is low ? Like actual textured particles, not actors.
+//The tank is a bit too sensitive to mass damage from the chaingun. So lower its' painchance and/or increase its' pain threshold, do the same for the turret.
 //Make the turret create a warning zone when its' about to fire, that warps to wherever its' aiming. To warn marines to avoid the firing spot.
 
 //The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
@@ -18,6 +17,10 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		//$Sprite MSV1Z1
 		Health 600;
 		GibHealth 200;
+		Radius 48;
+		Height 60;
+		Speed 8;
+		FastSpeed 12;
 		CameraHeight 32;
 		//DeathHeight 32; TODO: This will change as the Di-Cokkas' hull sinks down.
 		FriendlySeeBlocks 64; //Same as the default despite being an armed vehicle. Because it's shells are much slower.
@@ -38,6 +41,8 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		PainChance "MarineHMG", 30;
 		PainChance "MarineRifle", 45;
 		PainThreshold 10;
+		PainSound "Vehicle/Di-Cokka/Pain";
+		DeathSound "Vehicle/Di-Cokka/Death";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
 		DamageFactor "Melee", 1;
@@ -63,6 +68,9 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	
 	String User_Color; //The Di-Cokkas' color.
 	Bool User_TargetPrediction; //If the Di-Cokka should be able to lead its' shots. By default it doesn't.
+	Bool User_NoCorpseCrush; //If true, the Di-Cokka won't crush small corpses it happens to drive over.
+	
+	Bool ExtremePain; //The Di-Cokka flinched from a very strong attack.
 	
 	Override Void SpawnVehicleTurret ()
 	{
@@ -73,19 +81,30 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	
 	Override Void SpawnHeadlights () //TODO: Only spawn front headlights.
 	{
-		
+		Headlights.Push (SpawnVehicleHeadlight (Self,(32,32,24),spotlightangles:(20,30)));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(32,-32,24),spotlightangles:(20,30)));
 	}
 	
 	Override Void Tick()
 	{
 		Super.Tick();
 		
-		//If (Health <= SpawnHealth()/4) //Do fire particle spawning here when the vehicle is weakened enough.
+		If (IsFrozen()) Return;
+		If (GetAge() % 16 == 0)
+		{
+			//Spawn fire particles when the vehicle is weakened enough.
+			If (!IsDead (Self) && Health <= SpawnHealth()/2.5)
+			{
+				Actor Particle = Spawn ("MVP_DiCokkaFireParticle",Vec3Offset (FRandom (Radius, -Radius),FRandom (Radius, -Radius),FRandom (0, Height)),ALLOW_REPLACE);
+				Particle.Scale.X = Particle.Scale.Y = FRandom (0.4,0.55);
+				Particle.bXFlip = Random (False,True);
+			}
+		}
 	}
 	
 	Override Void PostBeginPlay ()
 	{
-		TurretOffsets = (0,0,5.75);
+		TurretOffsets = (0,0,-0.25);
 		Super.PostBeginPlay();
 		
 		//Copied from how the Smart Marines' color variable is handled.
@@ -112,11 +131,59 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			}
 		}
 	}
+	
+	Override Int DamageMobj (Actor Inflictor, Actor Source, Int Damage, Name MOD, Int Flags, Double Angle)
+	{
+		Int LeDamage = Super.DamageMobj (Inflictor, Source, Damage, MOD, Flags, Angle);
+		
+		//If DamageMobj decided that the chassis should flinch. Then make the turret flinch as well. Unless its' already flinching.
+		If (InStateSequence(CurState.NextState,FindState ("Pain")))
+		{a_log ("let me guess, this method of returning when an actor is hurt doesn't work ?");
+			If (LeDamage >= 50) ExtremePain = True; //Got hurt by a very damage attack, so flinch for longer.
+			If (Turret && !IsInState (Turret,"Pain"))
+			{A_Log ("The turret is hurt too");
+				If (Turret Is "MVP_DiCokkaTurret") MVP_DiCokkaTurret(Turret).ExtremePain = ExtremePain;
+				Turret.TriggerPainChance (MOD,True);
+			}
+		}
+		
+		Return LeDamage;
+	}
+	
 	States
 	{
 		Spawn:
-			MSV1 A -1;
-			Stop;
+			MSV1 A 4
+			{
+				A_StopSound (CHAN_MOVING);
+				A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
+				bStandStill = True;
+				A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
+				bStandStill = False;
+			}
+			Loop;
+		See:
+			MSV1 AABBCCDDEEFF 2
+			{
+				A_StopSound (CHAN_IDLING);
+				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
+				A_Wander();
+				If (!User_NoCorpseCrush) MVP_CrushCorpses ();
+			}
+			Loop;
+		Pain:
+			MSV1 # 12
+			{
+				A_StopSound (CHAN_IDLING);
+				A_StopSound (CHAN_MOVING);
+				A_StartSound (PainSound,CHAN_BODY);
+			}
+			MSV1 # 0 A_JumpIf (ExtremePain,1); //Flinch for a bit longer.
+			Goto See;
+			
+			MSV1 # 8 {ExtremePain = False;}
+			Goto See;
 	}
 }
 
@@ -125,12 +192,18 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	Default
 	{
 		Health 300;
+		Radius 32;
+		Height 24;
 		XScale 0.9;
 		YScale 0.75;
 		Mass 2000;
 		//DeathHeight 32; Make it the same as whatever height I decide on.
 		FriendlySeeBlocks 48;
 		MaxTargetRange 6144;
+		Tag "Di-Cokka Turret";
+		MVP_BaseTurret.MaximumPitch -20;
+		MVP_BaseTurret.MinimumPitch 10;
+		+MVP_BaseTurret.TransferDamage;
 		
 		//Copied from the hull.
 		-NoPain; //This vehicle CAN feel pain.
@@ -140,6 +213,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		PainChance "MarineHMG", 30;
 		PainChance "MarineRifle", 45;
 		PainThreshold 10;
+		PainSound "Vehicle/Di-Cokka/Pain";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
 		DamageFactor "Melee", 1;
@@ -162,6 +236,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		DamageFactor "Autocannon", 1;
 		DamageFactor "RifleBullet", 1;
 	}
+	
+	Bool ExtremePain;
 	
 	Override Bool ShouldAttack()
 	{
@@ -199,7 +275,75 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	States
 	{
 		Spawn:
-				MSV1 G -1 nodelay {if (bnotargetprediction) a_log ("no aim ?");}
-				Stop;
+			MSV1 G 1
+			{
+				RotateToVehicle();
+				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
+			}
+			Loop;
+		See:
+			MSV1 G 1
+			{
+				RotateToVehicle();
+				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
+			}
+			Loop;
+		Pain:
+			TNT1 A 0
+			{a_log ("oof ouch");
+				//Might make the turret able to be placed without the Di-Cokka itself or something.
+				If (!Master)
+					A_StartSound (PainSound,CHAN_BODY,CHANF_OVERLAP);
+			}
+			MSV1 M 6;
+			TNT1 A 0 A_JumpIf (ExtremePain,3);
+			MSV1 N 12;
+			MSV1 M 6;
+			Goto See;
+			//If in extreme pain, push the turret back even more.
+			MSV1 N 6;
+			MSV1 OP 8;
+			MSV1 Q Random (24,48); //K.O.
+			MSV1 Q 0
+			{
+				ExtremePain = False;
+				Angle -= 45; //Change the turrets' angle to match the angle it visually ended up at.
+				LastEnemyDelay = 70; //Give the turret time to slowly rotate around, instead of snapping back to its masters' angle.
+			}
+			Goto See;
+	}
+}
+
+//Textured particles defined in ANIMDEFS all animate in unison. So they are useless for this.
+Class MVP_DiCokkaFireParticle : Actor
+{
+	Default
+	{
+		+Bright;
+		+NoBlockmap;
+	}
+	
+	//Fun fact, an empty or totally custom tick override doesn't actually provide a noticeable performance improvement.
+	Override Void Tick()
+	{
+		If (IsFrozen()) Return;
+		// Copied from FastProjectile.
+		if (tics != -1)
+		{
+			if (tics > 0) tics--;
+			while (!tics)
+			{
+				if (!SetState (CurState.NextState))
+				{ // mobj was removed
+					return;
+				}
+			}
+		}
+	}
+	States
+	{
+		Spawn:
+			MSX3 ABDEFGHIJKLMNOPQRSTUVXYZ 3;
+			Stop;
 	}
 }

@@ -18,6 +18,8 @@ Class MVP_APC : MVP_BaseVehicle
 		Mass 28000;
 		MaxStepHeight 48;
 		Tag "Armored Personnel Carrier";
+		ActiveSound "Vehicle/APC/Moving";
+		DeathSound "SFX/Explosion";
 		
 		//"Armor"
 		DamageFactor 0.75; //Generic damage factor.
@@ -190,7 +192,7 @@ Class MVP_APC : MVP_BaseVehicle
 			APC1 AABBCCDD 2
 			{
 				A_StopSound (CHAN_IDLING);
-				A_StartSound ("Vehicle/APC/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
 				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous MVP_Chase property.
 				
@@ -261,7 +263,7 @@ Class MVP_APC : MVP_BaseVehicle
 				A_Explode (384,256,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
 				If (User_MarineAmount > 1) User_MarineAmount -= Random (0,User_MarineAmount-1); //Have a random amount of marines survive the explosion.
 				If (Random (0,255) < 16) User_MarineAmount = -1; //Small chance for nobody to have survived.
-				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.5);
+				A_StartSound (DeathSound,CHAN_BODY,attenuation:0.5);
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);
 			}
