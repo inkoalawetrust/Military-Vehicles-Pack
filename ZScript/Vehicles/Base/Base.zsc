@@ -1,6 +1,3 @@
-//TODO:
-//Replace the hacky shit in MVP_Chase involving the MissileMore flag and MinMissileChance with a new aggression multiplier in MVP_CheckMissileRange.
-//Also replace all instances of the native CheckMissileRange with the MVP one. Since that'll be the function that actually uses the aggression multiplier.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -149,6 +146,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		SpawnHeadlights();
 		
 		If (!bFriendly) Species = 'MilitaryHostile';
+		AggressionMultiplier = 1.0; //Default value for multiplier.
 		
 		If (!User_DefaultOrder || User_DefaultOrder ~== "")
 		{
@@ -295,6 +293,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight. Is also used to determine how long turreted vehicles stay in one place.
 	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
 	Int CurrentOrder; //The current order the vehicle is following.
+	Double AggressionMultiplier; //Can be used to further increase the chance of MVP_CheckMissileRange returning true. The LOWER it is the more frequent the attacking.
 
 	//Internal variables
 	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
@@ -608,9 +607,9 @@ Class MVP_BaseProjectile : FastProjectile
 		//Pass trail properties. Only really works for the dedicated trail class in particular, so it only runs if the trail is MVP_Tracer or a child class.
 		If (Trail Is "MVP_Tracer")
 		{
-			MVP_Tracer(Trail).SpawnOffsetX = SpawnOffsetX;
-			MVP_Tracer(Trail).SpawnOffsetY = SpawnOffsetY;
-			MVP_Tracer(Trail).SpawnOffsetZ = SpawnOffsetZ;
+			MVP_Tracer(Trail).SpawnOffsets.X = SpawnOffsetX;
+			MVP_Tracer(Trail).SpawnOffsets.Y = SpawnOffsetY;
+			MVP_Tracer(Trail).SpawnOffsets.Z = SpawnOffsetZ;
 		}
 	}
 	

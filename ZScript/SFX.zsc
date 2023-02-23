@@ -207,7 +207,6 @@ Class MVP_Flame : Actor
 		//Stick to your master, if any.
 		If (Master)
 			SetOrigin(Vec3OffsetRelative (Master,Offsets,flags:V3R_ANGLEONLY),True);
-			//SetOrigin (Master.Vec3Offset(Offsets.X,Offsets.Y,Offsets.Z),True);
 		
 		If (!InStateSequence(CurState,ResolveState ("Death")))
 		{
@@ -224,7 +223,7 @@ Class MVP_Flame : Actor
 		Spawn:
 			F1RE A 0 NoDelay
 			{
-				bXFlip = Random (0,1);
+				bXFlip = Random (False,True);
 				
 				A_StartSound ("SFX/Fire",CHAN_BODY,flags:CHANF_LOOPING,0.5);
 				A_AttachLight ('Fire',DynamicLight.FlickerLight,"EBDB57",48,40,param:0.25);
@@ -243,10 +242,6 @@ Class MVP_Flame : Actor
 			F1RE # 0 {Scale -= (.15,.15);}
 			TNT1 A 0 A_RemoveLight ('Fire');
 			Stop;
-		Sprites:
-			F1RE ABCDEFGH 0;
-			F2RE ABCDEFGH 0;
-			Stop;
 	}
 }
 
@@ -259,7 +254,7 @@ Class MVP_Tracer : Actor
 	{
 		Super.PostBeginPlay();
 		
-		Warp (Self,SpawnOffsetX,SpawnOffsetY,SpawnOffsetZ);
+		SetOrigin (Vec3OffsetRelative (Self,SpawnOffsets),False);
 	}
 	Override Void Tick()
 	{
@@ -269,8 +264,8 @@ Class MVP_Tracer : Actor
 			Destroy();
 	}
 	
-	Double SpawnOffsetX, SpawnOffsetY, SpawnOffsetZ;
-	Vector3 SpawnOffset;
+	Mixin MVP_MathFunctions;
+	Vector3 SpawnOffsets;
 	
 	States
 	{

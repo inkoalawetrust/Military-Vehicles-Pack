@@ -447,8 +447,7 @@ Extend Class MVP_BaseVehicle
 		Double PowerfulEnemyRetreatRange = (User_RetreatDistance*4)*(User_RetreatDistance*4); //Vehicles stay 4 times further away from powerful enemies than normal ones.
 		
 		//Temporarily store the values that are changed by the fear code.
-		Int OldMissileChance = MinMissileChance;
-		Bool bMissileMoreTemp = bMissileMore;
+		Double OldAggro = AggressionMultiplier;
 		
 		//Vehicles get scared if they have a living, visible target, and are either defenseless or the target is too powerful.
 		If (!bNoFear)
@@ -470,9 +469,8 @@ Extend Class MVP_BaseVehicle
 				bFrightened = AlreadyRetreating = True;
 			}
 			
-			//TODO: Change all calls to CheckMissileRange into the MVP version, and add an additional aggresiveness multiplier to the latter ?
 			If ((Flags & MVPC_ATTACKWHENSCARED) && bFrightened)
-				MinMissileChance = bMissileMore = 1;
+				AggressionMultiplier *= 0.5;
 		}
 		
 		If (!(Flags & MVPC_NOCHASE))
@@ -530,14 +528,12 @@ Extend Class MVP_BaseVehicle
 		
 		If (ShouldAttack()) //Run the unique attack decision code of the vehicle.
 		{
-			//bMissileMore = bMissileMoreTemp; //Can't change these two here because vehicles may make use of them in ShouldAttack().
-			//MinMissileChance = OldMissileChance;
+			AggressionMultiplier = OldAggro; //Reset aggression chance.
 			ChaseTimer = 0;
 			CorpseTarget = Null;
 			Return; //End the function if the vehicle should attack.
 		}
-		bMissileMore = bMissileMoreTemp;
-		MinMissileChance = OldMissileChance;
+		AggressionMultiplier = OldAggro; //Reset aggression chance.
 		
 		HandleChaseTimer();
 	}
@@ -584,7 +580,6 @@ Extend Class MVP_BaseVehicle
 	
 	//This stupid copy and paste has to literally only exist because P_HitFriend breaks friendly turrets with allies below or above them.
 	//The function is more or less the same as it's native counterpart, give or take the syntax and code comments, and it being slower by being non-native.
-	//Maybe I can add more custom code here, like lowering the distance to make vehicles even more likely to attack, so that I can further justify this thing existing.
 	Bool MVP_CheckMissileRange (Actor Other)
 	{
 		Double Dist;
@@ -624,7 +619,8 @@ Extend Class MVP_BaseVehicle
 		
 		If (bMissileMore) Dist *= 0.5;
 		If (bMissileEvenMore) Dist *= 0.125;
-		
+		Dist *= AggressionMultiplier;
+		console.printf ("dist is %f",dist);
 		Int MMC = Int(MinMissileChance * G_SkillPropertyFloat(SKILLP_Aggressiveness));
 		Return Random2[PR_CheckMissileRange]() >= Min(Int(Dist), MMC);
 	}

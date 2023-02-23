@@ -152,7 +152,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		
 		//If DamageMobj decided that the chassis should flinch. Then make the turret flinch as well. Unless its' already flinching.
 		If (InStateSequence(CurState.NextState,FindState ("Pain")))
-		{a_log ("let me guess, this method of returning when an actor is hurt doesn't work ?");
+		{
 			If (LeDamage >= 50) ExtremePain = True; //Got hurt by a very damage attack, so flinch for longer.
 			If (Turret && !IsInState (Turret,"Pain"))
 			{A_Log ("The turret is hurt too");

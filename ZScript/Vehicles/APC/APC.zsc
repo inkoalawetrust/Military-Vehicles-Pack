@@ -116,10 +116,11 @@ Class MVP_APC : MVP_BaseVehicle
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
+		//More likely to drop marines when about to die.
 		If (Health <= SpawnHealth()/4)
-			bMissileMore = bMissileEvenMore = True;
+			AggressionMultiplier *= 0.5;
 		
-		If (CheckMissileRange() && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
+		If (MVP_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (User_MarineAmount > 0)
 			{
@@ -129,7 +130,7 @@ Class MVP_APC : MVP_BaseVehicle
 		}
 		
 		//Why is this even here ? No fucking clue, this is why I comment half the codebase.
-		bFrightened = bMissileMore = bMissileEvenMore = False;
+		AggressionMultiplier = Default.AggressionMultiplier;
 		Return False;
 	}
 	
