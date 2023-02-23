@@ -225,10 +225,6 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				MVP_Chase ((NoRandomTurn ? MVPC_NORANDOMTURN : 0));
 				
-				MinMissileChance = Default.MinMissileChance;
-				bFrightened = bMissileMore = AlreadyRetreating = False;
-				NearestEnemy = Null;
-				
 				Return State (Null);
 			}
 			Loop;

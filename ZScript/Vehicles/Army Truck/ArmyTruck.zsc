@@ -224,7 +224,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			}
 		}
 		
-		bFrightened = AlreadyRetreating = bMissileMore = bMissileEvenMore = False;
+		bFrightened = bMissileMore = bMissileEvenMore = False;
 		NearestEnemy = Null;
 		Return False;
 	}

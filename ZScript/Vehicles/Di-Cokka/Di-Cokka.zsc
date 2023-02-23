@@ -1,11 +1,7 @@
 //TODO:
 //Make it so the turret rises up and then down to shoot. Might not do this, since unlike in Metal Slug, the Di-Cokka can aim up and down here.
 //In MS, the Di-Cokka can fire a burst of 3 shells, maybe add this as a somewhat rare alt attack ?
-/*Make pain inflicted on the hull pass to the turret, and vice versa. The hull stops, and the turret plays the knockback animation.
-  The normal turret pain state will only be half the knockback animation. The other half should only trigger by sufficient damage. 
-  No idea how to check for this, maybe by checking the CurStates' NextState in a DamageMobj override ?*/
-//The tank is a bit too sensitive to mass damage from the chaingun. So lower its' painchance and/or increase its' pain threshold, do the same for the turret.
-//Make the turret create a warning zone when its' about to fire, that warps to wherever its' aiming. To warn marines to avoid the firing spot.
+//Make the turret create a warning zone when it's about to fire, that warps to wherever its' aiming. To warn marines to avoid the firing spot.
 
 //The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
 Class MVP_DiCokka : MVP_BaseVehicle
@@ -35,11 +31,11 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		MVP_BaseVehicle.MaxCorpseHeight 60;
 		
 		-NoPain; //This vehicle CAN feel pain.
-		PainChance 50;
-		PainChance "Autocannon", 65;
-		PainChance "RifleBullet", 40;
-		PainChance "MarineHMG", 30;
-		PainChance "MarineRifle", 45;
+		PainChance 30;
+		PainChance "Autocannon", 55;
+		PainChance "RifleBullet", 20;
+		PainChance "MarineHMG", 10;
+		PainChance "MarineRifle", 25;
 		PainThreshold 10;
 		PainSound "Vehicle/Di-Cokka/Pain";
 		DeathSound "Vehicle/Di-Cokka/Death";
@@ -79,10 +75,28 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		If (Turret) Turret.bNoTargetPrediction = !User_TargetPrediction;
 	}
 	
-	Override Void SpawnHeadlights () //TODO: Only spawn front headlights.
+	Override Void UserVariableDefaults()
+	{
+		If (User_RetreatDistance == 0) User_RetreatDistance = 512;
+		Super.UserVariableDefaults();
+	}
+
+	
+	Override Void SpawnHeadlights ()
 	{
 		Headlights.Push (SpawnVehicleHeadlight (Self,(32,32,24),spotlightangles:(20,30)));
 		Headlights.Push (SpawnVehicleHeadlight (Self,(32,-32,24),spotlightangles:(20,30)));
+	}
+	
+	Override Bool StayStillAndShoot(Actor CheckSightFrom) {Return False;}
+	
+	//This simply returns true so that the vehicles doesn't always run away from all enemies. Even if the chassis itself technically has no attack.
+	Override Bool CanAttack()
+	{
+		If (Turret)
+			Return True;
+		
+		Return False;
 	}
 	
 	Override Void Tick()
@@ -158,7 +172,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
 				bStandStill = True;
-				A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
+				A_LookEx (0,0,MaxTargetRange,DEFAULT_HEARDISTANCE);
 				bStandStill = False;
 			}
 			Loop;
@@ -168,7 +182,9 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
-				A_Wander();
+				MVP_Chase (followdist:256);
+				bFrightened = bMissileMore = False;
+				NearestEnemy = Null;
 				If (!User_NoCorpseCrush) MVP_CrushCorpses ();
 			}
 			Loop;

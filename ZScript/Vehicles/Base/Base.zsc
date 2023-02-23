@@ -1,3 +1,6 @@
+//TODO:
+//Replace the hacky shit in MVP_Chase involving the MissileMore flag and MinMissileChance with a new aggression multiplier in MVP_CheckMissileRange.
+//Also replace all instances of the native CheckMissileRange with the MVP one. Since that'll be the function that actually uses the aggression multiplier.
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -289,7 +292,6 @@ Class MVP_BaseVehicle : Actor Abstract
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
 	Actor NearestEnemy; //The enemy closest to the vehicle, if any.
 	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
-	Bool AlreadyRetreating; //The vehicle is already running away from something that doesn't involve the enemy avoiding code, so don't bother to run from nearby enemies.
 	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight. Is also used to determine how long turreted vehicles stay in one place.
 	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
 	Int CurrentOrder; //The current order the vehicle is following.

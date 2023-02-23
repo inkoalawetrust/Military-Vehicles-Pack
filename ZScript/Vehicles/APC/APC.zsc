@@ -104,9 +104,9 @@ Class MVP_APC : MVP_BaseVehicle
 	
 	Override Void UserVariableDefaults()
 	{
+		If (User_RetreatDistance == 0) User_RetreatDistance = 1024;
 		Super.UserVariableDefaults();
 		If (User_MarineAmount == 0) User_MarineAmount = 8;
-		If (User_RetreatDistance == 0) User_RetreatDistance = 1024;
 	}
 	
 	Override Bool CanAttack ()
@@ -129,8 +129,7 @@ Class MVP_APC : MVP_BaseVehicle
 		}
 		
 		//Why is this even here ? No fucking clue, this is why I comment half the codebase.
-		bFrightened = AlreadyRetreating = bMissileMore = bMissileEvenMore = False;
-		NearestEnemy = Null;
+		bFrightened = bMissileMore = bMissileEvenMore = False;
 		Return False;
 	}
 	

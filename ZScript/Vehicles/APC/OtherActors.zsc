@@ -104,7 +104,6 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
-				RotateToVehicle (RTVF_SOUNDONLY);
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Right shot
 			{
@@ -113,7 +112,6 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
 				Frame = UpdateTurretElevation (4,1,7,10); //E, B, H, K
-				RotateToVehicle (RTVF_SOUNDONLY);
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Left shot
 			{
@@ -122,7 +120,6 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
 				Frame = UpdateTurretElevation (5,2,8,11); //F, C, I, L
-				RotateToVehicle (RTVF_SOUNDONLY);
 			}
 			APC3 # 1
 			{
@@ -144,7 +141,6 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				HandleChaseTimer();
 				
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
-				RotateToVehicle (RTVF_SOUNDONLY);
 				Return State (Null);
 			}
 			APC3 # 0 A_MonsterRefire (128,"See");
