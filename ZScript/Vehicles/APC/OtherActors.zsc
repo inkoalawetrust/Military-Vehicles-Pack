@@ -12,7 +12,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		FriendlySeeBlocks 80; //A bit over 10000 map unit sight range, useful for vehicles with actual guns to attack with.
 		MVP_BaseTurret.MaximumPitch -60;
 		MVP_BaseTurret.MinimumPitch 20;
-		MVP_BaseTurret.TurnSoundRadius 2;
+		MVP_BaseTurret.TurnSoundRadius 4;
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
 		DamageFactor "Autocannon", 0.8;
@@ -62,18 +62,8 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Super.PostBeginPlay();
 		
 		MissileState = FindState ("Fire");
+		
 	}
-	
-	/*Override Void Tick()
-	{
-		Double OldAngle = Angle;
-		Super.Tick();
-		
-		If (IsFrozen()) Return;
-		
-		If (AbsAngle (Angle,OldAngle) >= 2 && LastEnemyDelay)
-			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
-	}*/
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
@@ -105,7 +95,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
 				MVP_Chase (MVPC_NOCHASE);
-				UpdateLastEnemyTimer();
+				UpdateTurretSnapTimer();
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
 			Loop;
@@ -119,7 +109,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			APC3 # 3 Light ("50CalFiringLight") Bright //Right shot
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				//A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
 				Frame = UpdateTurretElevation (4,1,7,10); //E, B, H, K
@@ -128,7 +118,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			APC3 # 3 Light ("50CalFiringLight") Bright //Left shot
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				//A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
 				Frame = UpdateTurretElevation (5,2,8,11); //F, C, I, L
@@ -256,17 +246,6 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 	
 	Bool FocusFire; //Turned on by the APC, then passed over to the small MG on the autocannon.
 	
-	/*Override Void Tick()
-	{
-		Double OldAngle = Angle;
-		MVP_BaseTurret.Tick();
-		
-		If (IsFrozen()) Return;
-		
-		If (AbsAngle (Angle,OldAngle) >= 4 && LastEnemyDelay)
-			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.8);
-	}*/
-	
 	Override Void PostBeginPlay ()
 	{
 		Super.PostBeginPlay();
@@ -337,7 +316,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
 				MVP_Chase (MVPC_NOCHASE);
-				UpdateLastEnemyTimer();
+				UpdateTurretSnapTimer();
 				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
 			Loop;
@@ -518,7 +497,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
 				MVP_Chase (MVPC_NOCHASE);
-				UpdateLastEnemyTimer();
+				UpdateTurretSnapTimer();
 				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
 			Loop;
@@ -584,7 +563,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				If (Master)
 				{
 					Angle = Master.Angle;
-					DeathAngleOffset = 0; //Also remove the angle offset relative to the autocannon that was collected in Die().
+					TurretRotationOffset = 0; //Also remove the angle offset relative to the autocannon that was collected in Die().
 				}
 				RotateToVehicle (RTVF_NOTARGETCHECK);
 				Actor Boom = Spawn ("MVP_Explosion",Pos);

@@ -1,6 +1,3 @@
-//TODO:
-//Rename LastEnemyDelay and DeathAngleOffset to something more generic. Like TurretRotationOffset and TurretSnapDelay.
-
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -358,7 +355,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		MaxStepHeight 0;
 		Mass 500;
 		MVP_BaseTurret.TurnAmount 0.15;
-		MVP_BaseTurret.TurnSoundRadius 0.6;
+		MVP_BaseTurret.TurnSoundRadius 2;
 		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "Grenade", 0.9;
@@ -388,14 +385,14 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	Property MinimumPitch : MinPitch; //The minimum pitch the turret can go down to.
 	Property TurnAmount : TurnAmount; //How much the turret turns to face the vehicle when it's not snapping into position.
 	Property TurnSoundRadius : TurnSoundRadius; //How much the turret has to turn since last tick for the sound to play.
-	Property TurnSound : TurnSound;
+	Property TurnSound : TurnSound; //The sound the turret makes when it turns.
 	
-	Int LastEnemyDelay; //Used for the turret rotating code, to make it so the turret snaps back to the vehicle after some time of not having a target.
-	Double DeathAngleOffset; //Offsets the rotation of the turrets by this amount when they are killed. Also used by turret props.
+	Int TurretSnapDelay; //Used for the turret rotating code, to make it so the turret snaps back to the vehicle after some time of not having a target.
+	Double TurretRotationOffset; //Can be used to offset the rotation of the turret by this exact amount. Used by turrets when they are destroyed, and by prop turrets.
 	Vector3 LastEnemyPosition; //Used by the target prediction. If the turret has a target with no velocity, it grabs their last position every tick to compare it to the current position.
 	Vector3 CurrentEnemyPosition;
 	
-	Double OldAngle; //The turrets' angle in the last tick.
+	Double OldSoundAngle; //The turrets' angle in the last tick. Used for the turret turning sound.
 	
 	Enum ElevationStates
 	{
@@ -440,7 +437,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Override Void Tick()
 	{
-		OldAngle = Angle;
+		OldSoundAngle = Angle;
 		Super.Tick();
 		
 		//Keeps track of the current targets' position for the target prediction code.
@@ -454,6 +451,15 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		
 		If (IsFrozen()) Return;
 		
+		//Play the turrets' mechanical whirring sound whenever it's not dead.
+		If (TurnSound && !IsDead(Self))
+		{
+			//But only play it when the angle has changed a certain amount.
+			If (AbsAngle (Angle,OldSoundAngle) >= TurnSoundRadius
+			&& !(Master && AbsAngle(Master.Angle,Angle) <= 0.25)) //Stops the turn sound from playing when the turret is snapping to the vehicles' angle.
+				A_StartSound (TurnSound,CHAN_BODY,0,0.8,0.8);
+		}
+		
 		ElevationState = IsOverPitchLimits();
 		If (ElevationState != ELEVATION_INBOUNDS) Pitch = Clamp (Pitch,MaxPitch,MinPitch); //Turrets can't move past their elevation limits.
 		
@@ -466,13 +472,13 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
-		If (Master && !(Self Is "MVP_BaseTurretProp")) //Prop turrets use DeathAngleOffset differently.
-			DeathAngleOffset = DeltaAngle (Master.Angle,Angle);
+		If (Master && !(Self Is "MVP_BaseTurretProp")) //Prop turrets use TurretRotationOffset differently.
+			TurretRotationOffset = DeltaAngle (Master.Angle,Angle);
 		
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		bShootable = bNotAutoaimed = True;
 		If (bFallOnDeath) bNoSpriteShadow = False;
-		LastEnemyDelay = 0;
+		TurretSnapDelay = 0;
 	}
 	
 	Override Int DamageMobj (Actor Inflictor, Actor Source, Int Damage, Name MOD, Int Flags, Double Angle)

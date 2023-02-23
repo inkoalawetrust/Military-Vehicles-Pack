@@ -52,7 +52,7 @@ Class MVP_APCProp : MVP_BaseProp
 				Turret.SpawnFlags = SpawnFlags;
 				Turret.HandleSpawnFlags();
 				Turret.Angle = Angle;
-				Turret.DeathAngleOffset = User_TurretAngle;
+				Turret.TurretRotationOffset = User_TurretAngle;
 				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (45,-90);
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
@@ -67,7 +67,7 @@ Class MVP_APCProp : MVP_BaseProp
 				Turret.SpawnFlags = SpawnFlags;
 				Turret.HandleSpawnFlags();
 				Turret.Angle = Angle;
-				Turret.DeathAngleOffset = User_TurretAngle;
+				Turret.TurretRotationOffset = User_TurretAngle;
 				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (45,-90);
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
@@ -370,7 +370,7 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 				If (Master)
 				{
 					Angle = Master.Angle;
-					DeathAngleOffset = 0; //Also remove the angle offset relative to the autocannon that was collected in Die().
+					TurretRotationOffset = 0; //Also remove the angle offset relative to the autocannon that was collected in Die().
 				}
 				RotateToVehicle (RTVF_RELATIVEONLY);
 				Actor Boom = Spawn ("MVP_Explosion",Pos);
@@ -469,7 +469,7 @@ Class MVP_APCWreck : MVP_APCProp
 				Turret.HandleSpawnFlags();
 				MVP_APCMachineGunPropDead(Turret).WreckState = HandleTurretState();
 				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
-				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
+				Turret.TurretRotationOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
 			}
@@ -486,7 +486,7 @@ Class MVP_APCWreck : MVP_APCProp
 				MVP_APCAutocannonPropDead(Turret).HatchOpen = User_CannonHatchOpen;
 				If (User_NoSmallMG) Turret.Turret = Null;
 				Turret.Angle = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle;
-				Turret.DeathAngleOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
+				Turret.TurretRotationOffset = (User_TurretAngle != -1) ? Angle+User_TurretAngle : RandomAngle; //This offset needs to be stored too.
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
 			}

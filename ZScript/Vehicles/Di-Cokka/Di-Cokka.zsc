@@ -173,7 +173,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			}
 			Loop;
 		Pain:
-			MSV1 # 12
+			MSV1 # 20
 			{
 				A_StopSound (CHAN_IDLING);
 				A_StopSound (CHAN_MOVING);
@@ -182,7 +182,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			MSV1 # 0 A_JumpIf (ExtremePain,1); //Flinch for a bit longer.
 			Goto See;
 			
-			MSV1 # 8 {ExtremePain = False;}
+			MSV1 # 16 {ExtremePain = False;}
 			Goto See;
 	}
 }
@@ -214,6 +214,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		PainChance "MarineRifle", 45;
 		PainThreshold 10;
 		PainSound "Vehicle/Di-Cokka/Pain";
+		MVP_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
 		DamageFactor "Melee", 1;
@@ -261,17 +262,6 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		MissileState = FindState ("Fire");
 	}
 	
-	Override Void Tick()
-	{
-		Double OldAngle = Angle;
-		Super.Tick();
-		
-		If (IsFrozen()) Return;
-		
-		If (AbsAngle (Angle,OldAngle) >= 2 && LastEnemyDelay)
-			A_StartSound ("Vehicle/APC/TurretTurn",attenuation:0.85);
-	}
-	
 	States
 	{
 		Spawn:
@@ -301,15 +291,16 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 M 6;
 			Goto See;
 			//If in extreme pain, push the turret back even more.
-			MSV1 N 6;
+			MSV1 N 6 a_log ("aaaaaaaaaaaaaaa");
 			MSV1 OP 8;
 			MSV1 Q Random (24,48); //K.O.
 			MSV1 Q 0
 			{
 				ExtremePain = False;
-				Angle -= 45; //Change the turrets' angle to match the angle it visually ended up at.
-				LastEnemyDelay = 70; //Give the turret time to slowly rotate around, instead of snapping back to its masters' angle.
+				Angle -= 135; //Change the turrets' angle to match the angle it visually ended up at.
+				TurretSnapDelay = 70; //Give the turret time to slowly rotate around, instead of snapping back to its masters' angle.
 			}
+			//MSV1 G 200; //DEBUG: Just here to make sure the angle change above works.
 			Goto See;
 	}
 }
