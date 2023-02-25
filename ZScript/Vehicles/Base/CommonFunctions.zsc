@@ -148,6 +148,12 @@ Mixin Class MVP_CheckFunctions
 		Return (!Other.bIsMonster && !Other.Player);
 	}
 	
+	//TODO: Add a check for thrugroups. One day, I've never used them, and I doubt anyone has either lmao.
+	Bool IsCollidable (Actor Other)
+	{
+		Return (Other.bSolid && !Other.bNoBlockmap);
+	}
+	
 	Bool IsPatrolling (Actor Other)
 	{
 		If (!Other) Return False;
@@ -620,13 +626,13 @@ Extend Class MVP_BaseVehicle
 		If (bMissileMore) Dist *= 0.5;
 		If (bMissileEvenMore) Dist *= 0.125;
 		Dist *= AggressionMultiplier;
-		console.printf ("dist is %f",dist);
+		//console.printf ("dist is %f",dist);
 		Int MMC = Int(MinMissileChance * G_SkillPropertyFloat(SKILLP_Aggressiveness));
 		Return Random2[PR_CheckMissileRange]() >= Min(Int(Dist), MMC);
 	}
 	
 	//Used to make vehicles able to run over and grind corpses like crushers.
-	Void MVP_CrushCorpses ()
+	Void MVP_CrushCorpses (Double RadiusMultiplier = 1.75)
 	{
 		BlockThingsIterator Crusher = BlockThingsIterator.Create (Self);
 		Actor Mobj;
@@ -642,7 +648,7 @@ Extend Class MVP_BaseVehicle
 			If (Mobj.Pos.Z > Mobj.FloorZ) Continue; //Corpse is off the ground. Like if it's falling.
 			If (Mobj.Default.bFloat) Continue; //Don't crush floating corpses, particularly recently killed Lost Souls, which end up producing floating gibs.
 			If (Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
-			If (Distance3DSquared (Mobj) > ((Radius*2)*1.75) * ((Radius*2)*1.75)) Continue;
+			If (Distance3DSquared (Mobj) > ((Radius*2)*RadiusMultiplier) * ((Radius*2)*RadiusMultiplier)) Continue;
 			
 			Mobj.Grind (False); //Crush corpse, but not items.
 		}

@@ -102,12 +102,12 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Fire:
 			APC3 ###### 1
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				A_FaceTarget(0,0,flags:FAF_MIDDLE);
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Right shot
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				A_FaceTarget(0,0,flags:FAF_MIDDLE);
 				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
@@ -115,7 +115,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Left shot
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				A_FaceTarget(0,0,flags:FAF_MIDDLE);
 				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
@@ -123,7 +123,8 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			}
 			APC3 # 1
 			{
-				//If you have no target, or it's dead, or it's too high up or low down for you to shoot.
+				A_FaceTarget(0,0,flags:FAF_MIDDLE);
+				//If you have no target, or it's dead.
 				If (!Target || IsDead (Target))
 				{
 					A_ClearTarget();
@@ -188,7 +189,7 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 		
 		If (!Shooter) Return Trace_Stop; //Not sure if this should return BadLOF too.
 		
-		If (Mobj == Shooter || Mobj == Shooter.Master) Return Trace_Skip;
+		If (Mobj == Shooter.Master) Return Trace_Skip;
 		
 		//The target is in the line of fire. Shoot them anyway.
 		If (Mobj == Shooter.Target)
@@ -197,8 +198,8 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 		Bool IsEnemy = Shooter.IsHostile(Mobj); //Caching
 		
 		//Return BadLOF if the actor the trace found would stop the .50 cal round from ripping. Except if it's another enemy anyway.
-		If (!IsEnemy && CantRipActor (Mobj,FiftyCalRipLevel))
-		{console.printf ("mobj is %s",mobj.getclassname());
+		If ((IsInanimateObject(Mobj) || !IsEnemy) && CantRipActor (Mobj,FiftyCalRipLevel))
+		{console.printf ("unrippable mobj is %s",mobj.getclassname());
 			BadLOF = True;
 			Return Trace_Stop;
 		}
@@ -210,12 +211,19 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 			Return Trace_Stop;
 		}
 		
-		//Self explanatory.
+		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
 		If (BlockingLineInTheWay (Results.HitLine,0))
 		{console.printf ("a line is in the way.");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
+		
+		If (HitLevelGeometry (Results))
+		{console.printf ("level geometry is in the way.");
+			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
 		Return Trace_Skip;
 	}
 }
@@ -267,10 +275,11 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		
 		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
 		Check.Shooter = Self;
+		Check.SplashRadius = 128;
 		Check.Trace ((Pos.X,Pos.Y,Pos.Z+12),CurSector,Direction,Distance,0);
 		
 		If (Check.BadLOF)
-		{
+		{a_log ("badloaf");
 			bDontStayAround = True;
 			Check.Destroy();
 			Return False;
@@ -307,7 +316,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			Loop;
 		See:
 			APC2 # 1
-			{a_log ("cannon in the see state");
+			{//a_log ("cannon in the see state");
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
@@ -319,12 +328,12 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		Fire:
 			APC2 ###### 1
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				A_FaceTarget (0,0,flags:FAF_MIDDLE);
 				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 			}
 			APC2 # 3 Light ("AutocannonFlash") Bright
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				A_FaceTarget (0,0,flags:FAF_MIDDLE);
 				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
 				Actor Proj = A_SpawnProjectile ("MVP_AutocannonShell",16,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				HandleTargetPrediction (Proj,(0.3,-0.3),(0.45,-0.45),768);
@@ -338,6 +347,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			}
 			APC2 ### 8
 			{
+				A_FaceTarget(0,0,flags:FAF_MIDDLE);
 				//If you have no target, or it's dead.
 				If (!Target || IsDead (Target))
 				{
@@ -358,7 +368,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 				Return State (Null);
 			}
-			APC2 # 0 A_MonsterRefire (10,"See");
+			APC2 # 0 MVP_TurretRefire (10,"See");
 			Goto Fire+6;
 		Death: //When TG5 finishes the sprites for the gunner getting out the turret, add code to make them work here.
 			APC2 Q 0
@@ -488,7 +498,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			Loop;
 		See:
 			APC2 # 1
-			{a_log ("small mg in the see state");
+			{//a_log ("small mg in the see state");
 				A_FaceTarget (6,6,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
@@ -500,12 +510,12 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		Fire:
 			APC2 ###### 1
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				A_FaceTarget (0,0,flags:FAF_MIDDLE);
 				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 			}
 			APC2 # 4 Light ("RifleFiringLight") Bright
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				A_FaceTarget (0,0,flags:FAF_MIDDLE);
 				
 				//Play at half the volume if the autocannon is playing its' firing sound. To emphasize its' volume.
 				If (Master && Master.IsActorPlayingSound (CHAN_WEAPON))
@@ -519,6 +529,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			}
 			APC2 # 1
 			{
+				A_FaceTarget(0,0,flags:FAF_MIDDLE);
 				//If you have no target, or it's dead.
 				If (!Target || IsDead (Target))
 				{
@@ -548,7 +559,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 				Return State (Null);
 			}
-			APC2 # 0 A_MonsterRefire (128,"See");
+			APC2 # 0 MVP_TurretRefire (128,"See");
 			Goto Fire+6;
 		Death:
 			APC2 V 20
@@ -838,7 +849,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim) Return 1;
-		If (Target && (Victim.bIsMonster || Victim.Player) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
 		
 		If (Victim.SpawnHealth() <= 400) bExtremeDeath = True; //Always gib weak enough enemies.
 		Else bExtremeDeath = False;

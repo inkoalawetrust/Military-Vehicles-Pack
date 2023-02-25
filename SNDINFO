@@ -18,6 +18,7 @@ SFX/BulletRicochet3 "Sounds/SFX/BulletRicochet3.ogg"
 SFX/BulletRicochet4 "Sounds/SFX/BulletRicochet4.ogg"
 //SFX/BulletRicochet5 "Sounds/SFX/BulletRicochet5.ogg"
 Weapon/RadioCall "Sounds/SFX/RadioCall.ogg"
+Weapon/DebugFire "Sounds/SFX/DebugGunFire.ogg"
 
 $Random SFX/MSExplosion
 {

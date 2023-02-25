@@ -74,7 +74,7 @@ Extend Class MVP_BaseTurret
 	}
 	
 	//Handles making the vehicles lead their shots based on their targets' movement, regardless of whether or not it's a player or monster.
-	//Projectile: The projectile to spawn.
+	//Projectile: The projectile to modify.
 	//SpreadHorz/SpreadVert: Maximum and minimum horizontal and vertical spread, stored in Vector2s.
 	//MinDist: The minimum distance below which target prediction won't be used. And the projectile will be fired straight at the target instead.
 	Void HandleTargetPrediction (Actor Projectile, Vector2 SpreadHorz = (0,0), Vector2 SpreadVert = (0,0), Double MinDist = 1024)
@@ -128,6 +128,20 @@ Extend Class MVP_BaseTurret
 		Projectile.Angle += FRandom (SpreadHorz.X,SpreadHorz.Y);
 		Projectile.Pitch += FRandom (SpreadVert.X,SpreadVert.Y);
 		Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
+	}
+	
+	State MVP_TurretRefire (Int Chance, StateLabel AbortState, Bool DontFaceTarget = False)
+	{
+		If (!DontFaceTarget)
+			A_FaceTarget();
+			
+		If (Random2[pr_monsterrefire]() < Chance)
+			Return State (Null);
+		
+		If (!Target /*|| HitFriend()*/ || IsDead (Target) || !CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING|SF_SEEPASTSHOOTABLELINES))
+			Return FindState (AbortState);
+		
+		Return State (Null);
 	}
 	
 	//This function can be used by turrets to make them able to pick different targets from their master, instead of chasing or firing at the same target.
@@ -184,6 +198,78 @@ Extend Class MVP_BaseTurret
 	}
 }
 
+//Note: This is a pistol that fires a specified line of fire raycast. Used to debug if the LineTracer in question returns BadLOF properly.
+Class MVP_LOFDebugGun : Pistol
+{
+	Default
+	{
+		Weapon.SlotNumber 1;
+	}
+	
+	//Change the tracer spawned by New() to test different line of fire checks.
+	Action Void A_FireDebugTrace ()
+	{
+		A_StartSound ("Weapon/DebugFire",CHAN_WEAPON);
+		Let Check = New ("MVP_ProjectileLOFCheck");
+		
+		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		Vector3 ShotPos =(Pos.X,Pos.Y,Pos.Z+(Height/2));
+		
+		Double Distance = PLAYERMISSILERANGE; //8192 map units
+		Check.Shooter = Self;console.printf ("shooter is %s",check.shooter.getclassname());
+		Check.Trace (ShotPos,CurSector,Direction,Distance,0);
+		
+		vector3 HitPos = Check.Results.HitPos;
+		Vector3 Path = Level.Vec3Diff (ShotPos,Check.Results.HitPos);
+		Double PathDist = Check.Results.Distance;
+		Path /= PathDist;
+		If (!(PathDist <= 1))
+		{
+			For( Double I = 0; I < PathDist; I += 4)
+			{
+				FSpawnParticleParams P;
+				P.Color1 = "White";
+				P.Style = STYLE_None;
+				P.Lifetime = GameTicRate/2;
+				P.Pos = Level.Vec3Offset (ShotPos,Path*I);
+				P.Size = 4;
+				P.StartAlpha = 1;
+				P.FadeStep = -1;
+				P.Flags = SPF_FULLBRIGHT;
+				Level.SpawnParticle (P);
+			}
+		}
+		
+		Console.Printf ("FirePos %d %d %d, hitpos %d %d %d",shotpos.x,shotpos.y,shotpos.z,hitpos.x,hitpos.y,hitpos.z);
+		
+		If (Check.BadLOF)
+		{
+			A_Log ("MVP_LOFDebugGun: The line of fire check returned a bad LOF.");
+			Check.Destroy();
+			Return;
+		}
+		
+		A_Log ("MVP_LOFDebugGun: The line of fire check returned a good LOF.");
+		Check.Destroy();
+		Return;
+	}
+	States
+	{
+		Select:
+			TNT1 A 0 A_Overlay (666,"ToolGunLoop");
+			TNT1 A 1 A_Raise (100);
+			Goto Select+1;
+		Fire:
+			TNT1 A 4 A_FireDebugTrace();
+			TNT1 A 16;
+			Goto Ready;
+		ToolgunLoop:
+			LDBG A 12;
+			LDBG BCDE 8;
+			Loop;
+	}
+}
+
 //This is the base class for making custom LineTracer-based line of fire checks for vehicles. This is better than the old method of a do-all LOF check method.
 //It contains some basic LOF-related checks methods. Along with access to the MVPs' generic actor checks.
 Class MVP_LOFRaycast : LineTracer
@@ -198,7 +284,7 @@ Class MVP_LOFRaycast : LineTracer
 	Bool CanShootAtProp (Actor Other, Int HealthThreshold = 400)
 	{
 		If (!Other || !Shooter) Return False;
-		If (HealthThreshold <= 0) Return False; //No health limit specified.
+		If (HealthThreshold <= 0) Return True; //No health limit specified. You can shoot it.
 		
 		//Actor is an destructible inanimate object. And it's health is at or below the minimum threshold.
 		If (IsInanimateObject (Other) && !IsIndestructible (Other) && Other.Health <= HealthThreshold)
@@ -236,29 +322,111 @@ Class MVP_LOFRaycast : LineTracer
 		BLITW_HitscansToo 	= 1 << 0,	//Check for hitscan blocking lines too.
 		BLITW_HitscansOnly	= 1 << 1	//Check ONLY for hitscan blocking lines.
 	}
+	
 	//Is the line the trace went through blocking ?
 	Bool BlockingLineInTheWay (Line Blocking, Int Flags)
 	{
 		If (!Blocking) Return False;
 		
+		//Stop at sight blocking lines (Can't see past them) and everything-blocking lines.
+		If (Blocking.Flags & Line.ML_BLOCKEVERYTHING || Blocking.Flags & Line.ML_BLOCKSIGHT)
+			Return True;
+		
 		If (!Flags)
-			If (Blocking.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKEVERYTHING))
+			If (Blocking.Flags & Line.ML_BLOCKPROJECTILE)
 				Return True;
 		Else If (Flags & BLITW_HitscansToo)
-			If (Blocking.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKHITSCAN | Line.ML_BLOCKEVERYTHING))
+			If (Blocking.Flags & (Line.ML_BLOCKPROJECTILE | Line.ML_BLOCKHITSCAN))
 				Return True;
 		Else If (Flags & BLITW_HitscansOnly)
-			If (Blocking.Flags & (Line.ML_BLOCKHITSCAN | Line.ML_BLOCKEVERYTHING))
+			If (Blocking.Flags & Line.ML_BLOCKHITSCAN)
 				Return True;
 		
 		Return False;
 	}
+	
+	//Check if the trace hit any level geometry. This is very useful for all LOF checks, except if the projectile can literally go through level geometry.
+	//BUG: This check fails on 3D floors with FF_THINFLOOR. This however seems to be a GZDoom bug. And I'm not knowledgeable enough to PR a fix lol.
+	//TODO: Check for collision with non-shoot through 3D middle textures. The only method for doing this is not exposed to ZScript, so I need to PR it at some point.
+	Bool HitLevelGeometry (TraceResults Result)
+	{
+		//Hit a floor or ceiling.
+		If (Result.HitType == Trace_HitFloor || Result.HitType == Trace_HitCeiling)
+			Return True;
+		
+		If (Result.HitLine)
+		{
+			//Hit a linedef with void space behind it.
+			If (Result.HitLine.Sidedef[Line.Back] == Null)
+				Return True;
+			
+			//Hit a raised floor or lowered ceiling wall.
+			If (Result.Tier != TIER_Middle)
+				Return True;
+		}
+		
+		Return False;
+	}
+	
+	//The object scope system doesn't like calling useful functions like CheckSight. So here is the Wish.com version.
+	Bool CheckSightTo (Actor Origin, Actor Other, Double Range)
+	{
+		If (!Other) Return False;
+		
+		Let Check = New ("MVP_BasicSightCheck");
+		Vector3 SightPos = (Origin.Pos.XY,Origin.Pos.Z + Origin.Height * 0.75);
+		
+		Check.Shooter = Origin;
+		Check.SightTarget = Other;
+		
+		Check.Trace(SightPos,Origin.CurSector,Origin.Vec3To(Other),Range,0);
+		
+		Bool GoodLOS = Check.GoodLOS;
+		Check.Destroy();
+		
+		Return GoodLOS;
+	}
+}
+
+//The Khyber Pass version of P_CheckSight(). Brought to you by the object scope system.
+Class MVP_BasicSightCheck : MVP_LOFRaycast
+{
+	Bool GoodLOS; //BadLOF's good cousin.
+	Actor SightTarget; //Who are we even looking for ?
+	Override ETraceStatus TraceCallback()
+	{
+		Actor Mobj = Results.HitActor;
+		
+		//No shooter, sight check failed.
+		If (!Shooter)
+			Return Trace_Stop;
+		
+		//Level geometry in the way, check failed.
+		If (HitLevelGeometry (Results))
+			{console.printf ("cant see past level geometry");Return Trace_Stop;}
+		
+		//Sight or everything blocking lines in the way, check failed.
+		If (Results.HitLine && (Results.HitLine.Flags & Line.ML_BLOCKSIGHT || Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING))
+			{console.printf ("cant see past sight blockers");Return Trace_Stop;}
+		
+		//Ladies and gentlemen, we got him.
+		If (Mobj == SightTarget)
+		{console.printf ("epic sight check win");
+			GoodLOS = True;
+			Return Trace_Stop;
+		}
+		
+		Return Trace_Skip;
+	}
 }
 
 //Generic projectile LOF check for non-ripping projectiles, should be applicable to most projectiles.
+//PropHealthThreshold: If a destructible prop actor with this much health or less is standing the way, then shoot at it anyway.
+//SlashRadius: If the check hit level geometry, but the target is within the specified specified distance from the hit spot. Then don't return BadLOF.
 Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 {
 	Int PropHealthThreshold;
+	Double SplashRadius;
 	Override ETraceStatus TraceCallback()
 	{
 		If (PropHealthThreshold == 0) PropHealthThreshold = 400; //Default value, since it can't be set with a normal variable decleration.
@@ -273,30 +441,56 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 			Return Trace_Stop;
 		
 		//Indestructible prop in the way.
-		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj) || !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,400))
-		{
+		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj))
+		{console.printf ("immovable object vs stoppable force");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Destructible prop, but far too strong to shoot through in a timely manner.
-		If (!IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
-		{
+		If (IsCollidable (Mobj) && !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
+		{console.printf ("this is too much");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Solid corpse of an enemy in the way, shell can't go through.
 		If (Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
-		{
+		{console.printf ("enemy corpse.");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
-		//Self explanatory.
+		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
 		If (BlockingLineInTheWay (Results.HitLine,0))
-		{
+		{console.printf ("blocking line");
 			BadLOF = True;
+			Return Trace_Stop;
+		}
+		
+		//Level geometry is in the way.
+		If (HitLevelGeometry (Results))
+		{
+			console.printf ("hit the map");
+			//Don't return BadLOF if the target would be caught in the blast radius anyway. Unless they are immune to splash damage of course.
+			Double Distance;
+			If (SplashRadius > 0 && Shooter.Target && !Shooter.Target.bNoRadiusDmg && Distance <= SplashRadius)
+			{
+				Distance = Level.Vec3Diff (Shooter.Target.Pos,Results.HitPos).Length();;
+				If (CheckSightTo (Shooter,Shooter.Target,Distance))
+				{
+					console.printf ("caught in the blast");
+					Return Trace_Stop;
+				}
+				Else
+				{
+					console.printf ("not caught in the blast");
+					BadLOF = True;
+					Return Trace_Stop;
+				}
+			}
+			Else
+				BadLOF = True;
 			Return Trace_Stop;
 		}
 		

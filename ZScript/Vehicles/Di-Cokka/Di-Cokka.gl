@@ -1,0 +1,47 @@
+PointLight MSExplosion1
+{
+	Color 1.0 1.0 1.0
+	Size 512
+}
+
+PointLight MSExplosion2
+{
+	Color 0.97 0.96 0.50
+	Size 192
+}
+
+PointLight MSExplosion3
+{
+	Color 0.97 0.96 0.50
+	Size 224
+}
+
+PointLight MSExplosion4
+{
+	Color 0.97 0.96 0.50
+	Size 260
+}
+
+PointLight MSExplosion5
+{
+	Color 0.97 0.96 0.50
+	Size 256
+}
+
+Object MVP_MetalSlugExplosion
+{
+	Frame MSX1B0 {Light MSExplosion1}
+	Frame MSX2C0 {Light MSExplosion2}
+	Frame MSX2D0 {Light MSExplosion2}
+	Frame MSX2E0 {Light MSExplosion3}
+	Frame MSX2F0 {Light MSExplosion4}
+	Frame MSX2G0 {Light MSExplosion5}
+	Frame MSX2H0 {Light MSExplosion5}
+	Frame MSX2I0 {Light MSExplosion5}
+	Frame MSX2J0 {Light MSExplosion4}
+	Frame MSX2K0 {Light MSExplosion4}
+	Frame MSX2L0 {Light MSExplosion3}
+	Frame MSX2M0 {Light MSExplosion3}
+	Frame MSX2N0 {Light MSExplosion2}
+	Frame MSX2O0 {Light MSExplosion2}
+}

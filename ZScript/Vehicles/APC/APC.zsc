@@ -146,7 +146,7 @@ Class MVP_APC : MVP_BaseVehicle
 			&& !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling(Self) && bChaseGoal))
 			{
 				If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 40 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
-				{a_log ("running check");
+				{//a_log ("running check");
 					If (MVP_BaseVehicle.StayStillAndShoot (CheckSightFrom)) //Run basic distance checks.
 					{a_log ("bing chilling");
 						A_StopSound (CHAN_MOVING);
@@ -198,8 +198,6 @@ Class MVP_APC : MVP_BaseVehicle
 				
 				MVP_Chase (MVPC_ATTACKWHENSCARED|(NoRandomTurn ? MVPC_NORANDOMTURN : 0)|(User_CrushMode == CRUSH_ACTIVE ? MVPC_CORPSESEEKER : 0),512);
 				If (User_CrushMode != CRUSH_NONE) MVP_CrushCorpses();
-				
-				Return State (Null);
 			}
 			Loop;
 		DeployMarines:
