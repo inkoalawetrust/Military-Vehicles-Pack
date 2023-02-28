@@ -142,16 +142,16 @@ Class MVP_APC : MVP_BaseVehicle
 		Else Range = MaxTargetRange;
 		If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
 		{
-			If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && !Turret.bDontStayAround && (Target || Turret.Target) && Turret.ElevationState == Turret.ELEVATION_INBOUNDS
-			&& !(IsPowerful (Target) || IsPowerful (Turret.Target)) && !(IsPatrolling(Self) && bChaseGoal))
+			If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)))
 			{
-				If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 40 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
-				{//a_log ("running check");
-					If (MVP_BaseVehicle.StayStillAndShoot (CheckSightFrom)) //Run basic distance checks.
-					{a_log ("bing chilling");
+				If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
+				{
+					If (MVP_BaseVehicle.StayStillAndShoot (CheckSightFrom)) //Run basic checks.
+					{
 						A_StopSound (CHAN_MOVING);
 						A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
 						ChaseTimer = Random (16,48);
+						StayStillDelay = ChaseTimer+(Random (2,4)*GameTicRate);
 						SetStateLabel ("StickAround");
 						Return True;
 					}

@@ -128,10 +128,15 @@ Class MVP_BaseVehicle : Actor Abstract
 	//CheckSightFrom is the actor whose sight to their target is checked, to determine if the vehicle can shoot.
 	Virtual Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
+		If (StayStillDelay) Return False; //Too soon
+		If (Turret && Turret.bDontStayAround) Return False; //Turret told you to not move.
+		If (Turret && Turret.ElevationState != Turret.ELEVATION_INBOUNDS) Return False; //The turrets' target is too high up or low down to shoot.
+		If (IsPatrolling (Self) && bChaseGoal) Return False; //Don't stop if patrolling and "Don't Chase Goal" is on.
+		
 		Double Distance = (User_RetreatDistance > 0) ? User_RetreatDistance : 512; //Fall back to a distance of 512 MU if the vehicle is set to not retreat.
 		//Check if you are far enough from your nearest enemy or target.
-		If ((NearestEnemy && Distance3DSquared (NearestEnemy) >= (Distance*Distance)*1.2)
-		&& (Target && Distance3DSquared (Target) >= (Distance*Distance)*1.2))
+		Actor Whomstve = (NearestEnemy ? NearestEnemy : Target);
+		If ((Whomstve && Distance3DSquared (Whomstve) >= (Distance*Distance)*1.2))
 		{
 			If (CheckSightFrom.CheckSight (CheckSightFrom.Target))
 				Return True;
@@ -207,6 +212,9 @@ Class MVP_BaseVehicle : Actor Abstract
 		Super.Tick();
 		
 		If (IsFrozen()) Return;
+		
+		If (StayStillDelay)
+			{console.printf ("staystilldelay is %d",staystilldelay);StayStillDelay--;}
 		
 		If (!User_NoHeadlights)
 			HeadLightsOn = (CurSector && CurSector.LightLevel <= 104);
@@ -305,6 +313,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight. Is also used to determine how long turreted vehicles stay in one place.
 	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
 	Int CurrentOrder; //The current order the vehicle is following.
+	Int StayStillDelay; //How long before the vehicle can stand still to attack again.
 	Double AggressionMultiplier; //Can be used to further increase the chance of MVP_CheckMissileRange returning true. The LOWER it is the more frequent the attacking.
 
 	//Internal variables
@@ -344,8 +353,8 @@ Class MVP_BaseVehicle : Actor Abstract
 					Angle += RandomPick (75,80,85,90,95,10,105);
 			}
 			#### # 4 //If an enemy has gotten too close, the turret can't attack, or enough time has passed, then stop standing around.
-			{
-				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4) || !Turret.CanAttack())
+			{a_log ("bing chilling");
+				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4) || Turret && (!Turret.CanAttack() || Turret.bDontStayAround))
 				{
 					ChaseTimer = 0;
 					Return ResolveState ("See");

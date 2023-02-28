@@ -92,13 +92,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	{
 		//If you have dropped your marines, still have a turret the RNG is on your side, AND neither the turret or vehicle have a powerful target.
 		If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4 && (Target || Turret && Turret.Target)
-		&& !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 && !(IsPatrolling(Self) && bChaseGoal))
+		&& !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 )
 		{
 			If (MVP_BaseVehicle.StayStillAndShoot(CheckSightFrom))
 			{a_log ("taking a break");
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
 				ChaseTimer = Random (16,32);
+				StayStillDelay = ChaseTimer+(Random (2,4)*GameTicRate);
 				SetStateLabel ("StickAround");
 				Return True;
 			}

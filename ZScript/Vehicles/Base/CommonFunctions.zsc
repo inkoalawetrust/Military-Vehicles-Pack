@@ -154,10 +154,11 @@ Mixin Class MVP_CheckFunctions
 		Return (!Other.bIsMonster && !Other.Player);
 	}
 	
-	//TODO: Add a check for thrugroups. One day, I've never used them, and I doubt anyone has either lmao.
-	Bool IsCollidable (Actor Other)
+	Bool IsCollidable (Actor Other, Actor Caller = Null)
 	{
-		Return (Other.bSolid && !Other.bNoBlockmap);
+		Return ((Other.bSolid && !Other.bNoBlockmap)
+		//The ThruBits check is untested, since nobody uses ThruBits lmao.
+		&& !(Caller && Caller.bAllowThruBits && Other.bAllowThruBits && Caller.ThruBits & Other.ThruBits));
 	}
 	
 	Bool IsPatrolling (Actor Other)
@@ -237,7 +238,7 @@ Extend Class MVP_BaseVehicle
 			Return True;
 		
 		//Does the actor have 2500 health or more, is sufficiently large, or can reflect projectiles ?
-		If (Other.SpawnHealth() >= 2500 || (Other.Height >= 80 && Other.Radius >= 72) || Other.bReflective)
+		If ((Other.SpawnHealth() >= 2500 || Other.Health >= 2500) || (Other.Height >= 80 && Other.Radius >= 72) || Other.bReflective)
 			Return True;
 		
 		Return False;

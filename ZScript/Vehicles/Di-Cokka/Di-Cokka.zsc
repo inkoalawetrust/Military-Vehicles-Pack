@@ -1,6 +1,4 @@
 //TODO:
-//Make it so the turret rises up and then down to shoot. Might not do this, since unlike in Metal Slug, the Di-Cokka can aim up and down here.
-//In MS, the Di-Cokka can fire a burst of 3 shells, maybe add this as a somewhat rare alt attack ?
 //Make the prop and wrecked prop versions, the latter should also a have a variable to turn on the fire particles permanently.
 
 //The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
@@ -91,8 +89,22 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		Headlights.Push (SpawnVehicleHeadlight (Self,(32,-32,24),spotlightangles:(20,30)));
 	}
 	
-	//TODO: Add back the code for this virtual once the turret can even aim and shoot.
-	Override Bool StayStillAndShoot(Actor CheckSightFrom) {Return False;}
+	//Unlike most vehicles, the Di-Cokka only ever stops to shoot when the turret is firing a volley, and only during some volleys.
+	Override Bool StayStillAndShoot(Actor CheckSightFrom)
+	{
+		If (Health <= SpawnHealth()/2.5) Return False; //Don't stop if health is low. No need to check the turret, since it transfers its' damage.
+		If (IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) Return False; //Don't stop if your or your targets' turret is too powerful.
+		If (Turret && !Turret.bDontStayAround && MVP_BaseVehicle.StayStillAndShoot (CheckSightFrom))
+		{
+			A_StopSound (CHAN_MOVING);
+			A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
+			ChaseTimer = Random (64,96);
+			//StayStillDelay = ChaseTimer+(Random (4,10)*GameTicRate);
+			SetStateLabel ("StickAround");
+			Return True;
+		}
+		Return False;
+	}
 	
 	//This simply returns true so that the vehicle doesn't always run away from all enemies. Even if the chassis itself technically has no attack.
 	Override Bool CanAttack()
@@ -159,7 +171,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		//If DamageMobj decided that the chassis should flinch. Then make the turret flinch as well. Unless its' already flinching.
 		If (InStateSequence(CurState.NextState,FindState ("Pain")))
 		{
-			If (LeDamage >= 50) ExtremePain = True; //Got hurt by a very damage attack, so flinch for longer.
+			If (LeDamage >= 40) ExtremePain = True; //Got hurt by a very damaging attack, so flinch for longer.
 			If (Turret && !IsInState (Turret,"Pain"))
 			{A_Log ("The turret is hurt too");
 				If (Turret Is "MVP_DiCokkaTurret") MVP_DiCokkaTurret(Turret).ExtremePain = ExtremePain;
@@ -281,6 +293,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		MVP_BaseTurret.MaximumPitch -20;
 		MVP_BaseTurret.MinimumPitch 10;
 		+MVP_BaseTurret.TransferDamage;
+		+MVP_BaseTurret.DontStayAround;
 		
 		//Copied from the hull.
 		-NoPain; //This vehicle CAN feel pain.
@@ -296,13 +309,14 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		MVP_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
+		//Well actually it does, but only a slight reduction in damage from generic and Smart Marine hitscans.
 		DamageFactor "Melee", 1;
 		DamageFactor "Electric", 1;
 		DamageFactor "ExplosiveImpact", 1;
 		DamageFactor "Explosion", 1;
 		DamageFactor "Explosive", 1;
 		DamageFactor "Grenade", 1;
-		DamageFactor "HitScan", 1; //The generic damage type of hitscan attacks.
+		DamageFactor "HitScan", 0.9; //The generic damage type of hitscan attacks.
 		DamageFactor "Fire", 1;
 		DamageFactor "Crush", 1;
 		DamageFactor "Disintegrate", 1;
@@ -311,7 +325,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 1;
 		DamageFactor "MarineGrenade", 1;
-		DamageFactor "MarineRifle", 1;
+		DamageFactor "MarineRifle", 0.9;
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 1;
 		DamageFactor "RifleBullet", 1;
@@ -326,12 +340,24 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
 		
+		//Increase attack chance when close to death.
+		Bool AboutToDie = CriticallyLowHealth();
+		If (AboutToDie)
+			AggressionMultiplier *= 0.8;
+		Else
+			AggressionMultiplier = Default.AggressionMultiplier;
 		console.printf ("refire delay is %d",refiredelay);
 		If (!RefireDelay && Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && DiCokkaLOFCheck())
 		{
-			//If (Health <= SpawnHealth()/4)
-				//Increase triple shot chance perhaps ?
-			If (!NoStateJump) SetStateLabel ("Fire");
+			If (!NoStateJump)
+			{
+				//Has a chance to fire three shots one after the other, like in the original game.
+				//The chance of doing that is increased when the tank is about to die.
+				If (Random[pr_cajump](0,255) < (AboutToDie ? 64 : 56))
+					SetStateLabel ("Fire.Triple");
+				Else
+					SetStateLabel ("Fire");
+			}
 			Return True;
 		}
 		
@@ -345,11 +371,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		If (IsFrozen()) Return;
 		If (RefireDelay) RefireDelay--;
 		If (WarningZone) //Move the warning to wherever the shell will go, warning marines in advance.
-		{
-			//Vector3 LePos 
-			a_log ("tracking facing direction");
 			WarningZone.SetOrigin (GetAttackLocation(),True);
-		}
 	}
 	
 	Override Void OnDestroy()
@@ -393,14 +415,69 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		
 		If (Check.BadLOF)
 		{a_log ("bad lof");
-			bDontStayAround = True;
 			Check.Destroy();
 			Return False;
 		}
 		
-		bDontStayAround = False;
 		Check.Destroy();
 		Return True;
+	}
+	
+	//This one is a bit weird, it allows to not have to copy and paste the firing code 3 times for the triple attack.
+	//And returns nothing besides the elevation to put the turret at.
+	//It does however have an IsTripleShot parameter, which decreases' the shells' accuracy if it's part of a 3-shot volley.
+	Int A_DiCokkaShoot (Bool IsTripleShot = False)
+	{
+		Bool B; Actor Proj;
+		A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.6);
+		
+		Int TurretVisualElevation = UpdateTurretElevation (11,7,9,9); //L, H, J, J
+		
+		//Spawn the standalone firing effect of the turret. But at the appropriate spawn height.
+		Double FireEffectZ = 8;
+		Switch (TurretVisualElevation)
+		{
+			Case 11: //Facing down
+				FireEffectZ = 2;
+				Break;
+			Case 7:  //Facing forwards
+				FireEffectZ = 8;
+				Break;
+			Case 9: //Facing up
+				FireEffectZ = 24;
+				Break;
+			Default:
+				Break;
+		}
+		[B,Proj] = A_SpawnItemEx ("MVP_DiCokkaShotEffect",60,zofs:FireEffectZ);
+		If (Proj) Proj.A_SetScale (FRandom (1.1,1.75));
+		Proj = Null;
+		//======================================================================================
+		Vector2 HorzSpread = !IsTripleShot ? (0.2,-0.2) : (0.4,-0.4);
+		Vector2 VertSpread = !IsTripleShot ? (0.25,-0.25) : (0.5,-0.5);
+		Proj = A_SpawnProjectile ("MVP_DiCokkaShell",14,flags:CMF_AIMDIRECTION,Pitch);
+		HandleTargetPrediction (Proj,HorzSpread,VertSpread,128);console.printf ("the pitch is %d",pitch);
+		Return TurretVisualElevation;
+	}
+	
+	//Same situation as above, but this is for the Di-Cokkas' 1 second fire delay.
+	Int A_DiCokkaFireDelay()
+	{
+		//If the target isn't in the line of fire anymore, then try finding a new target.
+		If (!DiCokkaLOFCheck(True))
+		{
+			Actor AltTarget = PickDifferentTarget (Target,(WarningZone ? WarningZone : Target),512);
+			If (AltTarget) Target = AltTarget;
+		}
+		A_FaceTarget (3,3,flags:FAF_MIDDLE);
+		Return UpdateTurretElevation (10,6,8,8); //K, G, I, I
+		//console.printf ("moving around",pitch);
+	}
+	
+	//Return if the hulls' health is too low, or if not attached to anything, if the turrets' health is too low.
+	Bool CriticallyLowHealth()
+	{
+		Return (Master && Master.Health <= SpawnHealth()/4 || Health <= SpawnHealth()/4);
 	}
 	
 	//Fire a ray from the direction the turret is facing and return a position to where the ray stopped, which should also be where the projectile with hit.
@@ -429,7 +506,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			Goto Spawn+1;
 		See:
 			MSV1 # 1
-			{a_log ("in the see state");
+			{//a_log ("in the see state");
 				A_FaceTarget (3,3,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
@@ -438,86 +515,45 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
 			}
 			Loop;
-		//TODO: Add the 3 shot attack. Massively decrease the rate of fire to something reasonable.
 		Fire:
 			TNT1 A 0 //Makes the marines run from the turrets' impact zone.
 			{
 				WarningZone = WarnMarines (MWRN_ALLIESTOO,160);
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 			}
-			MSV1 ########################################### 1 //1 second delay, so the RefireDelay is actually RefireDelay+1.
+			MSV1 ################################### 1 {Frame = A_DiCokkaFireDelay();}//1 second delay, so the RefireDelay is actually RefireDelay+1.
+			MSV1 # 6 {Frame = A_DiCokkaShoot();}
+			MSV1 # 0
 			{
-				//If the target isn't in the line of fire anymore, then try finding a new target.
-				If (!DiCokkaLOFCheck(True))
-				{
-					Actor AltTarget = PickDifferentTarget (Target,(WarningZone ? WarningZone : Target),512);
-					If (AltTarget) Target = AltTarget;
-				}
-				A_FaceTarget (3,3,flags:FAF_MIDDLE);
-				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
-				//console.printf ("moving around",pitch);
+				If (WarningZone) WarningZone.Destroy();
+				RefireDelay = Random (2,5)*GameTicRate;
+				If (CriticallyLowHealth()) RefireDelay /= 1.5; //Fire a bit faster when almost dead.
 			}
-			//goto fire+1; //DEBUG DEBUG DEBUG
-			MSV1 # 6
-			{
-				Bool B; Actor Proj;
-				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.6);
-				
-				Int TurretVisualElevation = UpdateTurretElevation (11,7,9,9); //L, H, J, J
-				
-				//Spawn the standalone firing effect of the turret. But at the appropriate spawn height.
-				Double FireEffectZ = 8;
-				Switch (TurretVisualElevation)
-				{
-					Case 11: //Facing down
-						FireEffectZ = 2;
-						Break;
-					Case 7:  //Facing forwards
-						FireEffectZ = 8;
-						Break;
-					Case 9: //Facing up
-						FireEffectZ = 24;
-						Break;
-					Default:
-						Break;
-				}
-				[B,Proj] = A_SpawnItemEx ("MVP_DiCokkaShotEffect",60,zofs:FireEffectZ);
-				If (Proj) Proj.A_SetScale (FRandom (1.1,1.75));
-				Proj = Null;
-				//======================================================================================
-				
-				Proj = A_SpawnProjectile ("MVP_DiCokkaShell",14,flags:CMF_AIMDIRECTION,Pitch);
-				HandleTargetPrediction (Proj,(0.1,-0.1),(0.15,-0.15),128);
-				Frame = TurretVisualElevation;console.printf ("the pitch is %d",pitch);
-			}
-			MSV1 # 0 {If (WarningZone) WarningZone.Destroy(); RefireDelay = Random (2,5)*GameTicRate;}
 			Goto See;
-			/*
-			MSV1 ######## 2
+		//Mostly copied from the above Fire state.
+		Fire.Triple:
+			TNT1 A 0
 			{
-				//If you have no target, or it's dead.
-				If (!Target || IsDead (Target))
-				{
-					A_ClearTarget();
-					LookForPlayers (True); //Look for a new target.
-				}
-				
-				If (ElevationState != ELEVATION_INBOUNDS) A_ClearTarget();
-				
-				If (!DiCokkaLOFCheck())
-				{a_log ("vibe check failed");
-					A_ClearTarget();
-					Return ResolveState ("See");
-				}
-				
-				HandleChaseTimer();
-				
-				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
-				Return State (Null);
+				WarningZone = WarnMarines (MWRN_ALLIESTOO,160);
+				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
+				//When the hulls' health isn't too low, have a chance to make the tank stop to fire.
+				If (Master && !CriticallyLowHealth() && Random[pr_cajump](0,255) < 96) bDontStayAround = False; //Allow the tank to stop for a bit.
 			}
-			MSV1 # 0 A_MonsterRefire (25,"See");
-			
-			Loop;*/
+			MSV1 ################################### 1 {Frame = A_DiCokkaFireDelay();}
+			//https://www.youtube.com/watch?v=XlLbsTP0C_U
+			MSV1 # 6 {Frame = A_DiCokkaShoot(False);} //First shot in the volley has normal accuracy.
+			MSV1 ###### 1 {Frame = A_DiCokkaFireDelay();}
+			MSV1 # 6 {Frame = A_DiCokkaShoot(True);}
+			MSV1 ###### 1 {Frame = A_DiCokkaFireDelay();}
+			MSV1 # 6 {Frame = A_DiCokkaShoot(True);}
+			MSV1 # 0
+			{
+				If (WarningZone) WarningZone.Destroy();
+				RefireDelay = Random (2,5)*GameTicRate;
+				If (CriticallyLowHealth()) RefireDelay /= 1.5; //Fire a bit faster when almost dead.
+				bDontStayAround = True;
+			}
+			Goto See;
 		Pain:
 			TNT1 A 0
 			{a_log ("oof ouch");
@@ -531,7 +567,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 M 6;
 			Goto See;
 			//If in extreme pain, push the turret back even more.
-			MSV1 N 6 a_log ("aaaaaaaaaaaaaaa");
+			MSV1 N 6;
 			MSV1 OP 8;
 			MSV1 Q Random (24,48); //K.O.
 			MSV1 Q 0
@@ -540,7 +576,6 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 				Angle -= 135; //Change the turrets' angle to match the angle it visually ended up at.
 				TurretSnapDelay = 70; //Give the turret time to slowly rotate around, instead of snapping back to its masters' angle.
 			}
-			//MSV1 G 200; //DEBUG: Just here to make sure the angle change above works.
 			Goto See;
 		Death:
 			MSV1 WXY 10;
