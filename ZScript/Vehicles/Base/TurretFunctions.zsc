@@ -165,7 +165,7 @@ Extend Class MVP_BaseTurret
 			
 			If (!Mobj || Mobj == Avoid) Continue; //AVOID THIS TARGET.
 			
-			If (Mobj.bDormant || !Mobj.bIsMonster) Continue; //Don't attack dormant or non-monster actors.
+			If (Mobj.bDormant || IsInanimateObject (Mobj)) Continue; //Don't attack dormant or inanimate object actors.
 			
 			If (!CanBeTargeted(Mobj)) Continue; //Can't be targeted. (Duh)
 			

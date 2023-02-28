@@ -3,7 +3,7 @@ Mod made by Inkoalawetrust
 |==============|Code|==============|
 Any code not written by me (Inkoalawetrust) will be specified here.
 Help with coding by RaveYard.
-PitchTo() function written by Boondorl.
+LinearMap function written by Agent_Ash.
 |==============|Code|==============|
 
 

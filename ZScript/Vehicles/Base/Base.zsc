@@ -1,3 +1,12 @@
+//TODO:
+/*Add "realistic" turning mechanics to the turrets during combat. Where they have to actually rotate to face their target instead of instantly facing it.
+This will be different from the turning the turrets do to face their vehicle when idle.
+It will come with its' own Combat(Angle/Pitch)TurnRate properties, which dictate how much the turrets' angle and pitch are changed *per second*
+This will be handled in Tick(), and being a per-second turn rate will also allow me to just, directly plug the traversal rates of real weapon systems
+into the mod lmfao. Also add a NoCombatTraverse flag, that can be used to temporarily disable the rotating, e.g during a turrets' fire sequence.*/
+/*In relation to the above, maybe also give 16 rotations to the APCs' turrets (Except the small MG), should be easy enough to re-render the sprites.
+The main concern is file size here.*/
+
 Class MVP_BaseVehicle : Actor Abstract
 {
 	Default
@@ -111,6 +120,9 @@ Class MVP_BaseVehicle : Actor Abstract
 	{
 		Return False;
 	}
+	
+	//Return the location that the vehicles' attack will hit at.
+	Virtual Vector3 GetAttackLocation() {Return (Double.NaN,Double.NaN,Double.NaN);}
 	
 	//Should the vehicle stay still and attack ? The base actor class simply houses the most basic conditional check for this.
 	//CheckSightFrom is the actor whose sight to their target is checked, to determine if the vehicle can shoot.
@@ -795,9 +807,6 @@ Class MVP_Headlight : DynamicLight
 
 //The actor that warns marines around a specified area to run away from the zone in question, it uses the following properties and flags:
 //MaxTargetRange: Determines the exact size of the warning zone.
-//HarmFriends: Gives the warning to marines that are on the same side as the warning zone too, for stuff like indiscriminate AOE attacks. Use CopyFriendliness to make the zone share the allegience of its' creator.
-//CausePain: Specifies to marines that the AOE attack just causes pain, so they won't run away if on a turret, where they don't feel pain to begin with. This is basically only here because of the Army Car's pain ray.
-//SpecialFireDamage: Makes it so if the zone is attached to a vehicle, then it will destroy itself once the vehicle has no flames left from it being destroyed.
 //FIXME: Fix the really fucking stupid bug where when the zone alerts a marine, it will sometimes also alert other friendly NPCs and also make them target said zone.
 Class SmartMarineWarningZone : Actor
 {
@@ -813,8 +822,18 @@ Class SmartMarineWarningZone : Actor
 		+NoGravity;
 		+NoTarget; //Praying this stops marines from EVER having these zones as their target after they are done running from them.
 	}
+	
+	Enum MVPMarineWarnFlags
+	{
+		MWRN_ALLIESTOO = 1 << 0, //Gives the warning to marines that are on the same side as the warning zone too, for stuff like indiscriminate AOE attacks. Use CopyFriendliness to make the zone share the allegience of its' creator.
+		MWRN_WARP = 1 << 1, //Does nothing here, look at WarnMarines() instead.
+		MWRN_PAINONLY = 1 << 2, //Specifies to marines that the AOE attack just causes pain, so they won't run away if on a turret, where they don't feel pain to begin with. This is basically only here because of the Army Car's pain ray.
+		MWRN_VEHICLEDEATH = 1 << 3, //Makes it so if the zone is attached to a vehicle, then it will destroy itself once the vehicle has no flames left from it being destroyed.
+	}
+	
 	Inventory Token;
 	Vector3 Offset;
+	Int Flags;
 	Mixin MVP_CheckFunctions;
 	Mixin MVP_MathFunctions;
 	
@@ -859,7 +878,7 @@ Class SmartMarineWarningZone : Actor
 			//SetOrigin (Master.Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle),Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Offset.Z),True); //Copied from SpawnMarine().
 			SetOrigin (Vec3OffsetRelative (Master,Offset),True);
 		
-		If (bSpecialFireDamage && Master && Master Is "MVP_BaseVehicle") //If you are set to disappear when the vehicle has no death flames left. 
+		If ((Flags & MWRN_VEHICLEDEATH) && Master && Master Is "MVP_BaseVehicle") //If you are set to disappear when the vehicle has no death flames left. 
 			If (!MVP_BaseVehicle(Master).DeathFlames.Size())
 				Destroy();
 		
@@ -875,11 +894,11 @@ Class SmartMarineWarningZone : Actor
 			If (!(Mobj.GetClassName() == TheMarine || Mobj.GetClassName() == TheOtherMarine)) Continue;
 			
 			//Don't warn marines on the same side as the warning zone.
-			If (!bHarmFriends)
+			If (!(Flags && MWRN_ALLIESTOO))
 			{
 				If (Mobj.Health > 0 && !Mobj.bDormant && IsHostile (Mobj) && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
 				{
-					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
+					If (!(Flags & MWRN_PAINONLY) || (Flags & MWRN_PAINONLY) && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
 						If (Token) Token.Master = Self;
@@ -891,7 +910,7 @@ Class SmartMarineWarningZone : Actor
 			{
 				If (Mobj.Health > 0 && !Mobj.bDormant && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
 				{
-					If (!bCausePain || bCausePain && !MarineIsOnTurret(Mobj))
+					If (!(Flags & MWRN_PAINONLY) || (Flags & MWRN_PAINONLY) && !MarineIsOnTurret(Mobj))
 					{
 						Token = Mobj.GiveInventoryType (WarningToken);
 						If (Token) Token.Master = Self;
@@ -899,5 +918,12 @@ Class SmartMarineWarningZone : Actor
 				}
 			}
 		}
+	}
+	//DEBUG: Uncomment this to be able to see where the warning zones are at.
+	States
+	{
+		Spawn:
+			PLSS A 4 Bright;
+			Loop;
 	}
 }
