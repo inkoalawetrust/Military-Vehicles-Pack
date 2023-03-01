@@ -60,6 +60,14 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		MissileState = FindState ("DeployMarines");
 		MeleeState = FindState ("ChargeLoop"); //Most actual ramming code runs in Slam() below, not this state.
+		//Marine dropping states.
+		AttackStates.Push (FindState("DeployMarines",True));
+		AttackStates.Push (FindState("SpawnLoop",True));
+		AttackStates.Push (FindState("EndDeploy",True));
+		//Ram attack states.
+		AttackStates.Push (FindState("Charge",True));
+		AttackStates.Push (FindState("ChargeLoop",True));
+		AttackStates.Push (FindState("Brake",True)); //Does it count ? I'm going with yes.
 	}
 	
 	Override Void SpawnHeadlights ()

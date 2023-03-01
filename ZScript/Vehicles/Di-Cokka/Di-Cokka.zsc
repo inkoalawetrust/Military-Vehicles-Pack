@@ -99,7 +99,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			A_StopSound (CHAN_MOVING);
 			A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
 			ChaseTimer = Random (64,96);
-			//StayStillDelay = ChaseTimer+(Random (4,10)*GameTicRate);
+		StayStillDelay = ChaseTimer+(Random (4,10)*GameTicRate);
 			SetStateLabel ("StickAround");
 			Return True;
 		}
@@ -347,7 +347,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Else
 			AggressionMultiplier = Default.AggressionMultiplier;
 		console.printf ("refire delay is %d",refiredelay);
-		If (!RefireDelay && Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && DiCokkaLOFCheck())
+		If (!RefireDelay && Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
 		{
 			If (!NoStateJump)
 			{
@@ -390,37 +390,9 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	{
 		Super.PostBeginPlay();
 		
-		MissileState = FindState ("Fire");
-	}
-	
-	//If DirectionToTarget is on, fire the ray at the direction to the target, instead of the direction the turret is actual at.
-	Bool DiCokkaLOFCheck (Bool DirectionToTarget = False)
-	{
-		Let Check = New ("MVP_ProjectileLOFCheck");
-		
-		Vector3 Direction;
-		If (!DirectionToTarget)
-			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
-		Else
-		{
-			Double PitchTo = PitchTo (Target,14,Target.Height/2);
-			Direction = (AngleToVector(AngleTo(Target), Cos(PitchTo)), -Sin(PitchTo));
-		}
-		
-		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
-		Check.Shooter = Self;
-		Check.SplashRadius = 128;
-		Check.PropHealthThreshold = 200;
-		Check.Trace ((Pos.X,Pos.Y,Pos.Z+14),CurSector,Direction,Distance,0);
-		
-		If (Check.BadLOF)
-		{a_log ("bad lof");
-			Check.Destroy();
-			Return False;
-		}
-		
-		Check.Destroy();
-		Return True;
+		MissileState = FindState ("Fire",True);
+		AttackStates.Push (FindState("Fire",True));
+		AttackStates.Push (FindState("Fire.Triple",True));
 	}
 	
 	//This one is a bit weird, it allows to not have to copy and paste the firing code 3 times for the triple attack.
@@ -464,7 +436,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	Int A_DiCokkaFireDelay()
 	{
 		//If the target isn't in the line of fire anymore, then try finding a new target.
-		If (!DiCokkaLOFCheck(True))
+		If (/*!DiCokkaLOFCheck(True) */!MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround|TLOF_FaceOther))
 		{
 			Actor AltTarget = PickDifferentTarget (Target,(WarningZone ? WarningZone : Target),512);
 			If (AltTarget) Target = AltTarget;

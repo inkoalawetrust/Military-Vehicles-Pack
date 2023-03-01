@@ -196,6 +196,50 @@ Extend Class MVP_BaseTurret
 		
 		Return Null;
 	}
+	
+	Enum TurretLOFFlags
+	{
+		TLOF_FaceOther			= 1 << 0, //Should the ray be fired at the direction of the other actor instead of the direction the turret is facing ?
+		TLOF_DoStayAround		= 1 << 1, //Should the function not mess with the turrets' bDontStayAround flag ?
+	}
+	
+	//A generic turret LOF check, that is a wrapper for the stock projectile line of fire check.
+	//Other: The actor to check for, normally this will be the target. You can also simply not specify another actor.
+	//PropHealthThreshold: If a destructible prop is in the turrets' way with this much health or less, then still return true and fire through it.
+	//SplashRadius: For explosive attacks, if the LOF misses and hits level geometry, then still return true if the Other actor would be caught in the blast.
+	//CheckOffsets: How much to offset the checks' origin relative to the callers' position, default is offset 32 map units off the callers' Z position.
+	//Flags: What flags to pass to the check, a list of flags can be found above.
+	Bool MVP_TurretCheckLOF (Actor Other = Null, Int PropHealthThreshold = 400, Double SplashRadius = 0, Vector3 CheckOffsets = (0,0,32), Int Flags = 0)
+	{
+		Let Check = New ("MVP_ProjectileLOFCheck");
+		
+		Vector3 Direction;
+		If (!(Flags & TLOF_FaceOther))
+			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		Else
+		{
+			Double PitchTo = PitchTo (Other,14,Other.Height/2);
+			Direction = (AngleToVector(AngleTo(Other), Cos(PitchTo)), -Sin(PitchTo));
+		}
+		
+		Double Distance = Other ? Distance3D (Other)+32 : MaxTargetRange;
+		Check.Shooter = Self;
+		Check.Other = Other;
+		Check.SplashRadius = SplashRadius;
+		Check.PropHealthThreshold = ProphealthThreshold;
+		Check.Trace (Level.Vec3Offset (Pos,CheckOffsets),CurSector,Direction,Distance,0);
+		
+		If (Check.BadLOF)
+		{a_log ("bad lof");
+			If (!(Flags & TLOF_DoStayAround)) bDontStayAround = True;
+			Check.Destroy();
+			Return False;
+		}
+		
+		If (!(Flags & TLOF_DoStayAround)) bDontStayAround = False;
+		Check.Destroy();
+		Return True;
+	}
 }
 
 //Note: This is a pistol that fires a specified line of fire raycast. Used to debug if the LineTracer in question returns BadLOF properly.
@@ -277,6 +321,7 @@ Class MVP_LOFRaycast : LineTracer
 	Mixin MVP_CheckFunctions;
 	Bool BadLOF; //If true, there is something standing in the shooters' line of fire.
 	Actor Shooter; //The actor firing the raycast.
+	Actor Other; //The actor we are looking for, normally this is the shooters' target.
 	
 	//Should the actor shoot at the prop ?
 	//Other: The actor to check.
@@ -437,25 +482,25 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		If (Mobj == Shooter.Master) Return Trace_Skip;
 		
 		//The target is in the line of fire. Shoot them anyway.
-		If (Mobj == Shooter.Target)
+		If (Other && Mobj == Other)
 			Return Trace_Stop;
 		
 		//Indestructible prop in the way.
-		If (IsIndestructible (Mobj) && IsInanimateObject (Mobj))
+		If (Mobj && IsIndestructible (Mobj) && IsInanimateObject (Mobj))
 		{console.printf ("immovable object vs stoppable force");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Destructible prop, but far too strong to shoot through in a timely manner.
-		If (IsCollidable (Mobj) && !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
+		If (Mobj && IsCollidable (Mobj) && !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
 		{console.printf ("this is too much");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Solid corpse of an enemy in the way, shell can't go through.
-		If (Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
+		If (Mobj && Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
 		{console.printf ("enemy corpse.");
 			BadLOF = True;
 			Return Trace_Stop;
@@ -474,10 +519,10 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 			console.printf ("hit the map");
 			//Don't return BadLOF if the target would be caught in the blast radius anyway. Unless they are immune to splash damage of course.
 			Double Distance;
-			If (SplashRadius > 0 && Shooter.Target && !Shooter.Target.bNoRadiusDmg && Distance <= SplashRadius)
+			If (SplashRadius > 0 && Other && !Other.bNoRadiusDmg && Distance <= SplashRadius)
 			{
-				Distance = Level.Vec3Diff (Shooter.Target.Pos,Results.HitPos).Length();;
-				If (CheckSightTo (Shooter,Shooter.Target,Distance))
+				Distance = Level.Vec3Diff (Other.Pos,Results.HitPos).Length();;
+				If (CheckSightTo (Shooter,Other,Distance))
 				{
 					console.printf ("caught in the blast");
 					Return Trace_Stop;

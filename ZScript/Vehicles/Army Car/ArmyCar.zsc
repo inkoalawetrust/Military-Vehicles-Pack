@@ -29,6 +29,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		If (HasSupplies()) SetTag ("Army Car (Open Trunk)");
 		
 		MissileState = FindState ("DeployMarines"); //Car uses a custom ranged attack state, these states are set so that internal flags like AvoidMelee work properly.
+		AttackStates.Push (FindState("DeployMarines",True));
 	}
 	
 	Override Void Tick()

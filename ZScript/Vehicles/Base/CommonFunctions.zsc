@@ -141,21 +141,25 @@ Mixin Class MVP_CheckFunctions
 	
 	Bool IsIndestructible (Actor Other)
 	{
+		If (Other) Return False;
 		Return (Other.bInvulnerable || Other.bNoDamage/* || (!Other.bShootable)*/);
 	}
 	
 	Bool HasGodMode (Actor Other)
 	{
+		If (Other) Return False;
 		Return (Other.Player && Other.Player.Cheats & (CF_GODMODE | CF_GODMODE2));
 	}
 	
 	Bool IsInanimateObject (Actor Other)
 	{
+		If (Other) Return False;
 		Return (!Other.bIsMonster && !Other.Player);
 	}
 	
 	Bool IsCollidable (Actor Other, Actor Caller = Null)
 	{
+		If (Other) Return False;
 		Return ((Other.bSolid && !Other.bNoBlockmap)
 		//The ThruBits check is untested, since nobody uses ThruBits lmao.
 		&& !(Caller && Caller.bAllowThruBits && Other.bAllowThruBits && Caller.ThruBits & Other.ThruBits));
@@ -242,6 +246,25 @@ Extend Class MVP_BaseVehicle
 			Return True;
 		
 		Return False;
+	}
+	
+	//Checks if the vehicle is in any of the attack states defined, and if it is, it also returns a pointer to that state.
+	State IsInAttackState()
+	{
+		State FoundState = State (Null);
+		
+		//Loop through available states.
+		For (Int I = AttackStates.Size()-1; 0 <= I; I--)
+		{
+			//The state in the array matches the current state we are in.
+			If (InStateSequence (CurState,AttackStates[I]))
+			{
+				FoundState = AttackStates[I];
+				Break;
+			}
+		}
+		
+		Return FoundState;
 	}
 	
 	Enum MVPFlameFlags

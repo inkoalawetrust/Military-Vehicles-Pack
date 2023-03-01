@@ -266,6 +266,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		Super.OnDestroy();
 		RemoveHeadlights();
 		If (Turret) Turret.Destroy();
+		AttackStates.Delete(0,AttackStates.Size()); //Clean the array before removal, because the GC can't: https://github.com/ZDoom/gzdoom/issues/2019
 	}
 	
 	Override Void Activate (Actor Activator)
@@ -315,7 +316,8 @@ Class MVP_BaseVehicle : Actor Abstract
 	Int CurrentOrder; //The current order the vehicle is following.
 	Int StayStillDelay; //How long before the vehicle can stand still to attack again.
 	Double AggressionMultiplier; //Can be used to further increase the chance of MVP_CheckMissileRange returning true. The LOWER it is the more frequent the attacking.
-
+	Array <State> AttackStates; //Can be used to store all of the attack state labels each vehicle has.
+	
 	//Internal variables
 	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
 	Array <MVP_Headlight> Headlights; //Pointers to each headlight the vehicle has.
@@ -401,13 +403,15 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	FlagDef NoTargetPrediction : TurretFlags, 2; //The turret will not calculate its' targets' movement and lead its' shots.
 	FlagDef TransferDamage : TurretFlags, 3; //The turret will transfer damage taken to its' master (The vehicle it's on). Instead of taking any of its' own.
 	
-	Double MaxPitch, MinPitch, TurnAmount, TurnSoundRadius;
+	Double MaxPitch, MinPitch, TurnAmount, TurnSoundRadius, CombatAngleTurnRate, CombatPitchTurnRate;
 	Sound TurnSound;
 	Property MaximumPitch : MaxPitch; //The maximum pitch the turret can go up to.
 	Property MinimumPitch : MinPitch; //The minimum pitch the turret can go down to.
 	Property TurnAmount : TurnAmount; //How much the turret turns to face the vehicle when it's not snapping into position.
 	Property TurnSoundRadius : TurnSoundRadius; //How much the turret has to turn since last tick for the sound to play.
 	Property TurnSound : TurnSound; //The sound the turret makes when it turns.
+	Property CombatAngleTurnRate : CombatAngleTurnRate; //How fast the turret changes its' angle to face its' target when in combat. In degrees per second.
+	Property CombatPitchTurnRate : CombatPitchTurnRate; //How fast the turret changes its' pitch to face its' target when in combat. In degrees per second.
 	
 	Int TurretSnapDelay; //Used for the turret rotating code, to make it so the turret snaps back to the vehicle after some time of not having a target.
 	Double TurretRotationOffset; //Can be used to offset the rotation of the turret by this exact amount. Used by turrets when they are destroyed, and by prop turrets.
@@ -474,8 +478,17 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		
 		If (IsFrozen()) Return;
 		
+		Bool IsDead = IsDead (Self);
+		
+		//Combat turret traverse handling.
+		If (!IsDead)
+		{
+			If (IsInAttackState())
+				Console.Printf ("I am attacking pew pew pew.");
+		}
+		
 		//Play the turrets' mechanical whirring sound whenever it's not dead.
-		If (TurnSound && !IsDead(Self))
+		If (TurnSound && !IsDead)
 		{
 			//But only play it when the angle has changed a certain amount.
 			If (AbsAngle (Angle,OldSoundAngle) >= TurnSoundRadius
@@ -486,7 +499,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		ElevationState = IsOverPitchLimits();
 		If (ElevationState != ELEVATION_INBOUNDS) Pitch = Clamp (Pitch,MaxPitch,MinPitch); //Turrets can't move past their elevation limits.
 		
-		If (!Master || IsDead(Self) && bFallOnDeath) Return;
+		If (!Master || IsDead && bFallOnDeath) Return;
 		
 		SetOrigin (Vec3OffsetRelative(Master,(TurretOffsets.XY,Master.Height+TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
 		A_Stop();

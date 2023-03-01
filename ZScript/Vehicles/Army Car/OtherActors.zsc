@@ -28,6 +28,9 @@ Class MVP_PainRay : MVP_BaseTurret
 	{
 		Super.PostBeginPlay();
 		MissileState = FindState ("PainAttack");
+		AttackStates.Push (FindState("ChargeUp",True));
+		AttackStates.Push (FindState("PainAttack",True));
+		AttackStates.Push (FindState("ChargeDown",True));
 	}
 	
 	Override Bool ShouldAttack(Bool NoStateJump) {Return True;}

@@ -30,6 +30,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		
 		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
 		Check.Shooter = Self;
+		Check.Other = Target;
 		Check.Trace ((Pos.X,Pos.Y,Pos.Z+12),CurSector,Direction,Distance,0);
 		
 		If (Check.BadLOF)
@@ -62,7 +63,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Super.PostBeginPlay();
 		
 		MissileState = FindState ("Fire");
-		
+		AttackStates.Push (FindState("Fire",True));
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
@@ -255,6 +256,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		Super.PostBeginPlay();
 		
 		MissileState = FindState ("Fire");
+		AttackStates.Push (FindState("Fire",True));
 	}
 	
 	Override Void SpawnVehicleTurret ()
@@ -267,34 +269,11 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		TurretOffsets = Original;
 	}
 	
-	Bool AutocannonLOFCheck()
-	{
-		Let Check = New ("MVP_ProjectileLOFCheck");
-		
-		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
-		
-		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
-		Check.Shooter = Self;
-		Check.SplashRadius = 128;
-		Check.Trace ((Pos.X,Pos.Y,Pos.Z+12),CurSector,Direction,Distance,0);
-		
-		If (Check.BadLOF)
-		{a_log ("badloaf");
-			bDontStayAround = True;
-			Check.Destroy();
-			Return False;
-		}
-		
-		bDontStayAround = False;
-		Check.Destroy();
-		Return True;
-	}
-	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && AutocannonLOFCheck())
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,400,128,(0,0,12)))
 		{a_log ("i am going to shoot");
 			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
@@ -357,7 +336,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				
 				If (ElevationState != ELEVATION_INBOUNDS) A_ClearTarget();
 				
-				If (!AutocannonLOFCheck())
+				If (!MVP_TurretCheckLOF (Target,400,128,(0,0,12)))
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");
@@ -448,36 +427,14 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		Super.PostBeginPlay();
 		
 		MissileState = FindState ("Fire");
-	}
-	
-	Bool SmallMGLOFCheck()
-	{
-		Let Check = New ("MVP_ProjectileLOFCheck");
-		
-		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
-		
-		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
-		Check.Shooter = Self;
-		Check.PropHealthThreshold = 150;
-		Check.Trace ((Pos.X,Pos.Y,Pos.Z+8),CurSector,Direction,Distance,0);
-		
-		If (Check.BadLOF)
-		{
-			bDontStayAround = True;
-			Check.Destroy();
-			Return False;
-		}
-		
-		bDontStayAround = False;
-		Check.Destroy();
-		Return True;
+		AttackStates.Push (FindState("Fire",True));
 	}
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && SmallMGLOFCheck())
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,150,0,(0,0,8)))
 		{
 			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
@@ -548,7 +505,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				
 				If (ElevationState != ELEVATION_INBOUNDS) A_ClearTarget();
 				
-				If (!SmallMGLOFCheck())
+				If (!MVP_TurretCheckLOF (Target,150,0,(0,0,8)))
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");
