@@ -24,4 +24,6 @@ DoomEdNums
 		17012 = MVP_APCRuin
 	//Metal Slug
 		17013 = MVP_DiCokka
+		17014 = MVP_DiCokkaProp
+		17015 = MVP_DiCokkaWreck
 }

@@ -73,6 +73,34 @@ Extend Class MVP_BaseTurret
 			TurretSnapDelay = DefaultValue;
 	}
 	
+	Void DoCombatTraverse (Actor ToWhat)
+	{
+		//NOTE: A pitch of 270 means no pitch shifting in A_Face, which is bad for the turrets, since code like their LOF checks normally relies on them actually facing the target properly.
+		Console.Printf ("Doing combat traverse.");
+		Double AngleTraverse = CombatAngleTurnRate > 0 ? CombatAngleTurnRate/GameTicRate : 0;
+		Double PitchTraverse = CombatPitchTurnRate > 0 ? CombatPitchTurnRate/GameTicRate : 0;
+		console.printf ("old angle %f.00f",angle);
+		A_Face (ToWhat,AngleTraverse,PitchTraverse,flags:FAF_MIDDLE);
+		console.printf ("new angle %f.00f",angle);
+	}
+	
+	//Returns true if the Other actor is within a cone of the specified size. The Size is the angle and pitch that the Other actor must be within relative to the callers' direction.
+	Bool IsInCone (Actor Other, Double Size = 5, Double FalloffScale = 256)
+	{
+		If (!Other || Size <= 0)
+			Return False;
+		//HACK: This is meant to make the cone fall off linearly with distance. But pure linear falloff was too much so I had to scale it.
+		//I think it works now ? IDFK I didn't even pass elementary school math. There's a reason I use so little math in anything.
+		If (FallOffscale > 0)
+		{
+			Double OriginalSize = Size;
+			Size = Max (0, Size - (Distance3D (Other) / FalloffScale));
+			Size = Clamp (Size,0.1,OriginalSize*2); //Clamp the resulting value.
+			console.printf ("the size is %f, the distance is %f",size,distance3d(target));
+		}
+		Return (AbsAngle (AngleTo(Other),Angle) <= Size && Abs (Pitch - PitchTo (Target)) <= Size);
+	}
+	
 	//Handles making the vehicles lead their shots based on their targets' movement, regardless of whether or not it's a player or monster.
 	//Projectile: The projectile to modify.
 	//SpreadHorz/SpreadVert: Maximum and minimum horizontal and vertical spread, stored in Vector2s.
@@ -130,6 +158,7 @@ Extend Class MVP_BaseTurret
 		Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
 	}
 	
+	//A ZScript copy of A_MonsterRefire without the shitty HitFriend() check, and with the A_FaceTarget() call toggleable
 	State MVP_TurretRefire (Int Chance, StateLabel AbortState, Bool DontFaceTarget = False)
 	{
 		If (!DontFaceTarget)
@@ -214,7 +243,7 @@ Extend Class MVP_BaseTurret
 		Let Check = New ("MVP_ProjectileLOFCheck");
 		
 		Vector3 Direction;
-		If (!(Flags & TLOF_FaceOther))
+		If (!(Flags & TLOF_FaceOther)/* && (Other && Distance3DSquared(Other) > 2048)&& !IsInCone(Other,10)*/)
 			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 		Else
 		{
@@ -228,6 +257,8 @@ Extend Class MVP_BaseTurret
 		Check.SplashRadius = SplashRadius;
 		Check.PropHealthThreshold = ProphealthThreshold;
 		Check.Trace (Level.Vec3Offset (Pos,CheckOffsets),CurSector,Direction,Distance,0);
+		
+		MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,CheckOffsets),Check.Results.HitPos,Check.Results.Distance);
 		
 		If (Check.BadLOF)
 		{a_log ("bad lof");
@@ -263,26 +294,8 @@ Class MVP_LOFDebugGun : Pistol
 		Check.Shooter = Self;console.printf ("shooter is %s",check.shooter.getclassname());
 		Check.Trace (ShotPos,CurSector,Direction,Distance,0);
 		
-		vector3 HitPos = Check.Results.HitPos;
-		Vector3 Path = Level.Vec3Diff (ShotPos,Check.Results.HitPos);
-		Double PathDist = Check.Results.Distance;
-		Path /= PathDist;
-		If (!(PathDist <= 1))
-		{
-			For( Double I = 0; I < PathDist; I += 4)
-			{
-				FSpawnParticleParams P;
-				P.Color1 = "White";
-				P.Style = STYLE_None;
-				P.Lifetime = GameTicRate/2;
-				P.Pos = Level.Vec3Offset (ShotPos,Path*I);
-				P.Size = 4;
-				P.StartAlpha = 1;
-				P.FadeStep = -1;
-				P.Flags = SPF_FULLBRIGHT;
-				Level.SpawnParticle (P);
-			}
-		}
+		Vector3 HitPos = Check.Results.HitPos;
+		MVP_LOFRaycast.VisualizeTracePath (ShotPos, HitPos, Check.Results.Distance);
 		
 		Console.Printf ("FirePos %d %d %d, hitpos %d %d %d",shotpos.x,shotpos.y,shotpos.z,hitpos.x,hitpos.y,hitpos.z);
 		
@@ -297,6 +310,7 @@ Class MVP_LOFDebugGun : Pistol
 		Check.Destroy();
 		Return;
 	}
+	
 	States
 	{
 		Select:
@@ -322,6 +336,30 @@ Class MVP_LOFRaycast : LineTracer
 	Bool BadLOF; //If true, there is something standing in the shooters' line of fire.
 	Actor Shooter; //The actor firing the raycast.
 	Actor Other; //The actor we are looking for, normally this is the shooters' target.
+	
+	//Visualizes a path between OriginPos and FinalPos with a length specified by Distance. Used to debug where LOF checks start, go to, and end.
+	Static Void VisualizeTracePath (Vector3 OriginPos, Vector3 FinalPos, Double Distance)
+	{
+		Vector3 Path = Level.Vec3Diff (OriginPos,FinalPos);
+		Double PathDist = Distance;
+		Path /= PathDist;
+		If (!(PathDist <= 1))
+		{
+			For( Double I = 0; I < PathDist; I += 4)
+			{
+				FSpawnParticleParams P;
+				P.Color1 = "White";
+				P.Style = STYLE_None;
+				P.Lifetime = GameTicRate/2;
+				P.Pos = Level.Vec3Offset (OriginPos,Path*I);
+				P.Size = 4;
+				P.StartAlpha = 1;
+				P.FadeStep = -1;
+				P.Flags = SPF_FULLBRIGHT;
+				Level.SpawnParticle (P);
+			}
+		}
+	}
 	
 	//Should the actor shoot at the prop ?
 	//Other: The actor to check.

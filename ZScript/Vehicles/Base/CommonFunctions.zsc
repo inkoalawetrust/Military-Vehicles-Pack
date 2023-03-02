@@ -141,25 +141,25 @@ Mixin Class MVP_CheckFunctions
 	
 	Bool IsIndestructible (Actor Other)
 	{
-		If (Other) Return False;
+		If (!Other) Return False;
 		Return (Other.bInvulnerable || Other.bNoDamage/* || (!Other.bShootable)*/);
 	}
 	
 	Bool HasGodMode (Actor Other)
 	{
-		If (Other) Return False;
+		If (!Other) Return False;
 		Return (Other.Player && Other.Player.Cheats & (CF_GODMODE | CF_GODMODE2));
 	}
 	
 	Bool IsInanimateObject (Actor Other)
 	{
-		If (Other) Return False;
+		If (!Other) Return False;
 		Return (!Other.bIsMonster && !Other.Player);
 	}
 	
 	Bool IsCollidable (Actor Other, Actor Caller = Null)
 	{
-		If (Other) Return False;
+		If (!Other) Return False;
 		Return ((Other.bSolid && !Other.bNoBlockmap)
 		//The ThruBits check is untested, since nobody uses ThruBits lmao.
 		&& !(Caller && Caller.bAllowThruBits && Other.bAllowThruBits && Caller.ThruBits & Other.ThruBits));
@@ -252,6 +252,8 @@ Extend Class MVP_BaseVehicle
 	State IsInAttackState()
 	{
 		State FoundState = State (Null);
+		
+		If (InStateSequence (CurState,MissileState) || InStateSequence (CurState,MeleeState)) Return CurState;
 		
 		//Loop through available states.
 		For (Int I = AttackStates.Size()-1; 0 <= I; I--)
@@ -839,6 +841,7 @@ Extend Class MVP_BaseVehicle
 		//Turn the vehicles' headlights on.
 		Void TurnHeadlightsOn()
 		{
+			If (LightsOnAlready) Return;
 			LightLevel = 64; //Light up the vehicle.
 			If (Turret) Turret.LightLevel = 64; //And the turret, if any.
 			For (Int I = HeadLights.Size()-1; I >= 0; I--)
@@ -849,6 +852,7 @@ Extend Class MVP_BaseVehicle
 					Headlights[I].Active = True;
 				}
 			}
+			If (GetAge() > 1) LightsOnAlready = True; //1 tic delay to allow the lights to spawn in the first place.
 		}
 		
 		//Turn them off.
@@ -864,6 +868,7 @@ Extend Class MVP_BaseVehicle
 					Headlights[I].Active = False;
 				}
 			}
+			LightsOnAlready = False;
 		}
 		
 		//Remove them when the vehicle is killed or removed.
@@ -877,5 +882,6 @@ Extend Class MVP_BaseVehicle
 					Headlights.Delete(I);
 				}
 			}
+			LightsOnAlready = False;
 		}
 }

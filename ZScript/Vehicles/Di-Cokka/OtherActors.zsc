@@ -1,0 +1,406 @@
+Class MVP_DiCokkaProp : MVP_BaseProp
+{
+	Default
+	{
+		//$Title Di-Cokka (Prop)
+		//$Category Vehicles/Di-Cokka
+		//$Sprite MSV1Z1
+		Health 600;
+		GibHealth 100;
+		Radius 48;
+		Height 60;
+		CameraHeight 32;
+		DeathHeight 60;
+		Mass 10000;
+		XScale 0.9;
+		YScale 0.75;
+		Tag "Type II AFV \"Di-Cokka\" (Prop)";
+		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretProp";
+		DeathSound "Vehicle/Di-Cokka/Death";
+		
+		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
+		DamageFactor "Melee", 1;
+		DamageFactor "Electric", 1;
+		DamageFactor "ExplosiveImpact", 1;
+		DamageFactor "Explosion", 1;
+		DamageFactor "Explosive", 1;
+		DamageFactor "Grenade", 1;
+		DamageFactor "HitScan", 1; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 1;
+		DamageFactor "Crush", 1;
+		DamageFactor "Disintegrate", 1;
+		DamageFactor "Railgun", 1;
+		DamageFactor "Falling", 1;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 1;
+		DamageFactor "MarineGrenade", 1;
+		DamageFactor "MarineRifle", 1;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 1;
+		DamageFactor "RifleBullet", 1;
+	}
+	
+	String User_Color; //The Di-Cokkas' color.
+	Double User_TurretAngle; //The angle the turret of the APC should be facing.
+	Double User_TurretPitch; //The pitch the turret of the APC should be facing.
+	
+	Mixin MVP_DiCokkaSharedVirtuals; //Use the Di-Cokkas' virtuals/
+	
+	Override Void SpawnVehicleTurret()
+	{
+		If (User_TurretAngle == -1) User_TurretAngle = Random (180,-180);
+		If (VehicleTurret)
+		{
+			Turret = MVP_BaseTurret(Spawn (VehicleTurret,Pos+TurretOffsets));
+			If (Turret)
+			{
+				Turret.CopyFriendliness (Self,False);
+				Turret.SpawnFlags = SpawnFlags;
+				Turret.HandleSpawnFlags();
+				Turret.Angle = Angle;
+				Turret.TurretRotationOffset = User_TurretAngle;
+				Turret.Pitch = (User_TurretPitch != -1) ? Pitch+User_TurretPitch : Pitch+Random (45,-90);
+				Turret.Master = Self;
+				Turret.TurretOffsets = TurretOffsets;
+			}
+		}
+	}
+	
+	Int ForcedFireParticlesCount; //If this has a value, then the Di-Cokka is forced to spawn this amount of particles even when dead.
+	Double FireParticleFrequency; //How often fire particles spawn.
+	
+	States
+	{
+		Spawn:
+			MSV1 A 1
+			{
+				If (User_IdleSound)
+					A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
+				Else
+					A_StopSound (CHAN_IDLING);
+			}
+			Loop;
+		//The Di-Cokka sinks down when it dies.
+		Death:
+			MSV1 R 0 A_SetSize (-1,Height-1);
+			MSV1 R 8 A_StartSound (DeathSound,CHAN_BODY);
+			MSV1 S 8 A_SetSize (-1,Height-2);
+			MSV1 T 8 A_SetSize (-1,Height-3);
+			MSV1 U 8 A_SetSize (-1,Height-2);
+			MSV1 V 8 A_SetSize (-1,Height-1);
+			MSV1 V -1;
+			Stop;
+		//Ditto, but the Di-Cokka explodes into a shower of metal debris soon after.
+		XDeath:
+			MSV1 R 0 A_SetSize (-1,Height-1);
+			MSV1 R 8 A_StartSound (DeathSound,CHAN_BODY);
+			MSV1 S 8 A_SetSize (-1,Height-2);
+			MSV1 T 8 A_SetSize (-1,Height-3);
+			MSV1 U 8 A_SetSize (-1,Height-2);
+			MSV1 V 8 A_SetSize (-1,Height-1);
+			MSV1 V Random (35,35*5); //Wait for it.
+			MSV1 V 0
+			{
+				SmokeCounter = Random (64,192);
+				Bool b; Actor Debris;
+				
+				Debris = Spawn ("MVP_MetalSlugExplosion",Pos);
+				If (Debris)
+				{
+					Debris.A_SetRenderStyle (1.0,STYLE_NORMAL);
+					Debris.A_SetScale(2.5);
+					Debris.MeleeRange = 128;
+				}
+				
+				For (Int I; I <= SmokeCounter; I++)
+				{
+					[B, Debris] = A_SpawnItemEx ("MVP_DiCokkaDebris",FRandom (Radius,-Radius),FRandom(Radius,-Radius),FRandom (0,Height),FRandom (-32,32),FRandom (-32,32),FRandom (4,16));
+					If (Debris)
+					{
+						Debris.Scale *= FRandom (0.2,0.7);
+						Debris.bXFlip = Random (False,True);
+					}
+				}
+			}
+			Stop;
+	}
+}
+
+Class MVP_DiCokkaTurretProp : MVP_BaseTurretProp
+{
+	Default
+	{
+		Health 300;
+		Radius 32;
+		Height 24;
+		XScale 0.9;
+		YScale 0.75;
+		Mass 2000;
+		DeathHeight 24;
+		Tag "Di-Cokka Turret (Prop)";
+		MVP_BaseTurret.MaximumPitch -20;
+		MVP_BaseTurret.MinimumPitch 10;
+		+MVP_BaseTurret.TransferDamage;
+		DeathSound "Vehicle/Di-Cokka/Death";
+		
+		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
+		//Well actually it does, but only a slight reduction in damage from generic and Smart Marine hitscans.
+		DamageFactor "Melee", 1;
+		DamageFactor "Electric", 1;
+		DamageFactor "ExplosiveImpact", 1;
+		DamageFactor "Explosion", 1;
+		DamageFactor "Explosive", 1;
+		DamageFactor "Grenade", 1;
+		DamageFactor "HitScan", 0.9; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 1;
+		DamageFactor "Crush", 1;
+		DamageFactor "Disintegrate", 1;
+		DamageFactor "Railgun", 1;
+		DamageFactor "Falling", 1;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 1;
+		DamageFactor "MarineGrenade", 1;
+		DamageFactor "MarineRifle", 0.9;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 1;
+		DamageFactor "RifleBullet", 1;
+	}
+	States
+	{
+		Spawn:
+			MSV1 A 0;
+			MSV1 # 1
+			{
+				RotateToVehicle(RTVF_RELATIVEONLY);
+				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
+			}
+			Goto Spawn+1;
+		Death:
+			MSV1 WXY 10;
+			MSV1 Y 1 RotateToVehicle(RTVF_RELATIVEONLY);
+			Wait;
+	}
+}
+
+Class MVP_DiCokkaWreck : MVP_DiCokkaProp
+{
+	Default
+	{
+		//$Title Di-Cokka (Wreck)
+		//$Category Vehicles/Di-Cokka
+		//$Sprite MSV1[1
+		
+		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretWreck";
+		Height 51;
+		+NoDamage;
+		Tag "Type II AFV \"Di-Cokka\" (Wreck)";
+	}
+	
+	Bool User_SpawnFireParticles; //Should the tank spawn fire particles. Like it does when its' health is low or it recently died ?
+	
+	Override Void PostBeginPlay()
+	{
+		If (User_SpawnFireParticles) ForcedFireParticlesCount = INT.MAX;
+		Super.PostBeginPlay();
+	}
+	
+	Override Void SpawnHeadlights(){}
+	States
+	{
+		Spawn:
+			MSV1 V -1;
+			Stop;
+	}
+}
+
+Class MVP_DiCokkaTurretWreck : MVP_DiCokkaTurretProp
+{
+	Default
+	{
+		Tag "Di-Cokka Turret (Wreck)";
+		+NoDamage;
+	}
+	States
+	{
+		Spawn:
+			MSV1 Y 1 RotateToVehicle(RTVF_RELATIVEONLY);
+			Wait;
+	}
+}
+
+//Textured particles defined in ANIMDEFS all animate in unison. So they are useless for this.
+Class MVP_DiCokkaFireParticle : Actor
+{
+	Default
+	{
+		+Bright;
+		+NoBlockmap;
+	}
+	
+	//Fun fact, an empty or totally custom tick override doesn't actually provide a noticeable performance improvement.
+	Override Void Tick()
+	{
+		If (IsFrozen()) Return;
+		// Copied from FastProjectile.
+		if (tics != -1)
+		{
+			if (tics > 0) tics--;
+			while (!tics)
+			{
+				if (!SetState (CurState.NextState))
+				{ // mobj was removed
+					return;
+				}
+			}
+		}
+	}
+	States
+	{
+		Spawn:
+			MSX3 ABDEFGHIJKLMNOPQRSTUVXYZ 3;
+			Stop;
+	}
+}
+
+Class MVP_DiCokkaDebris : Actor
+{
+	Default
+	{
+		Radius 4;
+		Height 8;
+		+ThruActors;
+	}
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (Pos.Z <= FloorZ || BlockingLine)
+		{
+			If (Frame >= 7 && Random (0,256) < 48) A_StartSound ("Vehicle/Di-Cokka/MetalHit",volume:FRandom (0.3,0.8),ATTN_STATIC);
+			Destroy();
+		}
+	}
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay A_Jump (255,"Debris1","Debris2","Debris3");
+		Debris1:
+			MSDB ABCDEFGH 3;
+			Loop;
+		Debris2:
+			MSDB IJKLMNOP 3;
+			Loop;
+		Debris3:
+			MSDB QRSTUVWX 3;
+			Loop;
+	}
+}
+
+Class MVP_MetalSlugExplosion : MVP_BigExplosion
+{
+	States
+	{
+		Spawn:
+			MSX1 A 2 NoDelay
+			{
+				A_Explode (MaxTargetRange,Damage,XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,MeleeRange,damagetype:'Explosion');
+				A_QuakeEx (2,2,2,35*5,0,768,flags:QF_SCALEDOWN|QF_3D);
+				A_StartSound ("SFX/MSExplosion",CHAN_AUTO,attenuation:0.2);
+			}
+			MSX1 B 2;
+			MSX2 CDEFGHIJ 4;
+			MSX2 KLMNOPQRSTUVWX 6;
+			Stop;
+	}
+}
+
+Class MVP_DiCokkaShotEffect : Actor
+{
+	Default
+	{
+		+NoInteraction;
+	}
+	States
+	{
+		Spawn:
+			MSFX AB 1 Bright Light ("MSExplosion2");
+			MSFX CEGIKMO 2; //Removed half the frames for speed.
+			//MSFX CDEFGHIJKLMNO 2; //All the fire effect frames.
+			Stop;
+	}
+}
+
+Class MVP_DiCokkaShell : MVP_BaseProjectile
+{
+	Default
+	{
+		Radius 8;
+		Height 16;
+		Speed 25;
+		FastSpeed 30;
+		Damage 30;
+		ProjectileKickback 128;
+		Scale 0.9; //Scaled just right so that the shell visually fits into the barrel.
+		Obituary "%o was blown up by a Rebel tank.";
+		Decal "BigScorch";
+		DamageType "Autocannon"; //Using a tank shell damage type may lead to weird results, considering my future plans with the mod. I may change it to an HEShell type or something though.
+		+StrifeDamage;
+	}
+	
+	Void DoDiCokkaShellSplash (Int LiquidType, Bool UpsideDown = False)
+	{
+		If (LiquidType == LIQUID_NONE) Return;
+		HitLiquid = True;
+		Actor Splash = SpawnLiquidSplash (LiquidType,explosiondamage:96,48,0,'Explosive', True);
+		
+		Double Size = FRandom (1.5,2.0);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.bXFlip = Random (False,True);
+	}
+	
+	DynamicLight Light;
+	Bool HitLiquid; //Removes the shell if it hit a liquid texture.
+	States
+	{
+		Spawn:
+			MSPJ ABCD 2 Bright;
+			MSPJ EFGGFE 2;
+			MSPJ DCBA 2 Bright;
+			Loop;
+		Death:
+			TNT1 A 0
+			{
+				//The floor was hit.
+				If (Pos.Z <= FloorZ)
+					DoDiCokkaShellSplash(CheckLiquid(FloorPic));
+				//The ceiling was hit.
+				Else If (Pos.Z + Height >= CeilingZ)
+					DoDiCokkaShellSplash(CheckLiquid(CeilingPic),True);
+				
+				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+				
+				If (Pos.Z + Height >= CeilingZ) Scale.Y = -1.0; //If a ceiling was hit, invert the explosion.
+				
+				If (Pos.Z <= FloorZ + 24) SetOrigin ((Pos.XY,FloorZ),False);
+			}
+			MSX1 A 1 Bright A_SetScale (1.3);
+			MSX1 B 1 Bright
+			{
+				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
+				If (Light)
+				{
+					Light.Args[3] = 128; //Intensity
+					Light.Args[0] = 248; Light.Args[1] = 206; Light.Args[2] = 96; //RGB
+				}
+				
+				A_StartSound ("SFX/MSExplosion",volume:0.7,0.5);
+				MakeAlliesImmuneToExplosion (128);
+				A_Explode (128,128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
+				RemoveAllyExplosionImmunity();
+			}
+			MSX1 CDEFGHIJKLMNOPQR 2 Bright {If (Light) Light.Args[3]-= 5;}
+			MSX1 STUVW 3 {If (Light) Light.Args[3]-= 5;}
+			MSX1 XYZ[] 1 {If (Light) Light.Args[3]-= 5;}
+			MSXL ] 0 {If (Light) Light.Destroy();}
+			Stop;
+	}
+}

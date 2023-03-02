@@ -1,6 +1,3 @@
-//TODO:
-//Make the prop and wrecked prop versions, the latter should also a have a variable to turn on the fire particles permanently.
-
 //The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
 Class MVP_DiCokka : MVP_BaseVehicle
 {
@@ -64,6 +61,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	String User_Color; //The Di-Cokkas' color.
 	Bool User_TargetPrediction; //If the Di-Cokka should be able to lead its' shots. By default it doesn't.
 	Bool User_NoCorpseCrush; //If true, the Di-Cokka won't crush small corpses it happens to drive over.
+	Bool User_RealisticTurretTurn; //Instead of instantly facing the target, the turret turns to face them as fast as a real world WW2 tank turret moves.
 	
 	Bool ExtremePain; //The Di-Cokka flinched from a very strong attack.
 	Int ForcedFireParticlesCount; //If this has a value, then the Di-Cokka is forced to spawn this amount of particles even when dead.
@@ -73,7 +71,11 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	{
 		Super.SpawnVehicleTurret();
 		
-		If (Turret) Turret.bNoTargetPrediction = !User_TargetPrediction;
+		If (Turret)
+		{
+			Turret.bNoTargetPrediction = !User_TargetPrediction;
+			Turret.bNoCombatTraverse = !User_RealisticTurretTurn;
+		}
 	}
 	
 	Override Void UserVariableDefaults()
@@ -82,13 +84,6 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		Super.UserVariableDefaults();
 	}
 
-	
-	Override Void SpawnHeadlights ()
-	{
-		Headlights.Push (SpawnVehicleHeadlight (Self,(32,32,24),spotlightangles:(20,30)));
-		Headlights.Push (SpawnVehicleHeadlight (Self,(32,-32,24),spotlightangles:(20,30)));
-	}
-	
 	//Unlike most vehicles, the Di-Cokka only ever stops to shoot when the turret is firing a volley, and only during some volleys.
 	Override Bool StayStillAndShoot(Actor CheckSightFrom)
 	{
@@ -104,64 +99,6 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			Return True;
 		}
 		Return False;
-	}
-	
-	//This simply returns true so that the vehicle doesn't always run away from all enemies. Even if the chassis itself technically has no attack.
-	Override Bool CanAttack()
-	{
-		If (Turret)
-			Return True;
-		
-		Return False;
-	}
-	
-	Override Void Tick()
-	{
-		Super.Tick();
-		
-		If (IsFrozen()) Return;
-		If (GetAge() % 16*FireParticleFrequency == 0)
-		{
-			//Spawn fire particles when the vehicle is weakened enough.
-			If (ForcedFireParticlesCount || !IsDead (Self) && Health <= SpawnHealth()/2.5)
-			{
-				Actor Particle = Spawn ("MVP_DiCokkaFireParticle",Vec3Offset (FRandom (Radius, -Radius),FRandom (Radius, -Radius),FRandom (0, Height)),ALLOW_REPLACE);
-				Particle.Scale.X = Particle.Scale.Y = FRandom (0.4,0.55);
-				Particle.bXFlip = Random (False,True);
-				If (ForcedFireParticlesCount) ForcedFireParticlesCount--;
-			}
-		}
-	}
-	
-	Override Void PostBeginPlay ()
-	{
-		TurretOffsets = (0,0,-0.25);
-		FireParticleFrequency = 1.0;
-		Super.PostBeginPlay();
-		
-		//Copied from how the Smart Marines' color variable is handled.
-		If (!User_Color || User_Color ~== ""){} //Don't run the code if User_Color is empty.
-		Else
-		{
-			//Handles the random color choice that is performed if the color name given is "Random".
-			If (User_Color ~== "Random")
-			{
-				Static Const String ColorArray[] = {"White","Black","Yellow","Orange","Green","Original","Default"}; //Contains all the valid color names.
-				
-				User_Color = ColorArray[Random(0,ColorArray.Size()-1)]; //Randomly picks a color string.
-			}
-			
-			If (!(User_Color ~== "Default"))
-			{
-				A_SetTranslation (String.Format("DiCokka_%s", User_Color));
-				If (Turret) Turret.A_SetTranslation (String.Format("DiCokka_%s", User_Color));
-			}
-			Else
-			{
-				A_SetTranslation ('');
-				If (Turret) Turret.A_SetTranslation ('');
-			}
-		}
 	}
 	
 	Override Int DamageMobj (Actor Inflictor, Actor Source, Int Damage, Name MOD, Int Flags, Double Angle)
@@ -182,17 +119,16 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		Return LeDamage;
 	}
 	
-	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
+	//This simply returns true so that the vehicle doesn't always run away from all enemies. Even if the chassis itself technically has no attack.
+	Override Bool CanAttack()
 	{
-		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
-		If (Health < GetGibHealth())
-		{
-			ForcedFireParticlesCount = Random (24,64);
-			FireParticleFrequency = 0.25;
-		}
-		Else
-			ForcedFireParticlesCount = Random (8,24);
+		If (Turret)
+			Return True;
+		
+		Return False;
 	}
+	
+	Mixin MVP_DiCokkaSharedVirtuals; //Check the bottom of the file.
 	
 	States
 	{
@@ -292,6 +228,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Obituary "%o was blown up by a Rebel tank.";
 		MVP_BaseTurret.MaximumPitch -20;
 		MVP_BaseTurret.MinimumPitch 10;
+		MVP_BaseTurret.CombatAngleTurnRate 24; //The M4 Shermans' turret traverse rate, since the Di-Cokka kinda looks like a cartoony Sherman with a German turret.
+		MVP_BaseTurret.CombatPitchTurnRate 24;
 		+MVP_BaseTurret.TransferDamage;
 		+MVP_BaseTurret.DontStayAround;
 		
@@ -392,7 +330,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		
 		MissileState = FindState ("Fire",True);
 		AttackStates.Push (FindState("Fire",True));
-		AttackStates.Push (FindState("Fire.Triple",True));
+		AttackStates.Push (FindState("Fire.Triple"));
 	}
 	
 	//This one is a bit weird, it allows to not have to copy and paste the firing code 3 times for the triple attack.
@@ -436,12 +374,12 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	Int A_DiCokkaFireDelay()
 	{
 		//If the target isn't in the line of fire anymore, then try finding a new target.
-		If (/*!DiCokkaLOFCheck(True) */!MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround|TLOF_FaceOther))
+		If (!MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround|TLOF_FaceOther))
 		{
 			Actor AltTarget = PickDifferentTarget (Target,(WarningZone ? WarningZone : Target),512);
 			If (AltTarget) Target = AltTarget;
 		}
-		A_FaceTarget (3,3,flags:FAF_MIDDLE);
+		If (bNoCombatTraverse) {a_log ("facing target");A_FaceTarget (5,5,flags:FAF_MIDDLE);}
 		Return UpdateTurretElevation (10,6,8,8); //K, G, I, I
 		//console.printf ("moving around",pitch);
 	}
@@ -460,7 +398,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		LineTrace (Angle,INT.MAX,Pitch,TRF_SOLIDACTORS|TRF_THRUHITSCAN|TRF_BLOCKSELF,14,data:Check);
 		bMissile = bNoBlockMonst = False; //Turn off hack.
 		
-		console.printf ("angle is %d, pitch is %d, distance is %d, location is at %d %d %d",angle, pitch, int.max,check.hitlocation.x,check.hitlocation.y,check.hitlocation.z);
+		//console.printf ("angle is %d, pitch is %d, distance is %d, location is at %d %d %d",angle, pitch, int.max,check.hitlocation.x,check.hitlocation.y,check.hitlocation.z);
 		
 		Return Check.HitLocation;
 	}
@@ -550,185 +488,79 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			}
 			Goto See;
 		Death:
-			MSV1 WXY 10;
-			MSV1 Y -1;
-			Stop;
+			MSV1 WXY 10 RotateToVehicle(RTVF_RELATIVEONLY);
+			MSV1 Y 1 RotateToVehicle(RTVF_RELATIVEONLY);
+			Wait;
 	}
 }
 
-//Textured particles defined in ANIMDEFS all animate in unison. So they are useless for this.
-Class MVP_DiCokkaFireParticle : Actor
+//These virtuals are placed in this mixin to not have to copy and paste them on the prop version of the Di-Cokka.
+Mixin Class MVP_DiCokkaSharedVirtuals
 {
-	Default
+	Override Void SpawnHeadlights ()
 	{
-		+Bright;
-		+NoBlockmap;
+		Headlights.Push (SpawnVehicleHeadlight (Self,(32,32,24),spotlightangles:(20,30)));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(32,-32,24),spotlightangles:(20,30)));
 	}
 	
-	//Fun fact, an empty or totally custom tick override doesn't actually provide a noticeable performance improvement.
-	Override Void Tick()
-	{
-		If (IsFrozen()) Return;
-		// Copied from FastProjectile.
-		if (tics != -1)
-		{
-			if (tics > 0) tics--;
-			while (!tics)
-			{
-				if (!SetState (CurState.NextState))
-				{ // mobj was removed
-					return;
-				}
-			}
-		}
-	}
-	States
-	{
-		Spawn:
-			MSX3 ABDEFGHIJKLMNOPQRSTUVXYZ 3;
-			Stop;
-	}
-}
-
-Class MVP_DiCokkaDebris : Actor
-{
-	Default
-	{
-		Radius 4;
-		Height 8;
-		+ThruActors;
-	}
 	Override Void Tick()
 	{
 		Super.Tick();
-		If (Pos.Z <= FloorZ || BlockingLine)
+		
+		If (IsFrozen()) Return;
+		If (GetAge() % 16*FireParticleFrequency == 0)
 		{
-			If (Frame >= 7 && Random (0,256) < 48) A_StartSound ("Vehicle/Di-Cokka/MetalHit",volume:FRandom (0.3,0.8),ATTN_STATIC);
-			Destroy();
+			//Spawn fire particles when the vehicle is weakened enough.
+			If (ForcedFireParticlesCount || !IsDead (Self) && Health <= SpawnHealth()/2.5)
+			{
+				Actor Particle = Spawn ("MVP_DiCokkaFireParticle",Vec3Offset (FRandom (Radius, -Radius),FRandom (Radius, -Radius),FRandom (0, Height)),ALLOW_REPLACE);
+				Particle.Scale.X = Particle.Scale.Y = FRandom (0.4,0.55);
+				Particle.bXFlip = Random (False,True);
+				If (ForcedFireParticlesCount) ForcedFireParticlesCount--;
+			}
 		}
 	}
-	States
-	{
-		Spawn:
-			TNT1 A 0 NoDelay A_Jump (255,"Debris1","Debris2","Debris3");
-		Debris1:
-			MSDB ABCDEFGH 3;
-			Loop;
-		Debris2:
-			MSDB IJKLMNOP 3;
-			Loop;
-		Debris3:
-			MSDB QRSTUVWX 3;
-			Loop;
-	}
-}
-
-Class MVP_MetalSlugExplosion : MVP_BigExplosion
-{
-	States
-	{
-		Spawn:
-			MSX1 A 2 NoDelay
-			{
-				A_Explode (MaxTargetRange,Damage,XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,MeleeRange,damagetype:'Explosion');
-				A_QuakeEx (2,2,2,35*5,0,768,flags:QF_SCALEDOWN|QF_3D);
-				A_StartSound ("SFX/MSExplosion",CHAN_AUTO,attenuation:0.2);
-			}
-			MSX1 B 2;
-			MSX2 CDEFGHIJ 4;
-			MSX2 KLMNOPQRSTUVWX 6;
-			Stop;
-	}
-}
-
-Class MVP_DiCokkaShotEffect : Actor
-{
-	Default
-	{
-		+NoInteraction;
-	}
-	States
-	{
-		Spawn:
-			MSFX AB 1 Bright Light ("MSExplosion2");
-			MSFX CEGIKMO 2; //Removed half the frames for speed.
-			//MSFX CDEFGHIJKLMNO 2; //All the fire effect frames.
-			Stop;
-	}
-}
-
-Class MVP_DiCokkaShell : MVP_BaseProjectile
-{
-	Default
-	{
-		Radius 8;
-		Height 16;
-		Speed 25;
-		FastSpeed 30;
-		Damage 30;
-		ProjectileKickback 128;
-		Scale 0.9; //Scaled just right so that the shell visually fits into the barrel.
-		Obituary "%o was blown up by a Rebel tank.";
-		Decal "BigScorch";
-		DamageType "Autocannon"; //Using a tank shell damage type may lead to weird results, considering my future plans with the mod. I may change it to an HEShell type or something though.
-		+StrifeDamage;
-	}
 	
-	Void DoDiCokkaShellSplash (Int LiquidType, Bool UpsideDown = False)
+	Override Void PostBeginPlay ()
 	{
-		If (LiquidType == LIQUID_NONE) Return;
-		HitLiquid = True;
-		Actor Splash = SpawnLiquidSplash (LiquidType,explosiondamage:96,48,0,'Explosive', True);
+		TurretOffsets = (0,0,-0.25);
+		FireParticleFrequency = 1.0;
+		Super.PostBeginPlay();
 		
-		Double Size = FRandom (1.5,2.0);
-		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
-		Splash.bXFlip = Random (False,True);
+		//Copied from how the Smart Marines' color variable is handled.
+		If (!User_Color || User_Color ~== ""){} //Don't run the code if User_Color is empty.
+		Else
+		{
+			//Handles the random color choice that is performed if the color name given is "Random".
+			If (User_Color ~== "Random")
+			{
+				Static Const String ColorArray[] = {"White","Black","Yellow","Orange","Green","Original","Default"}; //Contains all the valid color names.
+				
+				User_Color = ColorArray[Random(0,ColorArray.Size()-1)]; //Randomly picks a color string.
+			}
+			
+			If (!(User_Color ~== "Default"))
+			{
+				A_SetTranslation (String.Format("DiCokka_%s", User_Color));
+				If (Turret) Turret.A_SetTranslation (String.Format("DiCokka_%s", User_Color));
+			}
+			Else
+			{
+				A_SetTranslation ('');
+				If (Turret) Turret.A_SetTranslation ('');
+			}
+		}
 	}
 	
-	DynamicLight Light;
-	Bool HitLiquid; //Removes the shell if it hit a liquid texture.
-	States
+	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
-		Spawn:
-			MSPJ ABCD 2 Bright;
-			MSPJ EFGGFE 2;
-			MSPJ DCBA 2 Bright;
-			Loop;
-		Death:
-			TNT1 A 0
-			{
-				//The floor was hit.
-				If (Pos.Z <= FloorZ)
-					DoDiCokkaShellSplash(CheckLiquid(FloorPic));
-				//The ceiling was hit.
-				Else If (Pos.Z + Height >= CeilingZ)
-					DoDiCokkaShellSplash(CheckLiquid(CeilingPic),True);
-				
-				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
-				
-				If (Pos.Z + Height >= CeilingZ) Scale.Y = -1.0; //If a ceiling was hit, invert the explosion.
-				
-				If (Pos.Z <= FloorZ + 24) SetOrigin ((Pos.XY,FloorZ),False);
-			}
-			MSX1 A 1 Bright A_SetScale (1.3);
-			MSX1 B 1 Bright
-			{
-				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
-				If (Light)
-				{
-					Light.Args[3] = 128; //Intensity
-					Light.Args[0] = 248; Light.Args[1] = 206; Light.Args[2] = 96; //RGB
-				}
-				
-				A_StartSound ("SFX/MSExplosion",volume:0.7,0.5);
-				MakeAlliesImmuneToExplosion (128);
-				A_Explode (128,128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
-				RemoveAllyExplosionImmunity();
-			}
-			MSX1 CDEFGHIJKLMNOPQR 2 Bright {If (Light) Light.Args[3]-= 5;}
-			MSX1 STUVW 3 {If (Light) Light.Args[3]-= 5;}
-			MSX1 XYZ[] 1 {If (Light) Light.Args[3]-= 5;}
-			MSXL ] 0 {If (Light) Light.Destroy();}
-			Stop;
+		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		If (Health < GetGibHealth())
+		{
+			ForcedFireParticlesCount = Random (24,64);
+			FireParticleFrequency = 0.25;
+		}
+		Else
+			ForcedFireParticlesCount = Random (8,24);
 	}
 }

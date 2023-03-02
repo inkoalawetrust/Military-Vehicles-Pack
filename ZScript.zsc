@@ -22,6 +22,7 @@ Version "4.10.0"
 	#Include "ZScript/Vehicles/APC/OtherActors.zsc"
 	//MISSION 01 START
 	#Include "ZScript/Vehicles/Di-Cokka/Di-Cokka.zsc"
+	#Include "ZScript/Vehicles/Di-Cokka/OtherActors.zsc"
 
 
 //Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.

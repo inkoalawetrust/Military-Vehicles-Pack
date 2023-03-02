@@ -38,6 +38,8 @@ Class MVP_BaseProp : MVP_BaseVehicle Abstract
 	{
 		Actor.Tick();
 		
+		If (IsFrozen()) Return;
+		
 		//Props don't move, so just let mappers be able to manually turn the lights on or off per prop.
 		If (!User_NoHeadlights)
 			HeadlightsOn = True;
