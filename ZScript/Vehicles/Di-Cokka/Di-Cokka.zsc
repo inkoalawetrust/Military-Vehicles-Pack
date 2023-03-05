@@ -64,8 +64,6 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	Bool User_RealisticTurretTurn; //Instead of instantly facing the target, the turret turns to face them as fast as a real world WW2 tank turret moves.
 	
 	Bool ExtremePain; //The Di-Cokka flinched from a very strong attack.
-	Int ForcedFireParticlesCount; //If this has a value, then the Di-Cokka is forced to spawn this amount of particles even when dead.
-	Double FireParticleFrequency; //How often fire particles spawn.
 	
 	Override Void SpawnVehicleTurret ()
 	{
@@ -274,9 +272,10 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	Bool ExtremePain; //Makes the turret play its' extreme pain animation when it flinches.
 	Int RefireDelay; //Stop the tank turret from firing another shell for a set amount of time.
 	
-	Override Bool ShouldAttack(Bool NoStateJump)
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
+		If (IsOverPitchLimits (Target,14,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		//Increase attack chance when close to death.
 		Bool AboutToDie = CriticallyLowHealth();
@@ -377,9 +376,14 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		If (!MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround|TLOF_FaceOther))
 		{
 			Actor AltTarget = PickDifferentTarget (Target,(WarningZone ? WarningZone : Target),512);
-			If (AltTarget) Target = AltTarget;
+			If (AltTarget)
+			{
+				ChaseTimer = 0; //Reset time since the target was last seen.
+				Target = AltTarget;
+			}
 		}
 		If (bNoCombatTraverse) {a_log ("facing target");A_FaceTarget (5,5,flags:FAF_MIDDLE);}
+		HandleChaseTimer();
 		Return UpdateTurretElevation (10,6,8,8); //K, G, I, I
 		//console.printf ("moving around",pitch);
 	}
@@ -393,14 +397,18 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	//Fire a ray from the direction the turret is facing and return a position to where the ray stopped, which should also be where the projectile with hit.
 	Override Vector3 GetAttackLocation ()
 	{
-		FLineTraceData Check;
-		bMissile = bNoBlockMonst = True; //HACK: Used for TRF_BLOCKSELF to set the right wallmask to the LineTracer that LineTrace() fires.
-		LineTrace (Angle,INT.MAX,Pitch,TRF_SOLIDACTORS|TRF_THRUHITSCAN|TRF_BLOCKSELF,14,data:Check);
-		bMissile = bNoBlockMonst = False; //Turn off hack.
+		Let Check = New ("MVP_GenericWarnMarineCheck");
+		
+		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		
+		Check.Shooter = Self;
+		Check.Other = Target;
+		Check.Trace ( Level.Vec3Offset (Pos,(0,0,14)), CurSector, Direction, MaxTargetRange, 0 );
+		MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,(0,0,14)),Check.Results.HitPos,Check.Results.Distance);
 		
 		//console.printf ("angle is %d, pitch is %d, distance is %d, location is at %d %d %d",angle, pitch, int.max,check.hitlocation.x,check.hitlocation.y,check.hitlocation.z);
 		
-		Return Check.HitLocation;
+		Return Check.Results.HitPos;
 	}
 	
 	States
@@ -417,6 +425,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		See:
 			MSV1 # 1
 			{//a_log ("in the see state");
+				If (WarningZone) WarningZone.Destroy();
 				A_FaceTarget (3,3,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
@@ -435,7 +444,6 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 # 6 {Frame = A_DiCokkaShoot();}
 			MSV1 # 0
 			{
-				If (WarningZone) WarningZone.Destroy();
 				RefireDelay = Random (2,5)*GameTicRate;
 				If (CriticallyLowHealth()) RefireDelay /= 1.5; //Fire a bit faster when almost dead.
 			}
@@ -458,7 +466,6 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 # 6 {Frame = A_DiCokkaShoot(True);}
 			MSV1 # 0
 			{
-				If (WarningZone) WarningZone.Destroy();
 				RefireDelay = Random (2,5)*GameTicRate;
 				If (CriticallyLowHealth()) RefireDelay /= 1.5; //Fire a bit faster when almost dead.
 				bDontStayAround = True;
@@ -497,6 +504,10 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 //These virtuals are placed in this mixin to not have to copy and paste them on the prop version of the Di-Cokka.
 Mixin Class MVP_DiCokkaSharedVirtuals
 {
+	Int ForcedFireParticlesCount; //If this has a value, then the Di-Cokka is forced to spawn this amount of particles even when dead.
+	Double FireParticleFrequency; //How often fire particles spawn.
+	Bool IceDeath; //Because the DeathType variable in AActor doesn't work for some reason ?
+	
 	Override Void SpawnHeadlights ()
 	{
 		Headlights.Push (SpawnVehicleHeadlight (Self,(32,32,24),spotlightangles:(20,30)));
@@ -508,7 +519,7 @@ Mixin Class MVP_DiCokkaSharedVirtuals
 		Super.Tick();
 		
 		If (IsFrozen()) Return;
-		If (GetAge() % 16*FireParticleFrequency == 0)
+		If (GetAge() % (16*FireParticleFrequency) == 0 && !IceDeath)
 		{
 			//Spawn fire particles when the vehicle is weakened enough.
 			If (ForcedFireParticlesCount || !IsDead (Self) && Health <= SpawnHealth()/2.5)
@@ -555,6 +566,7 @@ Mixin Class MVP_DiCokkaSharedVirtuals
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		If (MeansOfDeath == 'Ice') IceDeath = True;
 		If (Health < GetGibHealth())
 		{
 			ForcedFireParticlesCount = Random (24,64);

@@ -1,8 +1,5 @@
 //TODO:
-/*For the limt angle turn rate, maybe also give 16 rotations to the APCs' turrets (Except the small MG), should be easy enough to re-render the sprites.
-The main concern is file size here.*/
-//Make it so the APCs' dual MG and autocannon turrets' produce a warning zone at their impact zone while firing. To scare marines away.
-//In relation to the above. Move the code that warps a warning zone to where the Di-Cokkas' turret is facing into a mixin. So other turrets can use it.
+//Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
 
 Class MVP_BaseVehicle : Actor Abstract
 {
@@ -493,7 +490,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 				A_StartSound (TurnSound,CHAN_BODY,0,0.8,0.8);
 		}
 		
-		ElevationState = IsOverPitchLimits();
+		ElevationState = TurretOverPitchLimits();
 		If (ElevationState != ELEVATION_INBOUNDS) Pitch = Clamp (Pitch,MaxPitch,MinPitch); //Turrets can't move past their elevation limits.
 		
 		If (!Master || IsDead && bFallOnDeath) Return;

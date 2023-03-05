@@ -175,9 +175,9 @@ Mixin Class MVP_CheckFunctions
 	{
 		If (!Other) Return False;
 		
-		If (!Other.Player && Other.bFloat)
+		If (!Other.Player && Other.bFloat) // Flying monster.
 			Return True;
-		Else If (Other.Player)
+		Else If (Other.Player) //Flying player
 		{
 			If (Other.bFly || Other.bFlyCheat || Other.Player.Cheats & CF_NOCLIP2)
 				Return True;
@@ -404,6 +404,14 @@ Extend Class MVP_BaseVehicle
 		Spawnee.Angle = Self.Angle;
 		If (SetMaster)
 			Spawnee.Master = Self;
+		//At least try to make the default ZDoom marines a bit smarter.
+		If (WhatToSpawn != CustomMarine)
+		{
+			Spawnee.Speed = 16;
+			Spawnee.bSeeFriendlyMonsters = True;
+			Spawnee.FriendlySeeBlocks = 16;
+			Spawnee.bAvoidMelee = True;
+		}
 		
 		Return Spawnee;
 	}

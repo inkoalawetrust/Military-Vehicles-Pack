@@ -66,9 +66,6 @@ Class MVP_DiCokkaProp : MVP_BaseProp
 		}
 	}
 	
-	Int ForcedFireParticlesCount; //If this has a value, then the Di-Cokka is forced to spawn this amount of particles even when dead.
-	Double FireParticleFrequency; //How often fire particles spawn.
-	
 	States
 	{
 		Spawn:
@@ -344,6 +341,13 @@ Class MVP_DiCokkaShell : MVP_BaseProjectile
 		Decal "BigScorch";
 		DamageType "Autocannon"; //Using a tank shell damage type may lead to weird results, considering my future plans with the mod. I may change it to an HEShell type or something though.
 		+StrifeDamage;
+	}
+	
+	Override Int SpecialMissileHit (Actor Victim)
+	{
+		If (!Victim) Return 1;
+		If (Target && !IsInanimateObject(Victim) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
+		Return -1;
 	}
 	
 	Void DoDiCokkaShellSplash (Int LiquidType, Bool UpsideDown = False)

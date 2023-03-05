@@ -2,13 +2,25 @@
 //Functions and code exclusive to the turret class.
 Extend Class MVP_BaseTurret
 {
-	//Is the turrets' target too high or to low over the turrets' elevation limits ?
-	Int IsOverPitchLimits()
+	//Is the turrets too high or too low over its' elevation limits ?
+	Int TurretOverPitchLimits()
 	{
-		If (MaxPitch == 0 && MinPitch == 0) Return ELEVATION_INBOUNDS; //No elevation limits.
 		Double Diff = 0.1; //The turret pitch is clamped every tick, so this small difference allows them to still stop shooting.
-		If (Pitch-Diff < MaxPitch) Return ELEVATION_TOOHIGH;
-		If (Pitch+Diff > MinPitch) Return ELEVATION_TOOLOW;
+		If (MaxPitch != 0 && Pitch-Diff < MaxPitch) Return ELEVATION_TOOHIGH;
+		If (MinPitch != 0 && Pitch+Diff > MinPitch) Return ELEVATION_TOOLOW;
+		Return ELEVATION_INBOUNDS;
+	}
+	
+	//Is the other actor specified too high or below the turrets' pitch limits ?
+	//ZOfs and TargZOfs are properties passed over to PitchTo().
+	Int IsOverPitchLimits (Actor Other, Double ZOfs = 0, Double TargetZOfs = 0)
+	{
+		If (!Other) Return ELEVATION_INBOUNDS; //No other actor specified.
+		
+		Double PitchToOther = PitchTo (Other,ZOfs,TargetZOfs);
+		
+		If (MaxPitch != 0 && PitchToOther < MaxPitch) Return ELEVATION_TOOHIGH;
+		If (MinPitch != 0 && PitchToOther > MinPitch) Return ELEVATION_TOOLOW;
 		Return ELEVATION_INBOUNDS;
 	}
 	
@@ -258,7 +270,7 @@ Extend Class MVP_BaseTurret
 		Check.PropHealthThreshold = ProphealthThreshold;
 		Check.Trace (Level.Vec3Offset (Pos,CheckOffsets),CurSector,Direction,Distance,0);
 		
-		MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,CheckOffsets),Check.Results.HitPos,Check.Results.Distance);
+		//MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,CheckOffsets),Check.Results.HitPos,Check.Results.Distance);
 		
 		If (Check.BadLOF)
 		{a_log ("bad lof");
@@ -270,6 +282,50 @@ Extend Class MVP_BaseTurret
 		If (!(Flags & TLOF_DoStayAround)) bDontStayAround = False;
 		Check.Destroy();
 		Return True;
+	}
+	
+	Enum FindInLOFFlags
+	{
+		FIL_FaceTarget = 1 << 0, //Fire the ray straight at the Other actors' direction instead of wherever the turret is facing.
+		FIL_HitscanHit = 1 << 1, //Stop the search if a hitscan blocking line is in the way.
+		FIL_MissileHit = 1 << 2, //Ditto, but for projectile blocking lines instead.
+	}
+	
+	//Finds all actors in the line of fire, and adds them to the array specified in FoundActors.
+	//Flags: The flags to alter the checks' behavior, see above for the actual flags.
+	//Range: The range of the check.
+	//ActorLimit: How many actors the check will find before stopping.
+	//CheckOffsets: The offsets of the check relative to the caller.
+	//Other: The actor to aim the check to if FIL_FaceTarget is on.
+	//FoundActors: The array to output all the actors the check found to.
+	Void MVP_FindInLOF (Int Flags, Double Range, Int ActorLimit = 0, Vector3 CheckOffsets = (0,0,32), Actor Other = Null, Out Array <Actor> FoundActors = Null)
+	{
+		Let Check = New ("MVP_LOFActorFinder");
+		Vector3 Direction;
+		If (!(Flags & FIL_FaceTarget))
+			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		Else
+		{
+			Double PitchTo = PitchTo (Other,14,Other.Height/2);
+			Direction = (AngleToVector(AngleTo(Other), Cos(PitchTo)), -Sin(PitchTo));
+		}
+		
+		Check.Shooter = Self;
+		Check.Other = Other;
+		Check.ActorLimit = ActorLimit;
+		
+		Int BlockFlags;
+		If (Flags & FIL_HitscanHit && !(Flags & FIL_MissileHit)) BlockFlags |= MVP_LOFRaycast.BLITW_HitscansOnly;
+		Else If (Flags & (FIL_MissileHit|FIL_HitscanHit)) BlockFlags |= MVP_LOFRaycast.BLITW_HitscansToo;
+		Check.BlockMode = BlockFlags;
+		
+		Check.Trace (Level.Vec3Offset (Pos,CheckOffsets),CurSector,Direction,Range,0);
+		
+		//The most important bit. Transfer the actors the line tracer found to the array that was inputted 
+		If (FoundActors)
+			FoundActors.Move(Check.Mobjs);
+		
+		Return;
 	}
 }
 
@@ -336,6 +392,7 @@ Class MVP_LOFRaycast : LineTracer
 	Bool BadLOF; //If true, there is something standing in the shooters' line of fire.
 	Actor Shooter; //The actor firing the raycast.
 	Actor Other; //The actor we are looking for, normally this is the shooters' target.
+	Array <Actor> Mobjs; //An array of all the mobjs that were found. Can be returned to functions by using the out keyword.
 	
 	//Visualizes a path between OriginPos and FinalPos with a length specified by Distance. Used to debug where LOF checks start, go to, and end.
 	Static Void VisualizeTracePath (Vector3 OriginPos, Vector3 FinalPos, Double Distance)
@@ -359,6 +416,14 @@ Class MVP_LOFRaycast : LineTracer
 				Level.SpawnParticle (P);
 			}
 		}
+	}
+	
+	//Add the Other actor to the Mobjs array.
+	Void AddToMobjList (Actor Other)
+	{
+		If (Other)
+			Mobjs.Push(Other);
+		Return;
 	}
 	
 	//Should the actor shoot at the prop ?
@@ -503,6 +568,56 @@ Class MVP_BasicSightCheck : MVP_LOFRaycast
 	}
 }
 
+//Goes through all actors and adds them to the Mobjs array.
+Class MVP_LOFActorFinder : MVP_LOFRaycast
+{
+	Int ActorLimit; //How many actors the trace goes through before it stops. Useful for things such as rippers that only go through a certain amount of actors.
+	Int BlockMode; //What kind of lines will block the actor. Uses the same flags as BlockingLineInTheWay, a value of 0 (Default) means it checks only for BLOCKEVERYTHING lines.
+	Override ETraceStatus TraceCallback()
+	{
+		AddToMobjList (Results.HitActor);
+		
+		//Stop at blocking lines.
+		If (Results.HitLine && Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING || BlockingLineInTheWay (Results.HitLine,BlockMode))
+			Return Trace_Stop;
+		
+		//Stop at level geometry.
+		If (HitLevelGeometry (Results))
+			Return Trace_Stop;
+		
+		//If a limit to how many actors can be found has been set and passed. Then stop.
+		If (ActorLimit > 0 && ActorLimit >= Mobjs.Size()-1)
+			Return Trace_Stop;
+		
+		Return Trace_Skip;
+	}
+}
+
+//A generic check used to find where a projectile will roughly land, to place a warning zone for marines there.
+//This is here because MVP projectiles usually go through allies.
+Class MVP_GenericWarnMarineCheck : MVP_LOFRaycast
+{
+	Int BlockMode; //Works like the variable in MVP_LOFActorFinder.
+	Override ETraceStatus TraceCallback()
+	{
+		Actor Mobj = Results.HitActor;
+		
+		//Standard MVP projectiles go through allies.
+		If (Mobj && (IsInanimateObject (Mobj) || Shooter && Shooter.IsHostile (Mobj)))
+			Return Trace_Stop;
+		
+		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
+		If (Results.HitLine && Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING || BlockingLineInTheWay (Results.HitLine,BlockMode))
+			Return Trace_Stop;
+		
+		//Level geometry is in the way.
+		If (HitLevelGeometry (Results))
+			Return Trace_Stop;
+		
+		Return Trace_Skip;
+	}
+}
+
 //Generic projectile LOF check for non-ripping projectiles, should be applicable to most projectiles.
 //PropHealthThreshold: If a destructible prop actor with this much health or less is standing the way, then shoot at it anyway.
 //SlashRadius: If the check hit level geometry, but the target is within the specified specified distance from the hit spot. Then don't return BadLOF.
@@ -516,6 +631,8 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		Actor Mobj = Results.HitActor;
 		
 		If (!Shooter) Return Trace_Stop;
+		
+		AddToMobjList (Mobj);
 		
 		If (Mobj == Shooter.Master) Return Trace_Skip;
 		
