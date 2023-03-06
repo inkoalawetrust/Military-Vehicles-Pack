@@ -140,7 +140,7 @@ Class MVP_APC : MVP_BaseVehicle
 	Override Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
 		//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
-		Int Range;
+		Double Range;
 		If (Turret) Range = Turret.MaxTargetRange;
 		Else Range = MaxTargetRange;
 		If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))

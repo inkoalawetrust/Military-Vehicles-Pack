@@ -239,7 +239,7 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 				MVP_Flame(Flame).Offsets = (0.1,0,4);
 				Flame.Scale.X = Flame.Scale.Y = 1.0;
 				Flame.Master = Self;
-				Flame.ReactionTime *= FRandom (1.25,4.25);
+				Flame.ReactionTime *= Int(FRandom (1.25,4.25));
 				Flame.SetDamage (8);
 				Flame.MaxTargetRange = 64;
 				Flame.MeleeRange = 32;
@@ -314,7 +314,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 				MVP_Flame(Flame).Offsets = (0.1,0,4);
 				Flame.Scale.X = Flame.Scale.Y = 1.0;
 				Flame.Master = Self;
-				Flame.ReactionTime *= FRandom (1.25,4.25);
+				Flame.ReactionTime *= Int(FRandom (1.25,4.25));
 				Flame.SetDamage (8);
 				Flame.MaxTargetRange = 64;
 				Flame.MeleeRange = 32;

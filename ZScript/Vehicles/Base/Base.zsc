@@ -681,7 +681,7 @@ Class MVP_BaseProjectile : FastProjectile
 		If (Random (0,255) < DeflectChance) Return False; //Fission mailed.
 		
 		Int Damage = GetMissileDamage(7,1); //Get your damage, be it a static number or a damage function.
-		Victim.DamageMobj (Self,Target,Damage*DamageReductionFactor,DamageType); //Harm the caller even when deflected.
+		Victim.DamageMobj (Self,Target,Int(Damage*DamageReductionFactor),DamageType); //Harm the caller even when deflected.
 		Angle -= 180; //Turn around.
 		Vel *= -1; //Opposite day today
 		Speed *= SlowDownFactor; //Slow down by a set amount. Can just be randomized in the parameters instead.
@@ -832,6 +832,7 @@ Class SmartMarineWarningZone : Actor
 		MaxTargetRange 256;
 		//+Friendly; //To get your grenade-type warning to work with the marines the Friendly flag is NEEDED, because otherwise friendly marines will sometimes end up running in place for some ungodly reason.
 		+Shootable; //This will hopefully stop marines running from these warnings from ever getting stuck and running in place.
+		+NoBlockmap; //Let's hope this doesn't somehow fuck something up on the marines :)
 		+NotAutoaimed
 		+NoBlood;
 		+NoDamage;

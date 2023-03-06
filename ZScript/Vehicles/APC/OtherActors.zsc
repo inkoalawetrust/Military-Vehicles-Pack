@@ -54,6 +54,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
+		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,DualMGAttackHeight,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target)&& MGLOFCheck())
@@ -193,7 +194,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				MVP_Flame(Flame).Offsets = (0.1,0,4);
 				Flame.Scale.X = Flame.Scale.Y = 1.0;
 				Flame.Master = Self;
-				Flame.ReactionTime *= FRandom (1.25,4.25);
+				Flame.ReactionTime *= Int(FRandom (1.25,4.25));
 				Flame.SetDamage (8);
 				Flame.MaxTargetRange = 64;
 				Flame.MeleeRange = 32;
@@ -303,6 +304,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
+		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,400,128,(0,0,12)))
@@ -411,7 +413,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				MVP_Flame(Flame).Offsets = (0.1,0,4);
 				Flame.Scale.X = Flame.Scale.Y = 1.0;
 				Flame.Master = Self;
-				Flame.ReactionTime *= FRandom (1.25,4.25);
+				Flame.ReactionTime *= Int(FRandom (1.25,4.25));
 				Flame.SetDamage (8);
 				Flame.MaxTargetRange = 64;
 				Flame.MeleeRange = 32;
@@ -514,6 +516,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
+		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,150,0,(0,0,8)))

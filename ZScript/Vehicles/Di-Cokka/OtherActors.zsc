@@ -299,7 +299,7 @@ Class MVP_MetalSlugExplosion : MVP_BigExplosion
 		Spawn:
 			MSX1 A 2 NoDelay
 			{
-				A_Explode (MaxTargetRange,Damage,XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,MeleeRange,damagetype:'Explosion');
+				A_Explode (Damage,Int(MaxTargetRange),XF_HURTSOURCE|XF_NOTMISSILE|XF_EXPLICITDAMAGETYPE,True,Int(MeleeRange),damagetype:'Explosion');
 				A_QuakeEx (2,2,2,35*5,0,768,flags:QF_SCALEDOWN|QF_3D);
 				A_StartSound ("SFX/MSExplosion",CHAN_AUTO,attenuation:0.2);
 			}

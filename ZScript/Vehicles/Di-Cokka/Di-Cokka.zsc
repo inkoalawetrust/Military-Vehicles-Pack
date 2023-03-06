@@ -275,6 +275,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
+		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,14,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		//Increase attack chance when close to death.
@@ -445,7 +446,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 # 0
 			{
 				RefireDelay = Random (2,5)*GameTicRate;
-				If (CriticallyLowHealth()) RefireDelay /= 1.5; //Fire a bit faster when almost dead.
+				Double NewDelay = RefireDelay / 1.5;
+				If (CriticallyLowHealth()) RefireDelay = Int(NewDelay); //Fire a bit faster when almost dead.
 			}
 			Goto See;
 		//Mostly copied from the above Fire state.
@@ -467,7 +469,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 # 0
 			{
 				RefireDelay = Random (2,5)*GameTicRate;
-				If (CriticallyLowHealth()) RefireDelay /= 1.5; //Fire a bit faster when almost dead.
+				Double NewDelay = RefireDelay / 1.5;
+				If (CriticallyLowHealth()) RefireDelay = Int(NewDelay); //Fire a bit faster when almost dead.
 				bDontStayAround = True;
 			}
 			Goto See;

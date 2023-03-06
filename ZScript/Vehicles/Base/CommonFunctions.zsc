@@ -281,7 +281,7 @@ Extend Class MVP_BaseVehicle
 	//Lifespan: The random lifespan each flame has in tics, the default is 35*30 (30 seconds). The X component is the minimum lifespan a flame can have, and Y is the maximum.
 	Void SpawnDeathFlames (Int Flags = FSP_WARNMARINES|FSP_VEHICLEDEATH, Vector2 Amount = (5,12), Vector2 Lifespan = (24*TICRATE,105*TICRATE))
 	{
-		Int RandomFlames = Random (Amount.X,Amount.Y);
+		Int RandomFlames = Random (Int(Amount.X),Int(Amount.Y));
 		Actor Flame;
 		Vector3 SpawnPos;
 		//Spawn a random amount of flames around the APC wreck.
@@ -297,7 +297,7 @@ Extend Class MVP_BaseVehicle
 			{
 				Flame.Master = Self; //So the flame knows what actor to warp to.
 				MVP_Flame(Flame).Offsets = SpawnPos;
-				Flame.ReactionTime = FRandom (Lifespan.X,LifeSpan.Y);
+				Flame.ReactionTime = Int(FRandom (Lifespan.X,LifeSpan.Y));
 				DeathFlames.Push (Flame); //Add the valid flame to the list.
 			}
 		}
@@ -338,7 +338,7 @@ Extend Class MVP_BaseVehicle
 	//LightColor: The RGB color of the headlight. This isn't a Color variable since that's not what dynamic light actors use. Default is white.
 	//Intensity: The intensity of the headlight. Default is 256.
 	//SpotlightAngles: The inner (X) and outer (Y) angle of the headlight. Default is (10,25), the default of the DynamicLight class.
-	MVP_Headlight SpawnVehicleHeadlight (Actor AttachTo, Vector3 Offsets, Int Flags = 0, Vector3 LightColor = (255,255,255), Double Intensity = 256, Vector2 SpotlightAngles = (10,25))
+	MVP_Headlight SpawnVehicleHeadlight (Actor AttachTo, Vector3 Offsets, Int Flags = 0, Vector3 LightColor = (255,255,255), Int Intensity = 256, Vector2 SpotlightAngles = (10,25))
 	{
 		If (!AttachTo) AttachTo = Self; //Just in case.
 		MVP_Headlight Headlight = MVP_Headlight(Spawn ("MVP_Headlight",Pos,ALLOW_REPLACE));
@@ -348,9 +348,9 @@ Extend Class MVP_BaseVehicle
 		If (Flags & VHSF_BACKLIGHT) Headlight.IsBacklight = True;
 		
 		//XYZ = RGB
-		Headlight.Args[LIGHT_RED] = LightColor.X;
-		Headlight.Args[LIGHT_GREEN] = LightColor.Y;
-		Headlight.Args[LIGHT_BLUE] = LightColor.Z;
+		Headlight.Args[LIGHT_RED] = Int(LightColor.X);
+		Headlight.Args[LIGHT_GREEN] = Int(LightColor.Y);
+		Headlight.Args[LIGHT_BLUE] = Int(LightColor.Z);
 		Headlight.Args[LIGHT_INTENSITY] = Intensity;
 		
 		//X is the inner angle. Y is the outer angle.

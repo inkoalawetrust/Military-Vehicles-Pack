@@ -115,7 +115,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		If ((IsHostile(Victim) || IsInanimateObject (Victim)))
 		{
-			Victim.DamageMobj (Self,Self,Random (30,40)*Clamp(Vel.XY.Length(),0.1,INT.MAX),'Melee',angle:Angle); //Isekai the enemy.
+			Victim.DamageMobj (Self,Self,Random (30,40)*Int(Clamp(Vel.XY.Length(),0.1,INT.MAX)),'Melee',angle:Angle); //Isekai the enemy.
 			
 			//Black box, no idea how to alter it to decrease/increase how much the truck is slowed down when ramming.
 			Double Mul = LinearMap(Victim.Mass, 2000, 100, 0.1, 0.995);
@@ -440,7 +440,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				If (BlockingLine && !CheckMove (Vec2Angle (Vel.XY.Length(),Angle),PCM_NOACTORS))
 				{
 					//No idea if this even works as intended, can't even playtest it, since destructible geometry is totally undocumented lol.
-					Destructible.DamageLinedef (BlockingLine,Self,Random (30,40)*Clamp(Vel.XY.Length(),0.1,INT.MAX),'Melee',0,Pos,False);
+					Destructible.DamageLinedef (BlockingLine,Self,Int(Random (30,40)*Clamp(Vel.XY.Length(),0.1,INT.MAX)),'Melee',0,Pos,False);
 					HitThings.Clear();
 					TotalMassHit = 0;
 					bSkullFly = bSlidesOnWalls = CancelCharge = False;
