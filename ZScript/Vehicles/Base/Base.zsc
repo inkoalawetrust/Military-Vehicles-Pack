@@ -1,4 +1,8 @@
-//TODO:
+//FIXME:
+//Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
+
+//IDEA:
+//Maybe add some kind of check in the corpse crush code, to make a vehicle not actively crush corpses (Or even avoid them) if a friendly Archvile is visible.
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
 
 Class MVP_BaseVehicle : Actor Abstract
@@ -394,12 +398,13 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	}
 	
 	Private Int TurretFlags;
-	FlagDef FallOnDeath : TurretFlags, 0; //Turret stops being attached to its' vehicle after dying.
+	FlagDef FallOnDeath : TurretFlags, 0; //Turret detached from its' vehicle upon death.
 	FlagDef DontStayAround : TurretFlags, 1; //Used to make the turret not make the vehicle stop to sit around and let the turret shoot, even if the latter has a target.
 	FlagDef NoTargetPrediction : TurretFlags, 2; //The turret will not calculate its' targets' movement and lead its' shots.
 	FlagDef TransferDamage : TurretFlags, 3; //The turret will transfer damage taken to its' master (The vehicle it's on). Instead of taking any of its' own.
 	FlagDef NoCombatTraverse: TurretFlags, 4; //The stock combat traverse code will not run, can be used to give the turret its' own turn logic when firing.
 	
+	//Turret turning variables and properties.
 	Double MaxPitch, MinPitch, TurnAmount, TurnSoundRadius, CombatAngleTurnRate, CombatPitchTurnRate;
 	Sound TurnSound;
 	Property MaximumPitch : MaxPitch; //The maximum pitch the turret can go up to.
@@ -937,10 +942,10 @@ Class SmartMarineWarningZone : Actor
 		}
 	}
 	//DEBUG: Uncomment this to be able to see where the warning zones are at.
-	States
+	/*States
 	{
 		Spawn:
 			PLSS A 4 Bright;
 			Loop;
-	}
+	}*/
 }

@@ -578,7 +578,7 @@ Class MVP_LOFActorFinder : MVP_LOFRaycast
 		AddToMobjList (Results.HitActor);
 		
 		//Stop at blocking lines.
-		If (Results.HitLine && Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING || BlockingLineInTheWay (Results.HitLine,BlockMode))
+		If (Results.HitLine && Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING || BlockMode != 0 && BlockingLineInTheWay (Results.HitLine,BlockMode))
 			Return Trace_Stop;
 		
 		//Stop at level geometry.
@@ -607,7 +607,7 @@ Class MVP_GenericWarnMarineCheck : MVP_LOFRaycast
 			Return Trace_Stop;
 		
 		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
-		If (Results.HitLine && Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING || BlockingLineInTheWay (Results.HitLine,BlockMode))
+		If (Results.HitLine && Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING || BlockMode != 0 && BlockingLineInTheWay (Results.HitLine,BlockMode))
 			Return Trace_Stop;
 		
 		//Level geometry is in the way.
@@ -619,8 +619,8 @@ Class MVP_GenericWarnMarineCheck : MVP_LOFRaycast
 }
 
 //Generic projectile LOF check for non-ripping projectiles, should be applicable to most projectiles.
-//PropHealthThreshold: If a destructible prop actor with this much health or less is standing the way, then shoot at it anyway.
-//SlashRadius: If the check hit level geometry, but the target is within the specified specified distance from the hit spot. Then don't return BadLOF.
+//PropHealthThreshold: If a destructible prop actor with this much health or less is standing in the way, then shoot at it anyway.
+//SplashRadius: If the check hit level geometry, but the target is within the specified specified distance from the hit spot. Then don't return BadLOF.
 Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 {
 	Int PropHealthThreshold;

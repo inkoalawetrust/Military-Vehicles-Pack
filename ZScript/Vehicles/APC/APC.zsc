@@ -107,7 +107,7 @@ Class MVP_APC : MVP_BaseVehicle
 	
 	Override Void UserVariableDefaults()
 	{
-		If (User_RetreatDistance == 0) User_RetreatDistance = 1024;
+		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
 		Super.UserVariableDefaults();
 		If (User_MarineAmount == 0) User_MarineAmount = 8;
 	}

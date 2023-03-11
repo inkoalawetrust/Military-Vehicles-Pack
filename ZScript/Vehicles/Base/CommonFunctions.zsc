@@ -275,6 +275,7 @@ Extend Class MVP_BaseVehicle
 		FSP_VEHICLEDEATH = 1 << 1 //Mark the warning zone as needing to vanish once all of the flames have evaporated.
 	}
 	
+	//FIXME: Fix a bug where sometimes no flames will spawn, not sure why it happens, but it seems to occur in crammed spaces usually.
 	//Creates multiple flames within the bounding box of the vehicle. Used to create flaming wrecks when vehicles are gibbed.
 	//Flags: The flags that control the spawning behavior, look at MVPFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
 	//Amount: The random amount of flames that will be created, the X component is the minimum amount of flames, and Y is the maximum.
