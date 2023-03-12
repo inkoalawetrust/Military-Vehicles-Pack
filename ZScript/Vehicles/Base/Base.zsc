@@ -4,6 +4,7 @@
 //IDEA:
 //Maybe add some kind of check in the corpse crush code, to make a vehicle not actively crush corpses (Or even avoid them) if a friendly Archvile is visible.
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
+//Add a system in the base turrets' ShouldAttack(), where if the target is obstructed, the turret will instad try aiming up or down instead of the middle.
 
 Class MVP_BaseVehicle : Actor Abstract
 {
@@ -942,10 +943,10 @@ Class SmartMarineWarningZone : Actor
 		}
 	}
 	//DEBUG: Uncomment this to be able to see where the warning zones are at.
-	/*States
+	States
 	{
 		Spawn:
 			PLSS A 4 Bright;
 			Loop;
-	}*/
+	}
 }

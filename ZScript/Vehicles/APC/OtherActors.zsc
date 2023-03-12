@@ -27,6 +27,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	Const DualMGAttackHeight = 12;
 	
 	Array <Actor> HitActors;
+	MVP_APCMachineGunLOFCheck MarineWarner; //A permanent pointer to a dual MG LOF check tracer. So that it can be fired when the turret is firing to warn marines.
 	
 	Bool MGLOFCheck()
 	{
@@ -45,7 +46,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			Check.Destroy();
 			Return False;
 		}
-		MVP_LOFRaycast.VisualizeTracePath ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),Check.Results.HitPos,Check.Results.Distance);
+		//MVP_LOFRaycast.VisualizeTracePath ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),Check.Results.HitPos,Check.Results.Distance);
 		bDontStayAround = False;
 		Check.Destroy();
 		Return True;
@@ -72,17 +73,20 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		
 		MissileState = FindState ("Fire");
 		AttackStates.Push (FindState("Fire",True));
+		MarineWarner = New ("MVP_APCMachineGunLOFCheck"); //Create the warning trace for marines.
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		If (MarineWarner) MarineWarner.Destroy();
 		If (Master) Master.SetTag (Master.Default.GetTag());
 	}
 	
 	Override Void OnDestroy()
 	{
 		If (Master) Master.SetTag (Master.Default.GetTag());
+		If (MarineWarner) MarineWarner.Destroy();
 		Super.OnDestroy();
 	}
 	
@@ -94,18 +98,28 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		//When shooting, fire a ray that alerts any marines that would be caught in the line of fire.
 		If (IsInAttackState())
 		{
-			MVP_FindInLOF (0,INT.MAX,0,(0,0,12),foundactors:HitActors);
+			//MVP_FindInLOF (0,INT.MAX,0,(0,0,12),foundactors:HitActors);
+			Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+			
+			Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
+			MarineWarner.Shooter = Self;
+			MarineWarner.Other = Target;
+			MarineWarner.OnlyFindActors = True;
+			MarineWarner.Trace ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),CurSector,Direction,Distance,0);
+			MVP_LOFRaycast.VisualizeTracePath ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),MarineWarner.Results.HitPos,MarineWarner.Results.Distance);
+			HitActors.Move(MarineWarner.Mobjs);
 			//Check all the actors the trace hit.
 			Name TheMarine = "SmartMarine";
 			ForEach (Mobj : HitActors)
-			{
+			{console.printf ("found %s",mobj.getclassname());
 				If (Mobj && !IsDead (Mobj) && Mobj Is TheMarine && IsHostile(Mobj))
 				{
 					WarnSpecificMarine(Mobj); //Then warn them.
 					//spawn ("MVP_DiCokkaFireParticle",mobj.pos);a_log ("hit marine");
 				}
-				HitActors.Delete (HitActors.Find(Mobj));
+				//HitActors.Delete (HitActors.Find(Mobj));
 			}
+			HitActors.Clear();
 		}
 	}
 	
@@ -215,19 +229,20 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 {
 	Const FiftyCalRipLevel = 3; //This has to be changed if MVP_50CalBullets' ripper level is changed.
 	Const MaxRippedActors = 5; //Same as above, but this is the general count of how many actors a bulelt can go through before stopping.
+	Bool OnlyFindActors; //Used to make the dual MG warn marines it is firing at.
 	Override ETraceStatus TraceCallback()
 	{
 		Actor Mobj = Results.HitActor;
 		
 		If (!Shooter) Return Trace_Stop; //Not sure if this should return BadLOF too.
 		
-		AddToMobjList (Other);
+		AddToMobjList (Mobj);
 		
 		If (Mobj == Shooter.Master) Return Trace_Skip;
 		
 		//The target is in the line of fire. Shoot them anyway.
-		If (Mobj == Shooter.Target)
-			Return Trace_Stop;
+		If (Mobj == Other && !OnlyFindActors)
+			{console.printf ("i have what i need");Return Trace_Stop;}
 		
 		Bool IsEnemy = Shooter.IsHostile(Mobj); //Caching
 		
@@ -428,7 +443,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			Wait;
 		GenericFreezeDeath:
 			APC2 # 0 {Frame = UpdateTurretElevation (2,0,4,6); /*C, A, E, G*/}
-			Goto Super::GenericFreezeDeath;
+			Goto MVP_BaseVehicle::GenericFreezeDeath;
 	}
 }
 
@@ -438,7 +453,7 @@ Mixin Class MVP_AutocannonWarningZoneHandling
 	Actor WarningZone; //The warning zone the turret creates right before it fires.
 	Override Void Tick()
 	{
-		MVP_BaseTurret.Tick(); //Super.Tick would be the dual MGs' Tick(0. Which is bad because the MGs' Tick() handles the marine warnings for its' .50 BMG rounds.
+		MVP_BaseTurret.Tick(); //Super.Tick would be the dual MGs' Tick(). Which is bad because the MGs' Tick() handles the marine warnings for its' .50 BMG rounds.
 		If (IsFrozen()) Return;
 		If (WarningZone) //Move the warning to wherever the shell will go, warning marines in advance.
 			WarningZone.SetOrigin (GetAttackLocation(),True);
@@ -528,7 +543,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			If (!NoStateJump)
 			{
 				SetStateLabel ("Fire");
-				WarningZone = WarnMarines (0,32); //Create a warning zone to warn marines of wherever the machine gun is aiming.
+				WarningZone = WarnMarines (0,48); //Create a warning zone to warn marines of wherever the machine gun is aiming.
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 			}
 			Return True;

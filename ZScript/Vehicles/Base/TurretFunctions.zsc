@@ -270,7 +270,7 @@ Extend Class MVP_BaseTurret
 		Check.PropHealthThreshold = ProphealthThreshold;
 		Check.Trace (Level.Vec3Offset (Pos,CheckOffsets),CurSector,Direction,Distance,0);
 		
-		//MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,CheckOffsets),Check.Results.HitPos,Check.Results.Distance);
+		MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,CheckOffsets),Check.Results.HitPos,Check.Results.Distance);
 		
 		If (Check.BadLOF)
 		{a_log ("bad lof");
@@ -517,7 +517,7 @@ Class MVP_LOFRaycast : LineTracer
 	}
 	
 	//The object scope system doesn't like calling useful functions like CheckSight. So here is the Wish.com version.
-	Bool CheckSightTo (Actor Origin, Actor Other, Double Range)
+	Bool CheckSightTo (Actor Origin, Actor Other, Double Range, Bool NoBlockSight = False)
 	{
 		If (!Other) Return False;
 		
@@ -526,6 +526,7 @@ Class MVP_LOFRaycast : LineTracer
 		
 		Check.Shooter = Origin;
 		Check.SightTarget = Other;
+		Check.NoBlockSight = NoBlockSight;
 		
 		Check.Trace(SightPos,Origin.CurSector,Origin.Vec3To(Other),Range,0);
 		
@@ -541,6 +542,7 @@ Class MVP_BasicSightCheck : MVP_LOFRaycast
 {
 	Bool GoodLOS; //BadLOF's good cousin.
 	Actor SightTarget; //Who are we even looking for ?
+	Bool NoBlockSight; //The check ignores BLOCKSIGHT lines, like for the explosions.
 	Override ETraceStatus TraceCallback()
 	{
 		Actor Mobj = Results.HitActor;
@@ -554,7 +556,7 @@ Class MVP_BasicSightCheck : MVP_LOFRaycast
 			{console.printf ("cant see past level geometry");Return Trace_Stop;}
 		
 		//Sight or everything blocking lines in the way, check failed.
-		If (Results.HitLine && (Results.HitLine.Flags & Line.ML_BLOCKSIGHT || Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING))
+		If (Results.HitLine && ((!NoBlockSight && Results.HitLine.Flags & Line.ML_BLOCKSIGHT) || Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING))
 			{console.printf ("cant see past sight blockers");Return Trace_Stop;}
 		
 		//Ladies and gentlemen, we got him.
@@ -625,6 +627,22 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 {
 	Int PropHealthThreshold;
 	Double SplashRadius;
+	
+	//Is the other actor in the blast radius ?
+	Bool CaughtInTheBlast()
+	{
+		If (SplashRadius <= 0 || !Other || Other && Other.bNoRadiusDmg) Return False;
+		
+		Double Distance = Level.Vec3Diff (Other.Pos,Results.HitPos).Length();
+		If (Distance <= SplashRadius)
+		{
+			if (CheckSightTo (Shooter,Other,Distance, True)){console.printf ("the actor is in the blast");}
+			Return CheckSightTo (Shooter,Other,Distance, True);
+		}
+		
+		Return False;
+	}
+	
 	Override ETraceStatus TraceCallback()
 	{
 		If (PropHealthThreshold == 0) PropHealthThreshold = 400; //Default value, since it can't be set with a normal variable decleration.
@@ -640,22 +658,24 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		If (Other && Mobj == Other)
 			Return Trace_Stop;
 		
+		Bool OtherInBlast = CaughtInTheBlast(); //Caching
+		
 		//Indestructible prop in the way.
-		If (Mobj && IsIndestructible (Mobj) && IsInanimateObject (Mobj))
+		If (Mobj && !OtherInBlast && IsIndestructible (Mobj) && IsInanimateObject (Mobj))
 		{console.printf ("immovable object vs stoppable force");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Destructible prop, but far too strong to shoot through in a timely manner.
-		If (Mobj && IsCollidable (Mobj) && !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
+		If (Mobj && !OtherInBlast && IsCollidable (Mobj) && !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
 		{console.printf ("this is too much");
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Solid corpse of an enemy in the way, shell can't go through.
-		If (Mobj && Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
+		If (Mobj && !OtherInBlast && Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
 		{console.printf ("enemy corpse.");
 			BadLOF = True;
 			Return Trace_Stop;
