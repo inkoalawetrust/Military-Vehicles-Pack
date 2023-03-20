@@ -114,19 +114,19 @@ Class MVP_PainRay : MVP_BaseTurret
 					Victim = ItBurnsItBurns.Thing;
 					
 					//Don't hurt invulnerable actors.
-					If (Victim.bInvulnerable || Victim.bNoDamage) Continue;
+					If (IsIndestructible (Victim)) Continue;
 					
 					//Nor invulnerable players.
-					If (Victim.Player && Victim.Player.Cheats & (CF_GODMODE | CF_GODMODE2)) Continue;
+					If (HasGodMode (Victim)) Continue;
 					
 					//Don't painlock actors with a lot of health. Or who are already in pain, to avoid breaking states.
-					If (Victim.Health >= 400 || (IsInState (Self,"Pain") || IsInState (Self,"Pain.Microwave"))) Continue;
+					If (Victim.Health >= 400 || IsInState (Self,"Pain")) Continue;
 					
-					//Ignore yourself, non-monsters, dormant monsters, allies, or actors that are just too far away.
-					If (Victim == Self || !(Victim.bIsMonster || Victim.Player) || Victim.bDormant || !IsHostile(Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;
+					//Ignore yourself, inanimate objects, dormant monsters, allies, or actors that are just too far away.
+					If (Victim == Self || IsInanimateObject(Victim) || Victim.bDormant || !MVP_IsHostile(Self, Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;
 					
 					//And finally, check to see if the actor can even be targeted.
-					If (!CanBeTargeted (Victim)) Continue;
+					If (!CanBeTargeted (Self, Victim)) Continue;
 					
 					Victim.TriggerPainChance ('Microwave', False);
 					If (Victim.Player)

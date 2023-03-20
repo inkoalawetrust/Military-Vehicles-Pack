@@ -88,12 +88,9 @@ Extend Class MVP_BaseTurret
 	Void DoCombatTraverse (Actor ToWhat)
 	{
 		//NOTE: A pitch of 270 means no pitch shifting in A_Face, which is bad for the turrets, since code like their LOF checks normally relies on them actually facing the target properly.
-		Console.Printf ("Doing combat traverse.");
 		Double AngleTraverse = CombatAngleTurnRate > 0 ? CombatAngleTurnRate/GameTicRate : 0;
 		Double PitchTraverse = CombatPitchTurnRate > 0 ? CombatPitchTurnRate/GameTicRate : 0;
-		console.printf ("old angle %f.00f",angle);
 		A_Face (ToWhat,AngleTraverse,PitchTraverse,flags:FAF_MIDDLE);
-		console.printf ("new angle %f.00f",angle);
 	}
 	
 	//Returns true if the Other actor is within a cone of the specified size. The Size is the angle and pitch that the Other actor must be within relative to the callers' direction.
@@ -108,7 +105,6 @@ Extend Class MVP_BaseTurret
 			Double OriginalSize = Size;
 			Size = Max (0, Size - (Distance3D (Other) / FalloffScale));
 			Size = Clamp (Size,0.1,OriginalSize*2); //Clamp the resulting value.
-			console.printf ("the size is %f, the distance is %f",size,distance3d(target));
 		}
 		Return (AbsAngle (AngleTo(Other),Angle) <= Size && Abs (Pitch - PitchTo (Target)) <= Size);
 	}
@@ -208,7 +204,7 @@ Extend Class MVP_BaseTurret
 			
 			If (Mobj.bDormant || IsInanimateObject (Mobj)) Continue; //Don't attack dormant or inanimate object actors.
 			
-			If (!CanBeTargeted(Mobj)) Continue; //Can't be targeted. (Duh)
+			If (!CanBeTargeted(Self, Mobj)) Continue; //Can't be targeted. (Duh)
 			
 			If (IsDead (Mobj)) Continue; //Is dead (Duuuuuuuuuuh)
 			
@@ -270,10 +266,10 @@ Extend Class MVP_BaseTurret
 		Check.PropHealthThreshold = ProphealthThreshold;
 		Check.Trace (Level.Vec3Offset (Pos,CheckOffsets),CurSector,Direction,Distance,0);
 		
-		MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,CheckOffsets),Check.Results.HitPos,Check.Results.Distance);
+		//MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,CheckOffsets),Check.Results.HitPos,Check.Results.Distance);
 		
 		If (Check.BadLOF)
-		{a_log ("bad lof");
+		{
 			If (!(Flags & TLOF_DoStayAround)) bDontStayAround = True;
 			Check.Destroy();
 			Return False;
@@ -335,6 +331,7 @@ Class MVP_LOFDebugGun : Pistol
 	Default
 	{
 		Weapon.SlotNumber 1;
+		+Weapon.CheatNotWeapon;
 	}
 	
 	//Change the tracer spawned by New() to test different line of fire checks.
@@ -347,7 +344,7 @@ Class MVP_LOFDebugGun : Pistol
 		Vector3 ShotPos =(Pos.X,Pos.Y,Pos.Z+(Height/2));
 		
 		Double Distance = PLAYERMISSILERANGE; //8192 map units
-		Check.Shooter = Self;console.printf ("shooter is %s",check.shooter.getclassname());
+		Check.Shooter = Self;
 		Check.Trace (ShotPos,CurSector,Direction,Distance,0);
 		
 		Vector3 HitPos = Check.Results.HitPos;
@@ -553,15 +550,15 @@ Class MVP_BasicSightCheck : MVP_LOFRaycast
 		
 		//Level geometry in the way, check failed.
 		If (HitLevelGeometry (Results))
-			{console.printf ("cant see past level geometry");Return Trace_Stop;}
+			Return Trace_Stop;
 		
 		//Sight or everything blocking lines in the way, check failed.
 		If (Results.HitLine && ((!NoBlockSight && Results.HitLine.Flags & Line.ML_BLOCKSIGHT) || Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING))
-			{console.printf ("cant see past sight blockers");Return Trace_Stop;}
+			Return Trace_Stop;
 		
 		//Ladies and gentlemen, we got him.
 		If (Mobj == SightTarget)
-		{console.printf ("epic sight check win");
+		{
 			GoodLOS = True;
 			Return Trace_Stop;
 		}
@@ -605,7 +602,7 @@ Class MVP_GenericWarnMarineCheck : MVP_LOFRaycast
 		Actor Mobj = Results.HitActor;
 		
 		//Standard MVP projectiles go through allies.
-		If (Mobj && (IsInanimateObject (Mobj) || Shooter && Shooter.IsHostile (Mobj)))
+		If (Mobj && (IsInanimateObject (Mobj) || Shooter && MVP_IsHostile (Shooter,Mobj)))
 			Return Trace_Stop;
 		
 		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
@@ -635,10 +632,7 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		
 		Double Distance = Level.Vec3Diff (Other.Pos,Results.HitPos).Length();
 		If (Distance <= SplashRadius)
-		{
-			if (CheckSightTo (Shooter,Other,Distance, True)){console.printf ("the actor is in the blast");}
 			Return CheckSightTo (Shooter,Other,Distance, True);
-		}
 		
 		Return False;
 	}
@@ -662,28 +656,28 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		
 		//Indestructible prop in the way.
 		If (Mobj && !OtherInBlast && IsIndestructible (Mobj) && IsInanimateObject (Mobj))
-		{console.printf ("immovable object vs stoppable force");
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Destructible prop, but far too strong to shoot through in a timely manner.
 		If (Mobj && !OtherInBlast && IsCollidable (Mobj) && !IsIndestructible(Mobj) && IsInanimateObject (Mobj) && !CanShootAtProp(Mobj,PropHealthThreshold))
-		{console.printf ("this is too much");
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//Solid corpse of an enemy in the way, shell can't go through.
-		If (Mobj && !OtherInBlast && Shooter.IsHostile(Mobj) && IsSolidCorpse(Mobj))
-		{console.printf ("enemy corpse.");
+		If (Mobj && !OtherInBlast && MVP_IsHostile(Shooter,Mobj) && IsSolidCorpse(Mobj))
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
 		If (BlockingLineInTheWay (Results.HitLine,0))
-		{console.printf ("blocking line");
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
@@ -691,20 +685,15 @@ Class MVP_ProjectileLOFCheck : MVP_LOFRaycast
 		//Level geometry is in the way.
 		If (HitLevelGeometry (Results))
 		{
-			console.printf ("hit the map");
 			//Don't return BadLOF if the target would be caught in the blast radius anyway. Unless they are immune to splash damage of course.
 			Double Distance;
 			If (SplashRadius > 0 && Other && !Other.bNoRadiusDmg && Distance <= SplashRadius)
 			{
 				Distance = Level.Vec3Diff (Other.Pos,Results.HitPos).Length();;
 				If (CheckSightTo (Shooter,Other,Distance))
-				{
-					console.printf ("caught in the blast");
 					Return Trace_Stop;
-				}
 				Else
 				{
-					console.printf ("not caught in the blast");
 					BadLOF = True;
 					Return Trace_Stop;
 				}

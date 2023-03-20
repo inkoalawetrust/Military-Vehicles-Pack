@@ -96,7 +96,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		&& !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 )
 		{
 			If (MVP_BaseVehicle.StayStillAndShoot(CheckSightFrom))
-			{a_log ("taking a break");
+			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
 				ChaseTimer = Random (16,32);

@@ -1,10 +1,15 @@
 //FIXME:
-//Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
+/*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
+The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
+first tick. Which is literally worse than the turrets spawning on the ground.*/
 
 //IDEA:
 //Maybe add some kind of check in the corpse crush code, to make a vehicle not actively crush corpses (Or even avoid them) if a friendly Archvile is visible.
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
 //Add a system in the base turrets' ShouldAttack(), where if the target is obstructed, the turret will instad try aiming up or down instead of the middle.
+//Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Probably needs a rewrite of the marines.
+//Add smoke that can come off of vehicles when they are low on health.
+//Maybe add some special targetting code that makes vehicles target the hull of vehicles with turrets that have bTransferDamage instead of the turret itself.
 
 Class MVP_BaseVehicle : Actor Abstract
 {
@@ -100,6 +105,7 @@ Class MVP_BaseVehicle : Actor Abstract
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
 				Turret.TurretOffsets = TurretOffsets;
+				//Turret.SetOrigin (Vec3OffsetRelative(Turret.Master,(Turret.TurretOffsets.XY,Turret.Master.Height+Turret.TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
 			}
 		}
 	}
@@ -213,7 +219,7 @@ Class MVP_BaseVehicle : Actor Abstract
 		If (IsFrozen()) Return;
 		
 		If (StayStillDelay)
-			{console.printf ("staystilldelay is %d",staystilldelay);StayStillDelay--;}
+			StayStillDelay--;
 		
 		If (!User_NoHeadlights)
 			HeadLightsOn = (CurSector && CurSector.LightLevel <= 104);
@@ -303,7 +309,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Mixin MVP_MathFunctions;
 	
 	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
-	Const DEFAULT_HEARDISTANCE = 3072; //Exactly what it says, the default hear distance the vehicles' and turrets' A_LookEx calls use.
+	Const DEFAULT_HEARDISTANCE = 4096; //Exactly what it says, the default hear distance the vehicles' and turrets' A_LookEx calls use.
 	Const DEFAULT_SEEDISTANCE = 8192; //The default sight distance.
 	
 	//AI variables
@@ -356,7 +362,7 @@ Class MVP_BaseVehicle : Actor Abstract
 					Angle += RandomPick (75,80,85,90,95,10,105);
 			}
 			#### # 4 //If an enemy has gotten too close, the turret can't attack, or enough time has passed, then stop standing around.
-			{a_log ("bing chilling");
+			{
 				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4) || Turret && (!Turret.CanAttack() || Turret.bDontStayAround))
 				{
 					ChaseTimer = 0;
@@ -402,6 +408,8 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	FlagDef FallOnDeath : TurretFlags, 0; //Turret detached from its' vehicle upon death.
 	FlagDef DontStayAround : TurretFlags, 1; //Used to make the turret not make the vehicle stop to sit around and let the turret shoot, even if the latter has a target.
 	FlagDef NoTargetPrediction : TurretFlags, 2; //The turret will not calculate its' targets' movement and lead its' shots.
+	//Note: If your turret has bTransferDamage, any splash damage the vehicle itself receives will be effectively doubled due to the damage transfer.
+	//If you do not want this unintended consequence of the flag, then give the turret the +NORADIUSDMG flag !
 	FlagDef TransferDamage : TurretFlags, 3; //The turret will transfer damage taken to its' master (The vehicle it's on). Instead of taking any of its' own.
 	FlagDef NoCombatTraverse: TurretFlags, 4; //The stock combat traverse code will not run, can be used to give the turret its' own turn logic when firing.
 	
@@ -519,8 +527,20 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	
 	Override Int DamageMobj (Actor Inflictor, Actor Source, Int Damage, Name MOD, Int Flags, Double Angle)
 	{
-		If (bTransferDamage && Master)
+		If (bTransferDamage && Master && !bNoDamage)
+		{
+			//TODO: Expose the internal ReactToDamage() function to ZScript in a PR one day. To call it from here.
+			//HACK: This is mostly a copied bit from this unexposed internal code: https://sourcegraph.com/github.com/ZDoom/gzdoom/-/blob/src/playsim/p_interaction.cpp?L894
+			If (Damage > 0 && OkayToSwitchTarget(Source))
+			{
+				If (!LastEnemy)
+					LastEnemy = Target; //Remember our last enemy.
+				
+				Target = Source;
+				Threshold = DefThreshold;
+			}
 			Return Master.DamageMobj (Inflictor, Source, Damage, MOD, Flags, Angle);
+		}
 		
 		Return Super.DamageMobj (Inflictor, Source, Damage, MOD, Flags, Angle);
 	}
@@ -943,10 +963,10 @@ Class SmartMarineWarningZone : Actor
 		}
 	}
 	//DEBUG: Uncomment this to be able to see where the warning zones are at.
-	States
+	/*States
 	{
 		Spawn:
 			PLSS A 4 Bright;
 			Loop;
-	}
+	}*/
 }

@@ -108,7 +108,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		{
 			If (LeDamage >= 40) ExtremePain = True; //Got hurt by a very damaging attack, so flinch for longer.
 			If (Turret && !IsInState (Turret,"Pain"))
-			{A_Log ("The turret is hurt too");
+			{
 				If (Turret Is "MVP_DiCokkaTurret") MVP_DiCokkaTurret(Turret).ExtremePain = ExtremePain;
 				Turret.TriggerPainChance (MOD,True);
 			}
@@ -231,6 +231,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		+MVP_BaseTurret.TransferDamage;
 		+MVP_BaseTurret.DontStayAround;
 		
+		+NoRadiusDmg; //Prevents TransferDamage from doubling the explosion damage received by the tank.
 		//Copied from the hull.
 		-NoPain; //This vehicle CAN feel pain.
 		PainChance 30;
@@ -284,8 +285,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			AggressionMultiplier *= 0.8;
 		Else
 			AggressionMultiplier = Default.AggressionMultiplier;
-		console.printf ("refire delay is %d",refiredelay);
-		If (!RefireDelay && Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
+		
+		If (!RefireDelay && Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
 		{
 			If (!NoStateJump)
 			{
@@ -366,7 +367,9 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Vector2 HorzSpread = !IsTripleShot ? (0.2,-0.2) : (0.4,-0.4);
 		Vector2 VertSpread = !IsTripleShot ? (0.25,-0.25) : (0.5,-0.5);
 		Proj = A_SpawnProjectile ("MVP_DiCokkaShell",14,flags:CMF_AIMDIRECTION,Pitch);
-		HandleTargetPrediction (Proj,HorzSpread,VertSpread,128);console.printf ("the pitch is %d",pitch);
+		HandleTargetPrediction (Proj,HorzSpread,VertSpread,128);
+		Proj.Species = Species;
+		Proj.bDontHarmSpecies = True;
 		Return TurretVisualElevation;
 	}
 	
@@ -383,10 +386,9 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 				Target = AltTarget;
 			}
 		}
-		If (bNoCombatTraverse) {a_log ("facing target");A_FaceTarget (5,5,flags:FAF_MIDDLE);}
+		If (bNoCombatTraverse) A_FaceTarget (5,5,flags:FAF_MIDDLE);
 		HandleChaseTimer();
 		Return UpdateTurretElevation (10,6,8,8); //K, G, I, I
-		//console.printf ("moving around",pitch);
 	}
 	
 	//Return if the hulls' health is too low, or if not attached to anything, if the turrets' health is too low.
@@ -405,9 +407,6 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Check.Shooter = Self;
 		Check.Other = Target;
 		Check.Trace ( Level.Vec3Offset (Pos,(0,0,14)), CurSector, Direction, MaxTargetRange, 0 );
-		MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,(0,0,14)),Check.Results.HitPos,Check.Results.Distance);
-		
-		//console.printf ("angle is %d, pitch is %d, distance is %d, location is at %d %d %d",angle, pitch, int.max,check.hitlocation.x,check.hitlocation.y,check.hitlocation.z);
 		
 		Return Check.Results.HitPos;
 	}
@@ -425,7 +424,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			Goto Spawn+1;
 		See:
 			MSV1 # 1
-			{//a_log ("in the see state");
+			{
 				If (WarningZone) WarningZone.Destroy();
 				A_FaceTarget (3,3,flags:FAF_MIDDLE);
 				RotateToVehicle();
@@ -476,7 +475,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			Goto See;
 		Pain:
 			TNT1 A 0
-			{a_log ("oof ouch");
+			{
 				//Might make the turret able to be placed without the Di-Cokka itself or something.
 				If (!Master)
 					A_StartSound (PainSound,CHAN_BODY,CHANF_OVERLAP);

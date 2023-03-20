@@ -1,1 +1,29 @@
 //Currently just here to make UDB complain lol.
+/*Checks if the Iron Snail (https://forum.zdoom.org/viewtopic.php?t=58645) monsters pack is loaded.
+And if it, gives all its' monsters their own species. So that enemy Di-Cokkas (And any other MS vehicles I may make in the future)
+don't harm fellow Iron Snail enemies or infight with them.
+*//*
+Class MVP_IronSnailCompatHandler : EventHandler
+{
+	Bool IronSnailMonstersLoaded;
+	Mixin MVP_CheckFunctions;
+	
+	//NOTE: When GZDoom 4.11 comes out. Handling this from OnEngineInitialize might be a better idea.
+	Override Void OnRegister()
+	{
+		Name IronSnailNPC = "Snail_Base";
+		Bool IronSnailMonstersLoaded = CheckActorExists (IronSnailNPC);
+		If (!IronSnailMonstersLoaded) console.printf ("No iron snail ?"); //DEBUG DEBUG DEBUG DEBUG DEBUG REMOVE REMOVE REMOVE
+	}
+	
+	Override Void WorldThingSpawned (WorldEvent E)
+	{
+		Name IronSnailNPC = "Snail_Base";
+		//And finally, give all Iron Snail NPCs their own species.
+		If (E.Thing && E.Thing Is IronSnailNPC)
+		{
+			console.printf ("marked %s and an iron snail npc",e.thing.getclassname());
+			E.Thing.Species = "IronSnailNPC";
+		}
+	}
+}*/

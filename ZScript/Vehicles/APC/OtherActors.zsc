@@ -46,7 +46,6 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			Check.Destroy();
 			Return False;
 		}
-		//MVP_LOFRaycast.VisualizeTracePath ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),Check.Results.HitPos,Check.Results.Distance);
 		bDontStayAround = False;
 		Check.Destroy();
 		Return True;
@@ -58,7 +57,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,DualMGAttackHeight,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target)&& MGLOFCheck())
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target)&& MGLOFCheck())
 		{
 			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
@@ -106,19 +105,12 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			MarineWarner.Other = Target;
 			MarineWarner.OnlyFindActors = True;
 			MarineWarner.Trace ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),CurSector,Direction,Distance,0);
-			MVP_LOFRaycast.VisualizeTracePath ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),MarineWarner.Results.HitPos,MarineWarner.Results.Distance);
 			HitActors.Move(MarineWarner.Mobjs);
 			//Check all the actors the trace hit.
 			Name TheMarine = "SmartMarine";
 			ForEach (Mobj : HitActors)
-			{console.printf ("found %s",mobj.getclassname());
 				If (Mobj && !IsDead (Mobj) && Mobj Is TheMarine && IsHostile(Mobj))
-				{
 					WarnSpecificMarine(Mobj); //Then warn them.
-					//spawn ("MVP_DiCokkaFireParticle",mobj.pos);a_log ("hit marine");
-				}
-				//HitActors.Delete (HitActors.Find(Mobj));
-			}
 			HitActors.Clear();
 		}
 	}
@@ -242,33 +234,33 @@ Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
 		
 		//The target is in the line of fire. Shoot them anyway.
 		If (Mobj == Other && !OnlyFindActors)
-			{console.printf ("i have what i need");Return Trace_Stop;}
+			Return Trace_Stop;
 		
 		Bool IsEnemy = Shooter.IsHostile(Mobj); //Caching
 		
 		//Return BadLOF if the actor the trace found would stop the .50 cal round from ripping. Except if it's another enemy anyway.
 		If ((IsInanimateObject(Mobj) || !IsEnemy) && CantRipActor (Mobj,FiftyCalRipLevel))
-		{console.printf ("unrippable mobj is %s",mobj.getclassname());
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//The machine gun turret can't shoot through solid enemy corpses that strong.
 		If (IsEnemy && IsSolidCorpse (Mobj) && Mobj.SpawnHealth() >= 500 )
-		{console.printf ("A VEHICLE WRECK IS IN THE WAY");
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
 		If (BlockingLineInTheWay (Results.HitLine,0))
-		{console.printf ("a line is in the way.");
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
 		
 		If (HitLevelGeometry (Results))
-		{console.printf ("level geometry is in the way.");
+		{
 			BadLOF = True;
 			Return Trace_Stop;
 		}
@@ -324,8 +316,8 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,400,128,(0,0,12)))
-		{a_log ("i am going to shoot");
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,400,128,(0,0,12)))
+		{
 			If (!NoStateJump)
 			{
 				SetStateLabel ("Fire");
@@ -351,7 +343,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			Loop;
 		See:
 			APC2 # 1
-			{//a_log ("cannon in the see state");
+			{
 				If (WarningZone) WarningZone.Destroy();
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
 				RotateToVehicle();
@@ -481,9 +473,6 @@ Mixin Class MVP_AutocannonWarningZoneHandling
 		Check.Shooter = Self;
 		Check.Other = Target;
 		Check.Trace ( Level.Vec3Offset (Pos,(0,0,14)), CurSector, Direction, MaxTargetRange, 0 );
-		//MVP_LOFRaycast.VisualizeTracePath (Level.Vec3Offset (Pos,(0,0,14)),Check.Results.HitPos,Check.Results.Distance);
-		
-		//console.printf ("angle is %d, pitch is %d, distance is %d, location is at %d %d %d",angle, pitch, int.max,check.hitlocation.x,check.hitlocation.y,check.hitlocation.z);
 		
 		Return Check.Results.HitPos;
 	}
@@ -538,7 +527,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && IsHostile (Target) && MVP_TurretCheckLOF (Target,150,0,(0,0,8)))
+		If (Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,150,0,(0,0,8)))
 		{
 			If (!NoStateJump)
 			{
@@ -564,7 +553,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			Loop;
 		See:
 			APC2 # 1
-			{//a_log ("small mg in the see state");
+			{
 				If (WarningZone) WarningZone.Destroy();
 				A_FaceTarget (6,6,flags:FAF_MIDDLE);
 				RotateToVehicle();
@@ -586,9 +575,9 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				
 				//Play at half the volume if the autocannon is playing its' firing sound. To emphasize its' volume.
 				If (Master && Master.IsActorPlayingSound (CHAN_WEAPON))
-					{A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,0.75,0.4);a_log ("quiet");}
+					A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,0.75,0.4);
 				Else
-					{A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);a_log ("normal");}
+					A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);
 				
 				Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",8,flags:CMF_AIMDIRECTION,Pitch);
 				HandleTargetPrediction (Proj,(0.4,-0.4),(0.55,-0.55),1024);
@@ -697,7 +686,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		If (!Victim || Victim && Victim == DontCollide) Return 1;
 		If (Victim.bSolid && !Victim.bShootable) Return 1; //Don't stop at decorations that normally block projectiles.
 		
-		If (Target && !IsInanimateObject(Victim) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !MVP_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.
 		If ((HasGodMode(Victim) || IsIndestructible(Victim) && !IsInanimateObject(Victim)) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10),attenuation:0.75)) {bRipper = False; Return 1;}
@@ -805,7 +794,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim || Victim && Victim == DontCollide) Return 1;
-		If (Target && (Victim.bIsMonster || Victim.Player) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !MVP_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.
 		If ((HasGodMode(Victim) || IsIndestructible(Victim) && !IsInanimateObject(Victim)) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10))) Return 1;
@@ -916,7 +905,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim) Return 1;
-		If (Target && !IsInanimateObject(Victim) && !(Target.IsHostile (Victim))) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !MVP_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		If (Victim.SpawnHealth() <= 400) bExtremeDeath = True; //Always gib weak enough enemies.
 		Else bExtremeDeath = False;
