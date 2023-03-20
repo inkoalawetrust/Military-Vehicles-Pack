@@ -52,3 +52,17 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 - Has the ability to crush corpses that are small enough to fit under it. By default, the APC will in fact intentionally go up to, and crush nearby corpses if it's not pre-occupied or ordered to follow a player or stand still. It can also be set to not crush corpses at all, or to only passively crush them as it drives around.
 - Unlike the previous two vehicles, the APC has a chance for its' passengers to survive. Which means that there is a chance for a random amount of its' surviving passengers, to run out of the APC after it has been destroyed. All the survivors will have varying amount of lowered health of course.
 - Included multiple prop and destroyed versions of the vehicle. The destroyed props in particular are a lot more configurable than on the last two vehicles.
+
+### The Di-Cokka
+![](https://i.imgur.com/6n0kr7Im.png)
+- Is not an original vehicle, instead it's from Metal Slug. Being a cartoon tank, it has very different properties from the rest of the vehicles, detailed below.
+- Only has 600 health (As much as Mancubus) and very little damage factors. Making it even more fragile than the Army Car overall.
+- Is overall a bit dumber than the other vehicles. It doesn't have much unique AI code besides what's already shared between vehicles. This is intentional. It's a cartoon tank.
+- The Di-Cokkas’ turret does not use the realistic turret traverse that other vehicles use. Unless User_RealisticTurretTurn is on.
+- Fires much slower shell projectiles than any other vehicle. It also does not track its' targets' trajectory to fire by default, unless User_TargetPrediction is on.
+- Can sometimes fire a volley of 3 shots instead of 1, which is more in line with the Di-Cokkas' attack in the Metal Slug games.
+- Can be recolored with the User_Color user variable, more information available in the written documentation.
+- Can actually flinch from pain like a normal monster. Which causes the turret to fly back. Can also flinch from taking over 40 damage, which causes the turret to fly even further back, and the tank to be stunned for a bit. Similar to some of the vehicles in Metal Slug (But not the Di-Cokka itself, which had no real pain animation in MS).
+- Produces fire particles and a different movement sound when it's health is low enough.
+- Dies by just falling apart like in MS, not exploding like other vehicles. When gibbed, it falls apart, then completely explodes into a shower of debris, again, like it does in the original games.
+- Uses as many Metal Slug sprites and sounds as I could find.
