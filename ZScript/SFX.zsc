@@ -94,15 +94,6 @@ Class MVP_LiquidSplash : Actor
 	Double Volume, Attenuation;
 	Bool DontHarmSource;
 	Int LiquidType;
-	Enum LiquidTypes
-	{
-		LIQUID_NONE = 0,
-		LIQUID_WATER = 1,
-		LIQUID_NUKAGE = 2,
-		LIQUID_BLOOD = 3,
-		LIQUID_LAVA = 4,
-		LIQUID_SLIME = 5
-	};
 	States
 	{
 		Spawn:

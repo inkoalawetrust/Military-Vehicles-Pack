@@ -166,11 +166,18 @@ Extend Class MVP_BaseTurret
 		Projectile.Vel3DFromAngle (Projectile.Speed,Projectile.Angle,Projectile.Pitch);
 	}
 	
-	//A ZScript copy of A_MonsterRefire without the shitty HitFriend() check, and with the A_FaceTarget() call toggleable
-	State MVP_TurretRefire (Int Chance, StateLabel AbortState, Bool DontFaceTarget = False)
+	//A ZScript copy of A_MonsterRefire without the shitty HitFriend() check, and with the A_FaceTarget() call toggleable.
+	//Chance, AbortState: Work the same as in A_MonsterRefire.
+	//DontFaceTarget: If on, the turret won't instantly face the target after each refire.
+	//RetargetCheckChance: The chance that RetargetVehicleHull() runs after each refire. Never runs if set to -1. 
+	//RetargetCheckFlags: The flags to pass to RetargetVehicleHull() if it DOES run.
+	State MVP_TurretRefire (Int Chance, StateLabel AbortState, Bool DontFaceTarget = False, Int RetargetCheckChance = -1, Int RetargetCheckFlags = 0)
 	{
 		If (!DontFaceTarget)
 			A_FaceTarget();
+		
+		If (RetargetCheckChance != -1 && Random2[pr_monsterrefire]() < RetargetCheckChance)
+			RetargetVehicleHull (RetargetCheckFlags);
 			
 		If (Random2[pr_monsterrefire]() < Chance)
 			Return State (Null);

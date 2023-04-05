@@ -73,6 +73,8 @@ Class MVP_APC : MVP_BaseVehicle
 				Turret.Angle = Angle;
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
+				Double HealthFactor = Double(Health) / Double(Default.Health);
+				Turret.Health *= HealthFactor;
 				Turret.TurretOffsets = TurretOffsets;
 				If (User_NoTargetPrediction) Turret.bNoTargetPrediction = True;
 				SetTag ("Armored Personnel Carrier (Machine Gun)");
@@ -89,6 +91,8 @@ Class MVP_APC : MVP_BaseVehicle
 				Turret.Angle = Angle;
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
+				Double HealthFactor = Double(Health) / Double(Default.Health);
+				Turret.Health *= HealthFactor;
 				Turret.TurretOffsets = TurretOffsets;
 				If (User_FocusFire) MVP_APCAutocannon(Turret).FocusFire = True;
 				If (User_NoTargetPrediction) Turret.bNoTargetPrediction = True;
@@ -186,9 +190,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
-				bStandStill = True;
-				A_LookEx (0,0,8192,DEFAULT_HEARDISTANCE);
-				bStandStill = False;
+				MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			}
 			Loop;
 		See:

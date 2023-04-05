@@ -135,9 +135,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
-				bStandStill = True;
-				A_LookEx (0,0,MaxTargetRange,DEFAULT_HEARDISTANCE);
-				bStandStill = False;
+				MVP_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:MVPL_CHASETARGET);
 			}
 			Loop;
 		//The hull is basically just a moving platform for the turret, so its' AI is just whatever MVP_Chase has.
@@ -418,7 +416,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 # 1
 			{
 				RotateToVehicle();
-				A_LookEx (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE);
+				MVP_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:MVPL_CHASETARGET);
 				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
 			}
 			Goto Spawn+1;

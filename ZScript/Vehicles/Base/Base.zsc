@@ -2,14 +2,13 @@
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
 The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
 first tick. Which is literally worse than the turrets spawning on the ground.*/
+//Remake the .50 cal bullet and 30mm shell sprites. So that the whole round, casing included, isn't fired. Maybe add the casings as a visual effect instead.
 
 //IDEA:
-//Maybe add some kind of check in the corpse crush code, to make a vehicle not actively crush corpses (Or even avoid them) if a friendly Archvile is visible.
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
-//Add a system in the base turrets' ShouldAttack(), where if the target is obstructed, the turret will instad try aiming up or down instead of the middle.
+//Add a system in the base turrets' ShouldAttack(), where if the target is obstructed, the turret will instead try aiming up or down instead of the middle.
 //Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Probably needs a rewrite of the marines.
 //Add smoke that can come off of vehicles when they are low on health.
-//Maybe add some special targetting code that makes vehicles target the hull of vehicles with turrets that have bTransferDamage instead of the turret itself.
 
 Class MVP_BaseVehicle : Actor Abstract
 {
@@ -90,7 +89,6 @@ Class MVP_BaseVehicle : Actor Abstract
 	}
 	
 	//Handles spawning each vehicles' turret, if they have any.
-	//TODO: Pass spawn health modifications such as from the health UDMF property to turrets as well.
 	Virtual Void SpawnVehicleTurret ()
 	{
 		If (VehicleTurret)
@@ -104,6 +102,8 @@ Class MVP_BaseVehicle : Actor Abstract
 				Turret.Angle = Angle;
 				Turret.Pitch = Pitch;
 				Turret.Master = Self;
+				Double HealthFactor = Double(Health) / Double(Default.Health);
+				Turret.Health *= HealthFactor;
 				Turret.TurretOffsets = TurretOffsets;
 				//Turret.SetOrigin (Vec3OffsetRelative(Turret.Master,(Turret.TurretOffsets.XY,Turret.Master.Height+Turret.TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
 			}
@@ -553,7 +553,6 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 
 //The code that actually draws the line between the projectiles' current and previous position was written by Boondorl, since my own version had problems with pitch and so on. 
 //It's a FastProjectile with custom trail spawning code, so don't bother using FastProjectile's own trail system, as this one works better for truly fast projectiles.
-//TODO: Probably automate the handling of projectiles being removed upon hitting a liquid flat. Probably by using a Die() override.
 Class MVP_BaseProjectile : FastProjectile
 {
 	Default
@@ -570,11 +569,29 @@ Class MVP_BaseProjectile : FastProjectile
 		If (Target) Species = Target.Species;
 	}
 	
+	//NOTE: Die() is not called on projectiles except during bounces, for some reason. And calling this code manually on death states wouldn't be too different from the current system.
+	/*Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
+	{
+		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		a_log ("called die()");
+		//Check if the projectile hit any liquid flat. If it did call the hit liquid virtual method.
+		Bool HitFloor = (Pos.Z <= FloorZ);
+		Bool HitCeiling = (Pos.Z + Height >= CeilingZ);
+		Int LiquidType;
+		If (HitFloor || HitCeiling)
+		{
+			LiquidType = CheckLiquid (HitFloor ? FloorPic : CeilingPic);
+			If (LiquidType != LIQUID_NONE)
+				ProjectileHitLiquid (LiquidType,HitCeiling);
+		}
+	}*/
+	
 	Override Void Tick ()
 	{
 		Vector3 OldPos = Pos;
 		Super.Tick();
 		
+		//bMissile is removed when a projectile explodes.
 		If (!bMissile || IsFrozen()) Return;
 		
 		If (TrailDelay)
@@ -672,6 +689,8 @@ Class MVP_BaseProjectile : FastProjectile
 		}
 	}
 	
+	//Virtual Void ProjectileHitLiquid (Int LiquidType, Bool HitCeiling){}
+	
 	//Allows to quickly set up a spawned liquid splash, and then returns a pointer the splash to allow for further modifications, like making it visually larger or calling A_QuakeEx from it.
 	Actor SpawnLiquidSplash (Int LiquidType = LIQUID_WATER, Sound SplashSound = "SFX/LiquidExplosion", Double Volume = 1.0, Double Attenuation = 0.5,
 	Int ExplosionDamage = 0, Double ExplosionRadius = 0, Double FullDamageRadius = 0, Name DamageType = "", Bool DontHarmSource = False)
@@ -764,16 +783,6 @@ Class MVP_BaseProjectile : FastProjectile
 		
 		Return -1;
 	}
-	
-	Enum LiquidTypes
-	{
-		LIQUID_NONE = 0,
-		LIQUID_WATER = 1,
-		LIQUID_NUKAGE = 2,
-		LIQUID_BLOOD = 3,
-		LIQUID_LAVA = 4,
-		LIQUID_SLIME = 5
-	};
 	
 	Actor DontCollide; //Stores an actor that will be ignored by SpecialMissileHit, this is here so deflecting projectiles don't deflect dozens of times when bouncing off.
 	

@@ -312,9 +312,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyTruck/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
-				bStandStill = True; //So the vehicle isn't alerted by friendly players firing their weapons.
-				A_LookEx (0,0,DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
-				bStandStill = False;
+				MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			}
 			Loop;
 		See:
