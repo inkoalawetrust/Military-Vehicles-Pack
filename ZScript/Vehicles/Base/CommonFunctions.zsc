@@ -690,8 +690,9 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	Double LastTurnDir;
-	Int TurnCount;
+	Int TurnCount; //Keeps track of how many turns in a row an actor calling MVP_MoveTowards with CHF_NORANDOMTURN should make.
 	//IDEA: Since I may just end up having this as a wholesale replacement. Maybe I should also implement support for patrol points, CANTLEAVEFLOORPIC, and CHF_FASTCHASE ?
+	//FIXME: There's some flickering between different sprite angles, try fixing it.
 	//Originally written by Custodian. Modified by me (inkoalawetrust). Makes the actor move towards the specified actor.
 	//Other: The actor to move to.
 	//DetourFactor: How long the actor is allowed to move in a direction after hitting an obstacle, before heading straight for the target again.
@@ -776,7 +777,21 @@ Extend Class MVP_BaseVehicle
 		}
  
 		//face movement direction
-		If (!(ChaseFlags & CHF_NODIRECTIONTURN))angle = Normalize180(NextAngle);
+		If (!(ChaseFlags & CHF_NODIRECTIONTURN)) angle = Normalize180(NextAngle);
+		
+		/*If (!(Flags & MTFF_NOANGLESNAP)) Broken attempt at fixing the sprite flickering issue https://streamable.com/7y2uv2
+		{
+			Angle = GetNearestCardinalAngle (True),AngleTo (Players[ConsolePlayer].Camera));
+		}*/
+	}
+	
+	//Written by Lewisk3.
+	//Mathemagically gets the nearest sprite angle (https://zdoom.org/wiki/Sprite#Angles) based on the actors' current angle.
+	Double GetNearestCardinalAngle (Bool SixteenAngles = False)
+	{
+		Double NAngle = Normalize180(Angle) + 180;
+		Double Parts = 360 / (SixteenAngles ? 16.0 : 8.0);
+		Return (Round(NAngle / Parts) * Parts);
 	}
 	
 	//Gets the angle to the other actor, and also has a limit that can be used to get the angle to the other actor up to a certain point.

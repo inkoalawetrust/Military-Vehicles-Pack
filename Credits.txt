@@ -4,6 +4,7 @@ Mod made by Inkoalawetrust
 Any code not written by me (Inkoalawetrust) will be specified here.
 Custodian, for writing the base for the MVP_MoveTowards function, that I then extended.
 Help with coding by RaveYard.
+GetNearestCardinalAngle by Lewisk3.
 LinearMap function written by Agent_Ash.
 |==============|Code|==============|
 
