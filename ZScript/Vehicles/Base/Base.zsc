@@ -31,9 +31,9 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 		FriendlySeeBlocks 48; // 6144 map units, armed vehicles should have a longer range to be able to attack from across the map. 80; //A bit over 10000 map unit sight range
 		MaxStepHeight 32;
 		MaxTargetRange 10000;
-		MVP_BaseVehicle.MaxCorpseRadius 64;
-		MVP_BaseVehicle.MaxCorpseHeight 48;
-		MVP_BaseVehicle.AggressionMultiplier 1.0;
+		KAI_BaseVehicle.MaxCorpseRadius 64;
+		KAI_BaseVehicle.MaxCorpseHeight 48;
+		KAI_Actor.AggressionMultiplier 1.0;
 		Species "Military";
 		Obituary "%o managed to be killed by an abstract class, congratulations %o, we are all very proud of you. Or maybe a modder forgot to define a custom obituary.";
 		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
@@ -210,75 +210,19 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 	Mixin MVP_CheckFunctions;
 	Mixin MVP_MathFunctions;
 	
-	Const MARINE_RECURSIONS = 32; //How many times marine dropping vehicles can try dropping in an invalid spot before giving up.
-	Const DEFAULT_HEARDISTANCE = 4096; //Exactly what it says, the default hear distance the vehicles' and turrets' A_LookEx calls use.
-	Const DEFAULT_SEEDISTANCE = 8192; //The default sight distance.
-	
 	//AI variables
-	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
-	Actor NearestEnemy; //The enemy closest to the vehicle, if any.
-	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
-	Int ChaseTimer; //Makes the vehicle only chase its' target for a certain amount of time after it goes out of sight. Is also used to determine how long turreted vehicles stay in one place.
-	Int FearTimer; //Makes the vehicle keep running away from it's target for an additional random amount of time, so that it doesn't play peekaboo with enemies.
-	Int CurrentOrder; //The current order the vehicle is following.
-	Int StayStillDelay; //How long before the vehicle can stand still to attack again.
-	Array <State> AttackStates; //Can be used to store all of the attack state labels each vehicle has.
-	Double AggressionMultiplier; //Can be used to further increase the chance of MVP_CheckMissileRange returning true. The LOWER it is the more frequent the attacking.
-	Property AggressionMultiplier : AggressionMultiplier;
 	
 	//Internal variables
 	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
-	Array <MVP_Headlight> Headlights; //Pointers to each headlight the vehicle has.
-	Bool HeadlightsOn; //Should the headlights be on ?
-	MVP_BaseTurret Turret; //The turret the vehicle has, used to actually spawn said turret.
-	Vector3 TurretOffsets; //The offsets of the turret relative to the vehicle.
-	Bool LightsOnAlready; //Used to stop the headlight code from constantly iterating through the headlights.
-	
-	Double MaxCorpseRadius, MaxCorpseHeight;
-	Property MaxCorpseRadius : MaxCorpseRadius;
-	Property MaxCorpseHeight : MaxCorpseHeight;
 	
 	//Flag variables
-	Private Int VehicleFlags;
-	FlagDef Transport : VehicleFlags, 0; //The vehicle is marked as being able to transport soldiers.
-	FlagDef NoRadio : VehicleFlags, 1; //The vehicle ignores orders given to it by the radio item.
-	FlagDef ScareMarines : VehicleFlags, 2; //The vehicle can automatically scare marines away, regardless of its' size or health.
+	Private Int MVPVehicleFlags;
+	FlagDef ScareMarines : VehicleFlags, 0; //The vehicle can automatically scare marines away, regardless of its' size or health.
 	Class<MVP_BaseTurret> VehicleTurret; //The pointer to the vehicles' turret, if any.
 	Property VehicleTurret : VehicleTurret;
-	
-	//Generic user variables
-	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
-	//Bool User_NoTargetPrediction; //The vehicle will not calculate it's targets' movement and lead its' shots, this is only available to certain vehicles as not all of them have projectile attacks.
-	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
-	Int User_ChaseTime; //How much time the vehicle spends looking for it's out-of-sight target before giving up.
-	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
-	
-	//KAIREMOVE: This exact code is pasted wholesale into the library, so remove it all.
-	States
-	{
-		StickAround: //Generic state shared by all vehicles, for when they are far enough from any enemies to be able to just sit and let their turrets do the work.
-			#### # 0
-			{
-				//Face sideways from your target, if any.
-				A_FaceTarget ();
-				If (Target)
-					Angle += RandomPick (75,80,85,90,95,10,105);
-			}
-			#### # 4 //If an enemy has gotten too close, the turret can't attack, or enough time has passed, then stop standing around.
-			{
-				If (ChaseTimer <= 0 || FindNearestEnemy (User_RetreatDistance/1.4) || Turret && (!Turret.CanAttack() || Turret.bDontStayAround))
-				{
-					ChaseTimer = 0;
-					Return ResolveState ("See");
-				}
-				
-				ChaseTimer--;
-				Return State (Null);
-			}
-			Goto StickAround+1;
-	}
 }
 
+//URGENT: RESOLVE THE PROBLEMS WITH KAI_BASEVEHICLE AND TURRET HAVING THE EXACT SAME INHERITANCE LAYOUT AS MVP_BASEVEHICLE AND TURRET.
 Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 {
 	Default
@@ -300,7 +244,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 		+LookAllAround;
 		+DontFollowPlayers;
 		+NoSpriteShadow;
-		+MVP_BaseVehicle.NoRadio;
+		+KAI_BaseVehicle.NoRadio;
 		-AvoidHazards;
 		-AvoidMelee;
 		-CanBlast; //Turrets are attached to their vehicle.

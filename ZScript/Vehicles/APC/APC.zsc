@@ -190,7 +190,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
-				MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE,extraflags:KAIL_DOTEMPSTAND);
 			}
 			Loop;
 		See:

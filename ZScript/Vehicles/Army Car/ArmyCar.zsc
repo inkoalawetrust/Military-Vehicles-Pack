@@ -207,7 +207,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
-				If (WaitTimer <= 0) MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+				If (WaitTimer <= 0) KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE,extraflags:KAIL_DOTEMPSTAND);
 				
 				If (!IsPatrolling(Self) && Target && WaitTimer <= 0)
 					SetStateLabel ("See");

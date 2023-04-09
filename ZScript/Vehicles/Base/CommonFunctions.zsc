@@ -250,27 +250,7 @@ Mixin Class MVP_CheckFunctions
 //Vehicle functions
 Extend Class MVP_BaseVehicle
 {
-	//=====|Status checks|=====\\
-	/*Used to check if marines can spawn in the specified position, the radius and height parameters are for vehicles like the truck,
-	that- ugh, nevermind, I can't put into words what this does.*/
-	Bool ValidPositionAt (Vector2 Offset = (0,0), Double TempRadius = 32, Double TempHeight = 56)
-	{
-		//Store the previous position and dimensions of the vehicle.
-		Vector3 PrevPos = Pos;
-		Double PrevRadius = Radius;
-		Double PrevHeight = Height;
-		
-		A_SetSize (TempRadius,TempHeight);
-		SetXYZ (Vec3OffsetRelative (Self,(Offset,Pos.Z),flags:V3R_ANGLEONLY));
-		
-		Bool Ok = CheckPosition (Pos.XY);
-		
-		A_SetSize (PrevRadius,PrevHeight);
-		SetXYZ (PrevPos);
-		
-		Return Ok;
-	}
-	
+	//=====|Status checks|=====\\	
 	//KAIKEEP: Keep this function to the MVP. Since it runs stuff that only makes sense in the context of the MVP. IDEA: Maybe make IsPowerful a virtual ?
 	//Add a function that determines if the vehicles' target is a VERY powerful enemy.
 	Bool IsPowerful (Actor Other)
@@ -294,39 +274,6 @@ Extend Class MVP_BaseVehicle
 		
 		Return False;
 	}
-	
-	//KAIREMOVE: Remove all of this.
-	//Checks if the vehicle is in any of the attack states defined, and if it is, it also returns a pointer to that state.
-	State IsInAttackState()
-	{
-		State FoundState = State (Null);
-		
-		If (InStateSequence (CurState,MissileState) || InStateSequence (CurState,MeleeState)) Return CurState;
-		
-		//Loop through available states.
-		For (Int I = AttackStates.Size()-1; 0 <= I; I--)
-		{
-			//The state in the array matches the current state we are in.
-			If (InStateSequence (CurState,AttackStates[I]))
-			{
-				FoundState = AttackStates[I];
-				Break;
-			}
-		}
-		
-		Return FoundState;
-	}
-	
-	//Returns true if the specified actor can resurrect corpses like an Archvile does.
-	Bool IsNecromancer (Actor Other)
-	{
-		If (!Other) Return False;
-		
-		If (Other.FindState ("Heal")) Return True; //I checked several mods with Archvile-type monsters. And all of them have a Heal state. Making this the only universal way to check for them.
-		
-		Return False;
-	}
-	
 	//=====|Spawn functions|=====\\
 	//KAIREMOVE: Remove the headlight spawn function and its' code. I has been moved to the KAI_BaseVehicle now.
 	Enum MVPFlameFlags
@@ -373,52 +320,6 @@ Extend Class MVP_BaseVehicle
 				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);
 			Else
 				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);
-	}
-	
-	//High quality code rips.
-	Enum DynamicLightArgs
-	{
-	   LIGHT_RED = 0,
-	   LIGHT_GREEN = 1,
-	   LIGHT_BLUE = 2,
-	   LIGHT_INTENSITY = 3,
-	   LIGHT_SECONDARY_INTENSITY = 4,
-	   LIGHT_SCALE = 3,
-	}
-	
-	//VHSF = Vehicle Headlight Spawn Function
-	Enum HeadlightSpawnFlags
-	{
-		VHSF_BACKLIGHT = 1 << 0 //Is this a backlight ? If yes, the angle it faces relative to the vehicle is inverted, so that it faces behind the vehicle.
-	}
-	
-	//Spawns a headlight with the specified parameters. Then returns a pointer to it.
-	//AttachTo: The actor to attach the headlight to, this is just the caller usually.
-	//Offsets: The XYZ offsets to pass to the light. This doesn't call SetOffset() on the dynamic light because m_Ofs doesn't change before PostBeginPlay().
-	//Flags: The flags to pass to the headlight.
-	//LightColor: The RGB color of the headlight. This isn't a Color variable since that's not what dynamic light actors use. Default is white.
-	//Intensity: The intensity of the headlight. Default is 256.
-	//SpotlightAngles: The inner (X) and outer (Y) angle of the headlight. Default is (10,25), the default of the DynamicLight class.
-	MVP_Headlight SpawnVehicleHeadlight (Actor AttachTo, Vector3 Offsets, Int Flags = 0, Vector3 LightColor = (255,255,255), Int Intensity = 256, Vector2 SpotlightAngles = (10,25))
-	{
-		If (!AttachTo) AttachTo = Self; //Just in case.
-		MVP_Headlight Headlight = MVP_Headlight(Spawn ("MVP_Headlight",Pos,ALLOW_REPLACE));
-		
-		Headlight.Target = AttachTo; //Dynamic light actors use their target pointer to store who they are attached to.
-		Headlight.Offset = Offsets;
-		If (Flags & VHSF_BACKLIGHT) Headlight.IsBacklight = True;
-		
-		//XYZ = RGB
-		Headlight.Args[LIGHT_RED] = Int(LightColor.X);
-		Headlight.Args[LIGHT_GREEN] = Int(LightColor.Y);
-		Headlight.Args[LIGHT_BLUE] = Int(LightColor.Z);
-		Headlight.Args[LIGHT_INTENSITY] = Intensity;
-		
-		//X is the inner angle. Y is the outer angle.
-		Headlight.SpotInnerAngle = SpotlightAngles.X;
-		Headlight.SpotOuterAngle = SpotlightAngles.Y;
-		
-		Return Headlight;
 	}
 	
 	//=====|Marine related functions|=====\\
@@ -529,37 +430,6 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Vehicle behaviors|=====\\
-	/*KAIREMOVE: Replace all calls to this function with the KAI version, keep in mind, the logic of KAIL(MVPL)_NOTEMPSTAND has been inverted
-	so it needs to be on for all vehicles now !*/
-	Enum MVPLookFlags
-	{
-		MVPL_CHASETARGET = 1 << 0, //If the actor already has a target. Then go to the specified see state. For when the internal A_LookEx() doesn't do it itself.
-		MVPL_NOTEMPSTAND = 1 << 1, //Should the actor not temporarily stay still if friendly (Not begin moving due to player fire) between A_LookEx() calls ?
-	}
-	
-	//Generic wrapper for A_LookEx shared by all vehicles.
-	//Flags, MinSeeDist, MaxSeeDist, MaxHearDist, FOV, Label: These properties are all directly transfered to A_LookEx, so work the same as they do in that function.
-	//ExtraFlags: The extra flags that modified MVP_Look's behavior. Look above for available flags.
-	Void MVP_Look (Int Flags = 0, Double MinSeeDist = 0, Double MaxSeeDist = 0, Double MaxHearDist = 0, Double FOV = 0, StateLabel Label = Null, Int ExtraFlags = 0)
-	{
-		//HACK: This shit is probably a super hacky way to just get turrets that are already targeting an actor in their Spawn state to actually attack it.
-		If (ExtraFlags & MVPL_CHASETARGET && Target)
-		{
-			If (Label)
-				SetStateLabel (Label); //Go to specified state.
-			Else
-				SetState (SeeState); //Go to default See state.
-		}
-		Bool Stand = bStandStill;
-		If (!(ExtraFlags & MVPL_NOTEMPSTAND))
-		{
-			Stand = bStandStill;
-			bStandStill = True;
-		}
-		A_LookEx (Flags, MinSeeDist, MaxSeeDist, MaxHearDist, FOV, Label);
-		If (!(ExtraFlags & MVPL_NOTEMPSTAND)) bStandStill = Stand;
-	}
-	
 	Enum MVPChaseFlags
 	{
 		MVPC_ATTACKWHENSCARED = 1 << 0, //The vehicle will still be very likely to attack when scared of an enemy.

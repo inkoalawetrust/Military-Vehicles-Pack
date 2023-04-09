@@ -45,7 +45,7 @@ Class MVP_PainRay : MVP_BaseTurret
 	States
 	{
 		Spawn:
-			MCR3 H 1 MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+			MCR3 H 1 KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE,extraflags:KAIL_DOTEMPSTAND);
 			Loop;
 		See:
 			MCR3 H 1
