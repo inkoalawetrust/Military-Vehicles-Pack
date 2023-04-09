@@ -83,6 +83,10 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 		DamageFactor "RifleBullet", 0.8;
 	}
 	
+	Mixin MVP_CheckFunctions;
+	Mixin MVP_MathFunctions;
+	Mixin MVP_CommonFunctions;
+	
 	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
 	because it allows default user variable values to be set for actors that are spawned in-game as well, not just ones placed in UDB*/
 	Override Void UserVariableDefaults ()
@@ -208,23 +212,6 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 		TakeInventory (FearToken,INT.MAX);
 	}
 	
-	Enum VehicleCommands
-	{
-		ORDER_NONE = 0, //Null
-		ORDER_FOLLOW = 1, //Follow the player when having no target.
-		ORDER_WANDER = 2, //Wander around when having no target, instead of following the player.
-		ORDER_STAY = 3, //Stay in place until a target appears or you are ordered to start moving again. Then stand around again once the chase timer is out.
-		//ORDER_GOTOPOINT ? Perhaps, but maybe not, since I'm not sure how I could code the vehicles to head to a specified point.
-	};
-	
-	Mixin MVP_CheckFunctions;
-	Mixin MVP_MathFunctions;
-	
-	//AI variables
-	
-	//Internal variables
-	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
-	
 	//Flag variables
 	Private Int MVPVehicleFlags;
 	FlagDef ScareMarines : VehicleFlags, 0; //The vehicle can automatically scare marines away, regardless of its' size or health.
@@ -236,6 +223,8 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 	//Bool User_NoTargetPrediction; //The vehicle will not calculate it's targets' movement and lead its' shots, this is only available to certain vehicles as not all of them have projectile attacks.
 	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
 	Int User_ChaseTime; //How much time the vehicle spends looking for it's out-of-sight target before giving up.
+	
+	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
 }
 
 //URGENT: RESOLVE THE PROBLEMS WITH KAI_BASEVEHICLE AND TURRET HAVING THE EXACT SAME INHERITANCE LAYOUT AS MVP_BASEVEHICLE AND TURRET.
@@ -287,6 +276,8 @@ Class MVP_BaseTurret : KAI_BaseVehicleTurret Abstract
 		DamageFactor "Autocannon", 0.8;
 		DamageFactor "RifleBullet", 0.8;
 	}
+	
+	Mixin MVP_CommonFunctions;
 	
 	Private Int TurretFlags;
 	FlagDef FallOnDeath : TurretFlags, 0; //Turret detached from its' vehicle upon death.
@@ -435,7 +426,7 @@ Class MVP_BaseTurret : KAI_BaseVehicleTurret Abstract
 
 //The code that actually draws the line between the projectiles' current and previous position was written by Boondorl, since my own version had problems with pitch and so on. 
 //It's a FastProjectile with custom trail spawning code, so don't bother using FastProjectile's own trail system, as this one works better for truly fast projectiles.
-Class MVP_BaseProjectile : FastProjectile
+Class MVP_BaseProjectile : KAI_MixinProjectile
 {
 	Default
 	{
@@ -443,6 +434,8 @@ Class MVP_BaseProjectile : FastProjectile
 		MVP_BaseProjectile.TrailLineSpacing 2;
 		Projectile;
 	}
+	
+	Mixin MVP_CommonFunctions;
 	
 	Override Void PostBeginPlay()
 	{

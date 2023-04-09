@@ -58,7 +58,7 @@ Class MVP_Explosion : Actor
 }
 
 //Randomize the scale of the splashes and the APC shell explosions a bit.
-Class MVP_LiquidSplash : Actor
+Class MVP_LiquidSplash : KAI_MixinActor
 {
 	Default
 	{
@@ -146,7 +146,7 @@ Class MVP_LiquidSplash : Actor
 	}
 }
 
-Class MVP_Flame : Actor
+Class MVP_Flame : KAI_MixinActor
 {
 	Default
 	{
@@ -237,7 +237,7 @@ Class MVP_Flame : Actor
 }
 
 //A generic tracer effect particle.
-Class MVP_Tracer : Actor
+Class MVP_Tracer : KAI_MixinActor
 {
 	Default {RenderStyle "Add"; Scale 0.5; ReactionTime 1; +NoBlockmap; +NoInteraction;}
 	

@@ -15,7 +15,7 @@ Class MVP_DiCokkaProp : MVP_BaseProp
 		XScale 0.9;
 		YScale 0.75;
 		Tag "Type II AFV \"Di-Cokka\" (Prop)";
-		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretProp";
+		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretProp";
 		DeathSound "Vehicle/Di-Cokka/Death";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
@@ -187,7 +187,7 @@ Class MVP_DiCokkaWreck : MVP_DiCokkaProp
 		//$Category Vehicles/Di-Cokka
 		//$Sprite MSV1[1
 		
-		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretWreck";
+		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretWreck";
 		Height 51;
 		+NoDamage;
 		Tag "Type II AFV \"Di-Cokka\" (Wreck)";

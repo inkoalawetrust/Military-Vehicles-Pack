@@ -316,7 +316,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,400,128,(0,0,12)))
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,400,128,(0,0,12)))
 		{
 			If (!NoStateJump)
 			{
@@ -385,7 +385,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				
 				If (Random2[pr_monsterrefire]() < 20 &&
 				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
-				!MVP_TurretCheckLOF (Target,400,128,(0,0,12))))
+				!KAI_TurretCheckLOF (Target,400,128,(0,0,12))))
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");
@@ -527,7 +527,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,150,0,(0,0,8)))
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,150,0,(0,0,8)))
 		{
 			If (!NoStateJump)
 			{
@@ -604,7 +604,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				
 				If (Random2[pr_monsterrefire]() < 128 &&
 				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
-				!MVP_TurretCheckLOF (Target,150,0,(0,0,8))))
+				!KAI_TurretCheckLOF (Target,150,0,(0,0,8))))
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");

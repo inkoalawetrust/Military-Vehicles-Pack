@@ -1,5 +1,6 @@
-Class MVP_BaseProp : MVP_BaseVehicle Abstract
+Class MVP_BaseProp : KAI_BaseVehicleProp Abstract
 {
+	Mixin MVP_CommonFunctions;
 }
 
 Class MVP_BaseTurretProp : MVP_BaseTurret

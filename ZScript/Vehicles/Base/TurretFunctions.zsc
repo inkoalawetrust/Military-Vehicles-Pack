@@ -59,3 +59,28 @@ Class MVP_LOFDebugGun : Pistol
 			Loop;
 	}
 }
+
+//A generic check used to find where a projectile will roughly land, to place a warning zone for marines there.
+//This is here because MVP projectiles usually go through allies.
+Class MVP_GenericWarnMarineCheck : KAI_LOFRaycast
+{
+	Int BlockMode; //Works like the variable in MVP_LOFActorFinder.
+	Override ETraceStatus TraceCallback()
+	{
+		Actor Mobj = Results.HitActor;
+		
+		//Standard MVP projectiles go through allies.
+		If (Mobj && (IsInanimateObject (Mobj) || Shooter && Shooter.IsHostile (Mobj)))
+			Return Trace_Stop;
+		
+		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
+		If (Results.HitLine && Results.HitLine.Flags & Line.ML_BLOCKEVERYTHING || BlockMode != 0 && BlockingLineInTheWay (Results.HitLine,BlockMode))
+			Return Trace_Stop;
+		
+		//Level geometry is in the way.
+		If (HitLevelGeometry (Results))
+			Return Trace_Stop;
+		
+		Return Trace_Skip;
+	}
+}
