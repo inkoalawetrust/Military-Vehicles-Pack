@@ -37,7 +37,7 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "Autocannon", 0.7;
 		DamageFactor "RifleBullet", 0.75;
 		
-		+MVP_BaseVehicle.Transport;
+		+KAI_BaseVehicle.Transport;
 	}
 	
 	Override Void PostBeginPlay ()

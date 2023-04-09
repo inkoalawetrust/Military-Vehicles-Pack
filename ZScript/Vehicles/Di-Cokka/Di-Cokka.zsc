@@ -22,9 +22,9 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		YScale 0.75;
 		Tag "Type II AFV \"Di-Cokka\"";
 		Obituary "%o was blown up by a Rebel tank.";
-		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
-		MVP_BaseVehicle.MaxCorpseRadius 24; //Only crushes human sized objects. And only incidentally.
-		MVP_BaseVehicle.MaxCorpseHeight 60;
+		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
+		KAI_BaseVehicle.MaxCorpseRadius 24; //Only crushes human sized objects. And only incidentally.
+		KAI_BaseVehicle.MaxCorpseHeight 60;
 		
 		-NoPain; //This vehicle CAN feel pain.
 		PainChance 30;

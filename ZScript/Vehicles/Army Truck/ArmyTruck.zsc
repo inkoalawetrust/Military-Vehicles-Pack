@@ -34,7 +34,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		DamageFactor "Autocannon", 1.25;
 		DamageFactor "RifleBullet", 0.95;
 		
-		+MVP_BaseVehicle.Transport; //Carries soldiers.
+		+KAI_BaseVehicle.Transport; //Carries soldiers.
 		+NoExtremeDeath; //So the truck doesn't gib enemies it runs over.
 	}
 	

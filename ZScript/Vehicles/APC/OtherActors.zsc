@@ -10,16 +10,16 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Radius 32;
 		Mass 1200;
 		FriendlySeeBlocks 80; //A bit over 10000 map unit sight range, useful for vehicles with actual guns to attack with.
-		MVP_BaseTurret.MaximumPitch -60;
-		MVP_BaseTurret.MinimumPitch 20;
-		MVP_BaseTurret.TurnSoundRadius 4;
-		MVP_BaseTurret.CombatAngleTurnRate 55;
-		MVP_BaseTurret.CombatPitchTurnRate 30;
+		KAI_BaseVehicleTurret.MaximumPitch -60;
+		KAI_BaseVehicleTurret.MinimumPitch 20;
+		KAI_BaseVehicleTurret.TurnSoundRadius 4;
+		KAI_BaseVehicleTurret.CombatAngleTurnRate 55;
+		KAI_BaseVehicleTurret.CombatPitchTurnRate 30;
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
 		DamageFactor "Autocannon", 0.8;
 		AttackSound "Vehicle/APC/MGFire";
-		MVP_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
+		KAI_BaseVehicleTurret.TurnSound "Vehicle/APC/TurretTurn";
 		+MissileMore;
 		//+MVP_BaseVehicle.ScareMarines;
 	}
@@ -182,7 +182,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 				Return State (Null);
 			}
-			APC3 # 0 MVP_TurretRefire (48,"See",True);
+			APC3 # 0 KAI_TurretRefire (48,"See",True);
 			Goto Fire+6;
 		Death:
 			APC3 M 0 {Actor Boom = Spawn ("MVP_Explosion",Pos); Boom.bNoGravity = True;}
@@ -217,7 +217,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	}
 }
 
-Class MVP_APCMachineGunLOFCheck : MVP_LOFRaycast
+Class MVP_APCMachineGunLOFCheck : KAI_LOFRaycast
 {
 	Const FiftyCalRipLevel = 3; //This has to be changed if MVP_50CalBullets' ripper level is changed.
 	Const MaxRippedActors = 5; //Same as above, but this is the general count of how many actors a bulelt can go through before stopping.
@@ -282,10 +282,10 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		Tag "Autocannon Turret";
 		Obituary "%o was blown up by an autocannon";
 		AttackSound "Vehicle/APC/AutocannonFire";
-		MVP_BaseVehicle.VehicleTurret "MVP_APCMGTurret";
-		MVP_BaseTurret.MaximumPitch -50;
-		MVP_BaseTurret.MinimumPitch 20;
-		MVP_BaseTurret.TurnSoundRadius 4;
+		KAI_BaseVehicle.VehicleTurret "MVP_APCMGTurret";
+		KAI_BaseVehicleTurret.MaximumPitch -50;
+		KAI_BaseVehicleTurret.MinimumPitch 20;
+		KAI_BaseVehicleTurret.TurnSoundRadius 4;
 		+MissileEvenMore;
 	}
 	
@@ -396,7 +396,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 				Return State (Null);
 			}
-			APC2 # 0 MVP_TurretRefire (10,"See",True);
+			APC2 # 0 KAI_TurretRefire (10,"See",True);
 			Goto Fire+6;
 		Death: //When TG5 finishes the sprites for the gunner getting out the turret, add code to make them work here.
 			APC2 Q 0
@@ -492,10 +492,10 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		RipLevelMin 1;
 		MaxTargetRange 6144; //Reduced range compared to most attacks.
 		FriendlySeeBlocks 48; //Reduced sight range too.
-		MVP_BaseTurret.MaximumPitch -50; //Doesn't elevate quite as high as the other APC turrets.
-		MVP_BaseTurret.MinimumPitch 20;
-		MVP_BaseTurret.CombatAngleTurnRate 50;
-		MVP_BaseTurret.CombatPitchTurnRate 37;
+		KAI_BaseVehicleTurret.MaximumPitch -50; //Doesn't elevate quite as high as the other APC turrets.
+		KAI_BaseVehicleTurret.MinimumPitch 20;
+		KAI_BaseVehicleTurret.CombatAngleTurnRate 50;
+		KAI_BaseVehicleTurret.CombatPitchTurnRate 37;
 		Obituary "%o found out that rifle rounds are more dangerous than in the movies";
 		Tag "7.62mm Turret";
 		AttackSound "Vehicle/APC/SmallMGFire";
@@ -615,7 +615,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 				Return State (Null);
 			}
-			APC2 # 0 MVP_TurretRefire (128,"See",True);
+			APC2 # 0 KAI_TurretRefire (128,"See",True);
 			Goto Fire+6;
 		Death:
 			APC2 V 20

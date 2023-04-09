@@ -11,14 +11,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Health 800;
 		GibHealth 200;
 		Tag "Army Car";
-		MVP_BaseVehicle.VehicleTurret "MVP_PainRay";
+		KAI_BaseVehicle.VehicleTurret "MVP_PainRay";
 		DamageFactor "MarineGrenade", 1.25;
 		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
 		ActiveSound "Vehicle/ArmyCar/Moving";
 		DeathSound "SFX/Explosion";
 		//+MissileEvenMore
-		+MVP_BaseVehicle.Transport;
+		+KAI_BaseVehicle.Transport;
 	}
 	
 	Override Void PostBeginPlay ()

@@ -230,6 +230,12 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 	FlagDef ScareMarines : VehicleFlags, 0; //The vehicle can automatically scare marines away, regardless of its' size or health.
 	Class<MVP_BaseTurret> VehicleTurret; //The pointer to the vehicles' turret, if any.
 	Property VehicleTurret : VehicleTurret;
+	
+	//Generic user variables
+	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
+	//Bool User_NoTargetPrediction; //The vehicle will not calculate it's targets' movement and lead its' shots, this is only available to certain vehicles as not all of them have projectile attacks.
+	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
+	Int User_ChaseTime; //How much time the vehicle spends looking for it's out-of-sight target before giving up.
 }
 
 //URGENT: RESOLVE THE PROBLEMS WITH KAI_BASEVEHICLE AND TURRET HAVING THE EXACT SAME INHERITANCE LAYOUT AS MVP_BASEVEHICLE AND TURRET.
@@ -736,7 +742,7 @@ Class MVP_Headlight : DynamicLight
 //The actor that warns marines around a specified area to run away from the zone in question, it uses the following properties and flags:
 //MaxTargetRange: Determines the exact size of the warning zone.
 //FIXME: Fix the really fucking stupid bug where when the zone alerts a marine, it will sometimes also alert other friendly NPCs and also make them target said zone.
-Class SmartMarineWarningZone : Actor
+Class SmartMarineWarningZone : KAI_MixinActor
 {
 	Default
 	{
@@ -763,8 +769,6 @@ Class SmartMarineWarningZone : Actor
 	Inventory Token;
 	Vector3 Offset;
 	Int Flags;
-	Mixin MVP_CheckFunctions;
-	Mixin MVP_MathFunctions;
 	
 	//Cool copy and paste courtesy of the god forsaken scope system.
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
