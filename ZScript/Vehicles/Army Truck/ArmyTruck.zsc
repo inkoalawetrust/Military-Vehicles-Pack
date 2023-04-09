@@ -201,7 +201,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		If (Health <= SpawnHealth()/4)
 			AggressionMultiplier *= 0.5;
 		
-		If (MVP_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
+		If (KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (User_MarineAmount > 0 && DeployTimer <= 0)
 			{

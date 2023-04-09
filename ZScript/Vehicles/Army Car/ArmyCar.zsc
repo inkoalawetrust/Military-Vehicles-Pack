@@ -80,7 +80,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!User_NoMarines && DeployTimer <= 0 && MVP_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
+		If (!User_NoMarines && DeployTimer <= 0 && KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (!NoStateJump) SetStateLabel ("DeployMarines");
 			Return True; //Tell MVP_Chase to end.

@@ -110,6 +110,16 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 	//Return the location that the vehicles' attack will hit at.
 	Override Vector3 GetAttackLocation() {Return (Double.NaN,Double.NaN,Double.NaN);}
 	
+	Override Bool IsActorHostile (Actor Other, Bool TrueIfFriend)
+	{
+		If (!TrueIfFriend)
+			Return MVP_IsHostile(Self,Other);
+		Else
+			Return IsFriend (Other);
+		
+		Return False;
+	}
+	
 	Override Void BeginPlay()
 	{
 		Super.BeginPlay();
@@ -307,12 +317,9 @@ Class MVP_BaseTurret : KAI_BaseVehicleTurret Abstract
 	}
 	Int ElevationState; //Look above for possible elevation states.
 	
-	//KAIREMOVE: Only keep the species change.
 	Override Void PostBeginPlay ()
 	{
-		Actor.PostBeginPlay ();
-		UserVariableDefaults();
-		SpawnVehicleTurret();
+		Super.PostBeginPlay ();
 		If (!bFriendly) Species = 'MilitaryHostile';
 	}
 	

@@ -146,7 +146,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
 				MVP_Chase (followdist:256);
-				If (!User_NoCorpseCrush) MVP_CrushCorpses (1);
+				If (!User_NoCorpseCrush) KAI_CrushCorpses (1);
 			}
 			Loop;
 		Pain:
@@ -284,7 +284,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Else
 			AggressionMultiplier = Default.AggressionMultiplier;
 		
-		If (!RefireDelay && Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
+		If (!RefireDelay && Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
 		{
 			If (!NoStateJump)
 			{
