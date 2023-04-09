@@ -435,7 +435,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			Wait;
 		GenericFreezeDeath:
 			APC2 # 0 {Frame = UpdateTurretElevation (2,0,4,6); /*C, A, E, G*/}
-			Goto MVP_BaseVehicle::GenericFreezeDeath;
+			Goto KAI_BaseVehicle::GenericFreezeDeath;
 	}
 }
 

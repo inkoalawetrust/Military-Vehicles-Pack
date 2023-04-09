@@ -223,32 +223,53 @@ Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 }
 
 //URGENT: RESOLVE THE PROBLEMS WITH KAI_BASEVEHICLE AND TURRET HAVING THE EXACT SAME INHERITANCE LAYOUT AS MVP_BASEVEHICLE AND TURRET.
-Class MVP_BaseTurret : MVP_BaseVehicle Abstract
+Class MVP_BaseTurret : KAI_BaseVehicleTurret Abstract
 {
 	Default
 	{
-		Speed 0;
-		FastSpeed 0;
+		//Properties copied from MVP_BaseVehicle.
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
+		Radius 40;
+		Height 54;
+		DeathHeight 54;
+		CameraHeight 48;
+		FriendlySeeBlocks 48; // 6144 map units, armed vehicles should have a longer range to be able to attack from across the map. 80; //A bit over 10000 map unit sight range
+		MaxTargetRange 10000;
+		
 		RipLevelMin 2;
-		MaxStepHeight 0;
-		Mass 500;
 		MVP_BaseTurret.TurnAmount 0.15;
 		MVP_BaseTurret.TurnSoundRadius 2;
 		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
+		Species "Military";
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
-		+NoFear; //Can't really move to run away.
-		+DontThrust;
-		+StandStill;
-		+LookAllAround;
-		+DontFollowPlayers;
-		+NoSpriteShadow;
-		+KAI_BaseVehicle.NoRadio;
-		-AvoidHazards;
-		-AvoidMelee;
-		-CanBlast; //Turrets are attached to their vehicle.
-		-CountKill; //And because of that, they don't count as kills either.
+		
+		//Damage factors that act as the vehicles "armor".
+		DamageFactor 0.9; //Generic damage factor for all damage.
+		DamageFactor "Drowning", 0.0;
+		DamageFactor "Poison", 0.0;
+		DamageFactor "PoisonCloud", 0.0;
+		DamageFactor "Melee", 0.2; //May change this to have melee damage do nothing to the vehicles, unless it exceeds a certain ammount.
+		DamageFactor "Electric", 0.2;
+		DamageFactor "ExplosiveImpact", 0.75;
+		DamageFactor "Explosion", 0.75;
+		DamageFactor "Explosive", 0.75;
+		DamageFactor "Grenade", 0.7;
+		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.8;
+		DamageFactor "Crush", 1.5;
+		DamageFactor "Disintegrate", 1.5;
+		DamageFactor "Railgun", 2.0;
+		DamageFactor "Falling", 1.25;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.8;
+		DamageFactor "MarineGrenade", 0.7;
+		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "RifleBullet", 0.8;
 	}
 	
 	Private Int TurretFlags;
