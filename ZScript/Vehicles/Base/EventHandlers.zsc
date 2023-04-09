@@ -1,6 +1,6 @@
 //Currently just here to make UDB complain lol.
 /*Checks if the Iron Snail (https://forum.zdoom.org/viewtopic.php?t=58645) monsters pack is loaded.
-And if it, gives all its' monsters their own species. So that enemy Di-Cokkas (And any other MS vehicles I may make in the future)
+And if it is, gives all its' monsters their own species. So that enemy Di-Cokkas (And any other MS vehicles I may make in the future)
 don't harm fellow Iron Snail enemies or infight with them.
 *//*
 Class MVP_IronSnailCompatHandler : EventHandler

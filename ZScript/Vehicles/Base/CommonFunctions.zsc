@@ -84,7 +84,7 @@ Mixin Class MVP_UniversalFunctions
 		
 		Return LIQUID_NONE;
 	}
-	
+	//KAIREMOVE: REMOVE THE ALLY EXPLOSION IMMUNITY STUFF LATER.
 	Array <Actor> TempAllyList; //Used to prevent friends of the explosions' source from being harmed.
 	
 	//Temporarily give NORADIUSDMG to allies, to stop them from being harmed by explosions.
@@ -128,6 +128,7 @@ Mixin Class MVP_UniversalFunctions
 }
 
 //Generic status checks.
+//KAIREMOVE: Remove all the functions in this mixin besides CustomMarinesAvailable and MVP_IsHostile, since the rest are in KAIs' version of the mixin.
 Mixin Class MVP_CheckFunctions
 {
 	Bool CustomMarinesAvailable()
@@ -213,6 +214,7 @@ Mixin Class MVP_CheckFunctions
 		Return (Other == Caller.Target || !Other.bNoTarget && !(Other.Player && Other.Player.Cheats & CF_NOTARGET));
 	}
 	
+	//KAICHANGE: The library now has an IsActorHostile virtual for the KAI(MVP)_CrushCorpses function. So plug this function in as the return value of that virtual.
 	//Is the other actor hostile?
 	Bool MVP_IsHostile (Actor Caller, Actor Other)
 	{
@@ -269,6 +271,7 @@ Extend Class MVP_BaseVehicle
 		Return Ok;
 	}
 	
+	//KAIKEEP: Keep this function to the MVP. Since it runs stuff that only makes sense in the context of the MVP. IDEA: Maybe make IsPowerful a virtual ?
 	//Add a function that determines if the vehicles' target is a VERY powerful enemy.
 	Bool IsPowerful (Actor Other)
 	{
@@ -292,6 +295,7 @@ Extend Class MVP_BaseVehicle
 		Return False;
 	}
 	
+	//KAIREMOVE: Remove all of this.
 	//Checks if the vehicle is in any of the attack states defined, and if it is, it also returns a pointer to that state.
 	State IsInAttackState()
 	{
@@ -324,6 +328,7 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Spawn functions|=====\\
+	//KAIREMOVE: Remove the headlight spawn function and its' code. I has been moved to the KAI_BaseVehicle now.
 	Enum MVPFlameFlags
 	{
 		FSP_WARNMARINES = 1 << 0, //If any flames are succesfully created around the vehicle, should a marine warning zone be made ?
@@ -417,6 +422,7 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Marine related functions|=====\\
+	//KAI: All the marine shit stays here in the MVP. It'll be reworked when the marines are rewritten.
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)
 	{
@@ -523,6 +529,8 @@ Extend Class MVP_BaseVehicle
 	}
 	
 	//=====|Vehicle behaviors|=====\\
+	/*KAIREMOVE: Replace all calls to this function with the KAI version, keep in mind, the logic of KAIL(MVPL)_NOTEMPSTAND has been inverted
+	so it needs to be on for all vehicles now !*/
 	Enum MVPLookFlags
 	{
 		MVPL_CHASETARGET = 1 << 0, //If the actor already has a target. Then go to the specified see state. For when the internal A_LookEx() doesn't do it itself.
@@ -689,6 +697,7 @@ Extend Class MVP_BaseVehicle
 		}
 	}
 	
+	//KAIREMOVE: Replace all instances of this function with the one from KAI.
 	Double LastTurnDir;
 	Int TurnCount; //Keeps track of how many turns in a row an actor calling MVP_MoveTowards with CHF_NORANDOMTURN should make.
 	//IDEA: Since I may just end up having this as a wholesale replacement. Maybe I should also implement support for patrol points, CANTLEAVEFLOORPIC, and CHF_FASTCHASE ?
@@ -821,6 +830,7 @@ Extend Class MVP_BaseVehicle
 		RVHF_NOWEAKHULLCHECK		= 1 << 2, //The function should not retarget hulls weaker than whatever turret the caller is targeting.
 	}
 	
+	//KAIREMOVE: This function is now built into the library, no renaming or behavior changes. Just delete it from here, painless.
 	//Makes vehicles target the hulls of vehicles instead of their turrets' under certain conditions:
 	//If the turret has bTransferDamage and is smaller than the vehicle it's attached to. Since attacking the turret only harms the vehicle, might as well shoot the bigger hull instead.
 	//If the hulls' health is less than the health of the turret being targeted. Would be quicker to kill the vehicle than the turret.
@@ -851,6 +861,7 @@ Extend Class MVP_BaseVehicle
 		Return False;
 	}
 	
+	//KAIREMOVE: Replace this with KAI_CheckMissileRange.
 	//This stupid copy and paste has to literally only exist because P_HitFriend breaks friendly turrets with allies below or above them.
 	//The function is more or less the same as it's native counterpart, give or take the syntax and code comments, and it being slower by being non-native.
 	Bool MVP_CheckMissileRange (Actor Other)
@@ -898,6 +909,7 @@ Extend Class MVP_BaseVehicle
 		Return Random2[PR_CheckMissileRange]() >= Min(Int(Dist), MMC);
 	}
 	
+	//KAIREMOVE: This has been replaced with KAI_CrushCorpses, replace all instances of the MVP_ acronym in this function call.
 	//Used to make vehicles able to run over and grind corpses like crushers.
 	Void MVP_CrushCorpses (Double RadiusMultiplier = 1.75)
 	{
@@ -931,6 +943,7 @@ Extend Class MVP_BaseVehicle
 			bDontFollowPlayers = (Distance3DSquared (Players[FriendPlayer].Mo) <= MaxDist*MaxDist);
 	}
 	
+	//KAI: This stays here in the MVP.
 	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
 	//Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
 	//Range: The range around which to check for enemies.
@@ -972,7 +985,7 @@ Extend Class MVP_BaseVehicle
 		Return Chance;
 	}
 	
-	//TODO: Perhaps this should be moved outside of MVP_BaseVehicle, especially once I begin working on the KAI library.
+	//KAIREMOVE: There is no naming or parameter change on this functions in the library. So just delete this code once we are done. Painless
 	//Finds the closest actor in an array of actors.
 	//ActorList: The array of actors to find the closest one from. Usually scrubbed from a blockmap iterator.
 	//Pos: The position from which the distance check is performed on each actor.
@@ -1135,6 +1148,7 @@ Extend Class MVP_BaseVehicle
 	}
 	
 		//=====|Headlight functions|=====\\
+		//KAIREMOVE: This can be painlessly deleted now.
 		//Turn the vehicles' headlights on.
 		Void TurnHeadlightsOn()
 		{

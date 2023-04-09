@@ -1,3 +1,6 @@
+//UNDONE:
+//The functionality of MVP_IsHostile in the LOF tracers has been rolled back due to those classes being moved to the KAI. So I need to fix that after I finish suffering.
+
 //FIXME:
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
 The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
@@ -10,7 +13,7 @@ first tick. Which is literally worse than the turrets spawning on the ground.*/
 //Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Probably needs a rewrite of the marines.
 //Add smoke that can come off of vehicles when they are low on health.
 
-Class MVP_BaseVehicle : Actor Abstract
+Class MVP_BaseVehicle : KAI_BaseVehicle Abstract
 {
 	Default
 	{
@@ -82,73 +85,30 @@ Class MVP_BaseVehicle : Actor Abstract
 	
 	/*Allows each vehicle to define the defaults for its' own user variables. This is better than the //$UserDefaultValue editor key,
 	because it allows default user variable values to be set for actors that are spawned in-game as well, not just ones placed in UDB*/
-	Virtual Void UserVariableDefaults ()
+	Override Void UserVariableDefaults ()
 	{
 		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
 		If (User_ChaseTime == 0) User_ChaseTime = (35/2)*30; //This is 35/2, because it assumes that the default See state on the vehicles has 2 tic long states.
 	}
 	
-	//Handles spawning each vehicles' turret, if they have any.
-	Virtual Void SpawnVehicleTurret ()
-	{
-		If (VehicleTurret)
-		{
-			Turret = MVP_BaseTurret(Spawn (VehicleTurret,Pos+TurretOffsets));
-			If (Turret)
-			{
-				Turret.CopyFriendliness (Self,False);
-				Turret.SpawnFlags = SpawnFlags;
-				Turret.HandleSpawnFlags();
-				Turret.Angle = Angle;
-				Turret.Pitch = Pitch;
-				Turret.Master = Self;
-				Double HealthFactor = Double(Health) / Double(Default.Health);
-				Turret.Health *= HealthFactor;
-				Turret.TurretOffsets = TurretOffsets;
-				//Turret.SetOrigin (Vec3OffsetRelative(Turret.Master,(Turret.TurretOffsets.XY,Turret.Master.Height+Turret.TurretOffsets.Z),flags:V3R_ANGLEONLY),True);
-			}
-		}
-	}
-	
-	//Used to neatly order the spawning of headlights in vehicle definitions. You could just as easily do the spawning in PostBeginPlay()
-	Virtual Void SpawnHeadlights(){}
+	//KAIREMOVE: Delete SpawnHeadlights, make Can/ShouldAttack, GetAttackLocation, and StayStillAndShot into overrides.
 	
 	//NOTE: Maybe have this check for SECF_NOATTACK sectors ? Or not, since it would trigger vehicles to run away from enemies in them.
 	//Used by MVP_Chase to check for all the different methods each vehicle has to attack.
-	Virtual Bool CanAttack()
+	Override Bool CanAttack()
 	{
 		Return False; //Vehicles have no attacks by default, of course.
 	}
 	
 	//Called in the middle of MVP_Chase to handle the unique attack decision code of each vehicle.
 	//NoStateJump: If true, then the vehicle should not call SetStateLabel.
-	Virtual Bool ShouldAttack(Bool NoStateJump = False)
+	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		Return False;
 	}
 	
 	//Return the location that the vehicles' attack will hit at.
-	Virtual Vector3 GetAttackLocation() {Return (Double.NaN,Double.NaN,Double.NaN);}
-	
-	//Should the vehicle stay still and attack ? The base actor class simply houses the most basic conditional check for this.
-	//CheckSightFrom is the actor whose sight to their target is checked, to determine if the vehicle can shoot.
-	Virtual Bool StayStillAndShoot (Actor CheckSightFrom)
-	{
-		If (StayStillDelay) Return False; //Too soon
-		If (Turret && Turret.bDontStayAround) Return False; //Turret told you to not move.
-		If (Turret && Turret.ElevationState != Turret.ELEVATION_INBOUNDS) Return False; //The turrets' target is too high up or low down to shoot.
-		If (IsPatrolling (Self) && bChaseGoal) Return False; //Don't stop if patrolling and "Don't Chase Goal" is on.
-		
-		Double Distance = (User_RetreatDistance > 0) ? User_RetreatDistance : 512; //Fall back to a distance of 512 MU if the vehicle is set to not retreat.
-		//Check if you are far enough from your nearest enemy or target.
-		Actor Whomstve = (NearestEnemy ? NearestEnemy : Target);
-		If ((Whomstve && Distance3DSquared (Whomstve) >= (Distance*Distance)*1.2))
-		{
-			If (CheckSightFrom.CheckSight (CheckSightFrom.Target))
-				Return True;
-		}
-		Return False;
-	}
+	Override Vector3 GetAttackLocation() {Return (Double.NaN,Double.NaN,Double.NaN);}
 	
 	Override Void BeginPlay()
 	{
@@ -161,12 +121,10 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
+	//KAIREMOVE: Remove the calls to other virtuals, since the vehicle will inherit from KAI_BaseVehicle.
 	Override Void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
-		UserVariableDefaults();
-		SpawnVehicleTurret();
-		SpawnHeadlights();
 		
 		If (!bFriendly) Species = 'MilitaryHostile';
 		
@@ -211,24 +169,11 @@ Class MVP_BaseVehicle : Actor Abstract
 		}
 	}
 	
+	//KAIREMOVE: The headlight and stay still delay stuff is handled by the library now, so only keep the fear token shit.
 	Override Void Tick()
 	{
 		Name FearToken = "SM_IAmTheDanger";
 		Super.Tick();
-		
-		If (IsFrozen()) Return;
-		
-		If (StayStillDelay)
-			StayStillDelay--;
-		
-		If (!User_NoHeadlights)
-			HeadLightsOn = (CurSector && CurSector.LightLevel <= 104);
-		
-		If (HeadLightsOn)
-			TurnHeadlightsOn();
-		Else
-			TurnHeadlightsOff();
-		
 		If (CheckActorExists(FearToken))
 		{
 			If (bScareMarines && Self) SetInventory (FearToken,1);
@@ -245,55 +190,12 @@ Class MVP_BaseVehicle : Actor Abstract
 		Return Super.CanCollideWith (Other, Passive);
 	}
 	
+	//KAIREMOVE: Replace all this except the fear token stuff with just a Super.Die() call !
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Name FearToken = "SM_IAmTheDanger";
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
-		If (Turret && !IsDead(Turret)) //When dead, kill the turret the same way as the vehicle died.
-		{
-			Turret.bTransferDamage = False; //Turn the flag off so that the turret can die after the vehicle itself does.
-			If (Health < GetGibHealth()) //Same check Die() uses internally to check if an actor was gibbed. 
-				Turret.DamageMobj (Inflictor, Source, Turret.Health+(-Turret.GetGibHealth())+1, MeansOfDeath, DMG_FORCED);
-			Else
-				Turret.DamageMobj (Inflictor, Source, Turret.Health, MeansOfDeath, DMG_FORCED);
-		}
 		TakeInventory (FearToken,INT.MAX);
-		bShootable = bNotAutoaimed = True; //Destroyed vehicles stay shootable and non-autoaimable unless specified otherwise.
-		RemoveHeadlights(); //The vehicles aren't resurrectable, so the headlights aren't needed.
-		HeadlightsOn = False;
-		CorpseTarget = Null;
-		A_StopSound (CHAN_IDLING);
-		A_StopSound (CHAN_MOVING);
-	}
-	
-	Override Void OnDestroy()
-	{
-		Super.OnDestroy();
-		RemoveHeadlights();
-		If (Turret) Turret.Destroy();
-		AttackStates.Delete(0,AttackStates.Size()); //Clean the array before removal, because the GC can't: https://github.com/ZDoom/gzdoom/issues/2019
-	}
-	
-	Override Void Activate (Actor Activator)
-	{
-		Super.Activate(Activator);
-		
-		If (Turret) //Pass it down to turrets as well.
-			Turret.Activate (Activator);
-	}
-	
-	Override Void Deactivate (Actor Activator)
-	{
-		Super.Deactivate(Activator);
-		
-		If (Turret) //Pass it down to turrets as well.
-			Turret.Deactivate (Activator);
-	}
-	
-	Enum VehicleSoundChannels
-	{
-		CHAN_IDLING = 23500,
-		CHAN_MOVING = 23501
 	}
 	
 	Enum VehicleCommands
@@ -351,6 +253,7 @@ Class MVP_BaseVehicle : Actor Abstract
 	Int User_ChaseTime; //How much time the vehicle spends looking for it's out-of-sight target before giving up.
 	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
 	
+	//KAIREMOVE: This exact code is pasted wholesale into the library, so remove it all.
 	States
 	{
 		StickAround: //Generic state shared by all vehicles, for when they are far enough from any enemies to be able to just sit and let their turrets do the work.
@@ -439,6 +342,7 @@ Class MVP_BaseTurret : MVP_BaseVehicle Abstract
 	}
 	Int ElevationState; //Look above for possible elevation states.
 	
+	//KAIREMOVE: Only keep the species change.
 	Override Void PostBeginPlay ()
 	{
 		Actor.PostBeginPlay ();
@@ -813,6 +717,7 @@ Class MVP_BaseProjectile : FastProjectile
 	Property SpawnOffsetZ : SpawnOffsetZ;
 }
 
+//KAIREMOVE: The entire headlight class has been taken wholesale with the class names simply changed, so remove it from here.
 Class MVP_Headlight : DynamicLight
 {
 	Default
