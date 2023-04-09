@@ -1,4 +1,4 @@
-Class MVP_ArmyCar : MVP_BaseVehicle
+Class MVP_ArmyCar : KAI_BaseVehicle
 {
 	Default
 	{
@@ -11,14 +11,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Health 800;
 		GibHealth 200;
 		Tag "Army Car";
-		MVP_BaseVehicle.VehicleTurret "MVP_PainRay";
+		KAI_BaseVehicle.VehicleTurret "MVP_PainRay";
 		DamageFactor "MarineGrenade", 1.25;
 		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
 		ActiveSound "Vehicle/ArmyCar/Moving";
 		DeathSound "SFX/Explosion";
 		//+MissileEvenMore
-		+MVP_BaseVehicle.Transport;
+		+KAI_BaseVehicle.Transport;
 	}
 	
 	Override Void PostBeginPlay ()
@@ -80,10 +80,10 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!User_NoMarines && DeployTimer <= 0 && MVP_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
+		If (!User_NoMarines && DeployTimer <= 0 && KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (!NoStateJump) SetStateLabel ("DeployMarines");
-			Return True; //Tell MVP_Chase to end.
+			Return True; //Tell KAI_Chase to end.
 		}
 		
 		Return False;
@@ -95,7 +95,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4 && (Target || Turret && Turret.Target)
 		&& !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 )
 		{
-			If (MVP_BaseVehicle.StayStillAndShoot(CheckSightFrom))
+			If (KAI_BaseVehicle.StayStillAndShoot(CheckSightFrom))
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
@@ -207,7 +207,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
-				If (WaitTimer <= 0) MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+				If (WaitTimer <= 0) KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 				
 				If (!IsPatrolling(Self) && Target && WaitTimer <= 0)
 					SetStateLabel ("See");
@@ -221,9 +221,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				LookExParams ArmyCarSight;
 				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
-				Bool NoRandomTurn = ((!Target || User_NoMarines) && !IsPatrolling(Self)); //Return this bool in the NoRandomTurn parameter of MVP_Chase
+				Bool NoRandomTurn = ((!Target || User_NoMarines) && !IsPatrolling(Self)); //Return this bool in the NoRandomTurn parameter of KAI_Chase
 				
-				MVP_Chase ((NoRandomTurn ? MVPC_NORANDOMTURN : 0));
+				KAI_Chase ((NoRandomTurn ? KAIC_NORANDOMTURN : 0));
 				
 				Return State (Null);
 			}

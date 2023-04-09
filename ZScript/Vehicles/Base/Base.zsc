@@ -1,0 +1,19 @@
+Class MVP_BaseVehicle : KAI_BaseVehicle
+{
+}
+
+Class MVP_BaseTurret : KAI_BaseTurret
+{
+}
+
+Class MVP_BaseProp : KAI_BaseProp
+{
+}
+
+Class MVP_BaseTurretProp : KAI_BaseTurretProp
+{
+}
+
+Class MVP_BaseProjectile : KAI_BaseProjectile
+{
+}

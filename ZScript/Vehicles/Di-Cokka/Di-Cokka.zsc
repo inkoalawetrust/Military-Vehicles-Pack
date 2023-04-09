@@ -1,5 +1,5 @@
 //The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
-Class MVP_DiCokka : MVP_BaseVehicle
+Class MVP_DiCokka : KAI_BaseVehicle
 {
 	Default
 	{
@@ -22,9 +22,9 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		YScale 0.75;
 		Tag "Type II AFV \"Di-Cokka\"";
 		Obituary "%o was blown up by a Rebel tank.";
-		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
-		MVP_BaseVehicle.MaxCorpseRadius 24; //Only crushes human sized objects. And only incidentally.
-		MVP_BaseVehicle.MaxCorpseHeight 60;
+		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
+		KAI_BaseVehicle.MaxCorpseRadius 24; //Only crushes human sized objects. And only incidentally.
+		KAI_BaseVehicle.MaxCorpseHeight 60;
 		
 		-NoPain; //This vehicle CAN feel pain.
 		PainChance 30;
@@ -87,7 +87,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	{
 		If (Health <= SpawnHealth()/2.5) Return False; //Don't stop if health is low. No need to check the turret, since it transfers its' damage.
 		If (IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) Return False; //Don't stop if your or your targets' turret is too powerful.
-		If (Turret && !Turret.bDontStayAround && MVP_BaseVehicle.StayStillAndShoot (CheckSightFrom))
+		If (Turret && !Turret.bDontStayAround && KAI_BaseVehicle.StayStillAndShoot (CheckSightFrom))
 		{
 			A_StopSound (CHAN_MOVING);
 			A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
@@ -135,18 +135,18 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
-				MVP_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:MVPL_CHASETARGET);
+				KAI_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:KAIL_CHASETARGET);
 			}
 			Loop;
-		//The hull is basically just a moving platform for the turret, so its' AI is just whatever MVP_Chase has.
+		//The hull is basically just a moving platform for the turret, so its' AI is just whatever KAI_Chase has.
 		See:
 			MSV1 AABBCCDDEEFF 2
 			{
 				A_StopSound (CHAN_IDLING);
 				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
-				MVP_Chase (followdist:256);
-				If (!User_NoCorpseCrush) MVP_CrushCorpses (1);
+				KAI_Chase (followdist:256);
+				If (!User_NoCorpseCrush) KAI_CrushCorpses (1);
 			}
 			Loop;
 		Pain:
@@ -207,7 +207,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	}
 }
 
-Class MVP_DiCokkaTurret : MVP_BaseTurret
+Class MVP_DiCokkaTurret : KAI_BaseTurret
 {
 	Default
 	{
@@ -222,12 +222,12 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		MaxTargetRange 6144;
 		Tag "Di-Cokka Turret";
 		Obituary "%o was blown up by a Rebel tank.";
-		MVP_BaseTurret.MaximumPitch -20;
-		MVP_BaseTurret.MinimumPitch 10;
-		MVP_BaseTurret.CombatAngleTurnRate 24; //The M4 Shermans' turret traverse rate, since the Di-Cokka kinda looks like a cartoony Sherman with a German turret.
-		MVP_BaseTurret.CombatPitchTurnRate 24;
-		+MVP_BaseTurret.TransferDamage;
-		+MVP_BaseTurret.DontStayAround;
+		KAI_BaseTurret.MaximumPitch -20;
+		KAI_BaseTurret.MinimumPitch 10;
+		KAI_BaseTurret.CombatAngleTurnRate 24; //The M4 Shermans' turret traverse rate, since the Di-Cokka kinda looks like a cartoony Sherman with a German turret.
+		KAI_BaseTurret.CombatPitchTurnRate 24;
+		+KAI_BaseTurret.TransferDamage;
+		+KAI_BaseTurret.DontStayAround;
 		
 		+NoRadiusDmg; //Prevents TransferDamage from doubling the explosion damage received by the tank.
 		//Copied from the hull.
@@ -241,7 +241,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		PainSound "Vehicle/Di-Cokka/Pain";
 		DeathSound "Vehicle/Di-Cokka/Death";
 		AttackSound "Vehicle/Di-Cokka/Shoot";
-		MVP_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
+		KAI_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
 		//Well actually it does, but only a slight reduction in damage from generic and Smart Marine hitscans.
@@ -273,7 +273,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!MVP_BaseTurret.ShouldAttack()) Return False;
+		If (!KAI_BaseTurret.ShouldAttack()) Return False;
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,14,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
@@ -284,7 +284,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Else
 			AggressionMultiplier = Default.AggressionMultiplier;
 		
-		If (!RefireDelay && Target != Self && MVP_CheckMissileRange(Target) && !IsDead (Target) && MVP_IsHostile (Self,Target) && MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
+		If (!RefireDelay && Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAI_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
 		{
 			If (!NoStateJump)
 			{
@@ -375,7 +375,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	Int A_DiCokkaFireDelay()
 	{
 		//If the target isn't in the line of fire anymore, then try finding a new target.
-		If (!MVP_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround|TLOF_FaceOther))
+		If (!KAI_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround|TLOF_FaceOther))
 		{
 			Actor AltTarget = PickDifferentTarget (Target,(WarningZone ? WarningZone : Target),512);
 			If (AltTarget)
@@ -398,7 +398,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	//Fire a ray from the direction the turret is facing and return a position to where the ray stopped, which should also be where the projectile with hit.
 	Override Vector3 GetAttackLocation ()
 	{
-		Let Check = New ("MVP_GenericWarnMarineCheck");
+		Let Check = New ("KAI_GenericWarnMarineCheck");
 		
 		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 		
@@ -416,7 +416,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 # 1
 			{
 				RotateToVehicle();
-				MVP_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:MVPL_CHASETARGET);
+				KAI_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:KAIL_CHASETARGET);
 				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
 			}
 			Goto Spawn+1;
@@ -427,7 +427,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 				A_FaceTarget (3,3,flags:FAF_MIDDLE);
 				RotateToVehicle();
 				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
-				MVP_Chase (MVPC_NOCHASE);
+				KAI_Chase (KAIC_NOCHASE);
 				UpdateTurretSnapTimer();
 				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
 			}

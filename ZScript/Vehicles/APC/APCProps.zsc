@@ -45,7 +45,7 @@ Class MVP_APCProp : MVP_BaseProp
 		
 		If (User_Turret ~== "Machine Gun" || User_Turret ~== "MachineGun" || User_Turret ~== "MG")
 		{
-			Turret = MVP_BaseTurret(Spawn ("MVP_APCMachineGunProp",Pos+TurretOffsets));
+			Turret = KAI_BaseTurret(Spawn ("MVP_APCMachineGunProp",Pos+TurretOffsets));
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
@@ -60,7 +60,7 @@ Class MVP_APCProp : MVP_BaseProp
 		}
 		Else If (User_Turret ~== "Autocannon")
 		{
-			Turret = MVP_BaseTurret(Spawn ("MVP_APCAutocannonProp",Pos+TurretOffsets));
+			Turret = KAI_BaseTurret(Spawn ("MVP_APCAutocannonProp",Pos+TurretOffsets));
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
@@ -156,7 +156,7 @@ Class MVP_APCProp : MVP_BaseProp
 				
 				If (Turret)
 				{
-					Turret.Master = Null; //Detach turret. The code for actually killing it as well is in the Die() override of MVP_BaseTurret.
+					Turret.Master = Null; //Detach turret. The code for actually killing it as well is in the Die() override of KAI_BaseTurret.
 					Turret.A_ChangeVelocity (FRandom (16,24),FRandom (16,24),FRandom (24,32),CVF_RELATIVE); //Weeeeeeeee
 				}
 				
@@ -186,7 +186,7 @@ Class MVP_APCProp : MVP_BaseProp
 	}
 }
 
-Class MVP_APCMachineGunProp : MVP_BaseTurretProp
+Class MVP_APCMachineGunProp : KAI_BaseTurretProp
 {
 	Default
 	{
@@ -196,8 +196,8 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 		DeathHeight 32;
 		Radius 32;
 		Mass 700;
-		MVP_BaseTurret.MaximumPitch -70;
-		MVP_BaseTurret.MinimumPitch 20;
+		KAI_BaseTurret.MaximumPitch -70;
+		KAI_BaseTurret.MinimumPitch 20;
 		Tag "Machine Gun Turret (Prop)";
 		Obituary "%o is bad at prop hunt";
 		DamageFactor "Autocannon", 0.8;
@@ -265,7 +265,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 		Mass 1000;
 		Tag "Autocannon Turret (Prop)";
 		Obituary "%o got killed by an empty prop";
-		MVP_BaseVehicle.VehicleTurret "MVP_APCMGTurretProp";
+		KAI_BaseVehicle.VehicleTurret "MVP_APCMGTurretProp";
 	}
 	
 	Override Void SpawnVehicleTurret()
@@ -329,7 +329,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 	}
 }
 
-Class MVP_APCMGTurretProp : MVP_BaseTurretProp
+Class MVP_APCMGTurretProp : KAI_BaseTurretProp
 {
 	Default
 	{
@@ -340,8 +340,8 @@ Class MVP_APCMGTurretProp : MVP_BaseTurretProp
 		Radius 24;
 		Mass 125;
 		RipLevelMin 1;
-		MVP_BaseTurret.MaximumPitch -60;
-		MVP_BaseTurret.MinimumPitch 20;
+		KAI_BaseTurret.MaximumPitch -60;
+		KAI_BaseTurret.MinimumPitch 20;
 		Obituary "%o found out that even empty guns can kill %h"; //First time I've had to actually use an obituary keyword that isn't %o lol.
 		Tag "7.62mm Turret (Prop)";
 		DamageType "RifleBullet";
@@ -461,7 +461,7 @@ Class MVP_APCWreck : MVP_APCProp
 		Int RandomAngle = Random (0,360); //Used if the APC prop has a turret angle of -1.
 		If (User_Turret ~== "Machine Gun" || User_Turret ~== "MachineGun" || User_Turret ~== "MG")
 		{
-			Turret = MVP_BaseTurret(Spawn ("MVP_APCMachineGunPropDead",Pos+TurretOffsets));
+			Turret = KAI_BaseTurret(Spawn ("MVP_APCMachineGunPropDead",Pos+TurretOffsets));
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
@@ -476,7 +476,7 @@ Class MVP_APCWreck : MVP_APCProp
 		}
 		Else If (User_Turret ~== "Autocannon")
 		{
-			Turret = MVP_BaseTurret(Spawn ("MVP_APCAutocannonPropDead",Pos+TurretOffsets));
+			Turret = KAI_BaseTurret(Spawn ("MVP_APCAutocannonPropDead",Pos+TurretOffsets));
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
@@ -600,7 +600,7 @@ Class MVP_APCAutocannonPropDead : MVP_APCAutocannonProp
 	{
 		+NoDamage;
 		Tag "Autocannon Turret (Wreck)";
-		MVP_BaseVehicle.VehicleTurret "MVP_APCMGTurretPropDead";
+		KAI_BaseVehicle.VehicleTurret "MVP_APCMGTurretPropDead";
 	}
 	
 	Override Void SpawnVehicleTurret()

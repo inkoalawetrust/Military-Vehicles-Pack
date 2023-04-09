@@ -15,7 +15,7 @@ Class MVP_DiCokkaProp : MVP_BaseProp
 		XScale 0.9;
 		YScale 0.75;
 		Tag "Type II AFV \"Di-Cokka\" (Prop)";
-		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretProp";
+		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretProp";
 		DeathSound "Vehicle/Di-Cokka/Death";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
@@ -51,7 +51,7 @@ Class MVP_DiCokkaProp : MVP_BaseProp
 		If (User_TurretAngle == -1) User_TurretAngle = Random (180,-180);
 		If (VehicleTurret)
 		{
-			Turret = MVP_BaseTurret(Spawn (VehicleTurret,Pos+TurretOffsets));
+			Turret = KAI_BaseTurret(Spawn (VehicleTurret,Pos+TurretOffsets));
 			If (Turret)
 			{
 				Turret.CopyFriendliness (Self,False);
@@ -123,7 +123,7 @@ Class MVP_DiCokkaProp : MVP_BaseProp
 	}
 }
 
-Class MVP_DiCokkaTurretProp : MVP_BaseTurretProp
+Class MVP_DiCokkaTurretProp : KAI_BaseTurretProp
 {
 	Default
 	{
@@ -135,9 +135,9 @@ Class MVP_DiCokkaTurretProp : MVP_BaseTurretProp
 		Mass 2000;
 		DeathHeight 24;
 		Tag "Di-Cokka Turret (Prop)";
-		MVP_BaseTurret.MaximumPitch -20;
-		MVP_BaseTurret.MinimumPitch 10;
-		+MVP_BaseTurret.TransferDamage;
+		KAI_BaseTurret.MaximumPitch -20;
+		KAI_BaseTurret.MinimumPitch 10;
+		+KAI_BaseTurret.TransferDamage;
 		DeathSound "Vehicle/Di-Cokka/Death";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
@@ -187,7 +187,7 @@ Class MVP_DiCokkaWreck : MVP_DiCokkaProp
 		//$Category Vehicles/Di-Cokka
 		//$Sprite MSV1[1
 		
-		MVP_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretWreck";
+		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretWreck";
 		Height 51;
 		+NoDamage;
 		Tag "Type II AFV \"Di-Cokka\" (Wreck)";
@@ -346,7 +346,7 @@ Class MVP_DiCokkaShell : MVP_BaseProjectile
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim) Return 1;
-		If (Target && !IsInanimateObject(Victim) && !MVP_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !KAI_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		Return -1;
 	}
 	

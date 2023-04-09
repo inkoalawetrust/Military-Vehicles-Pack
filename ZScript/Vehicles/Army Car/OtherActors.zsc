@@ -1,5 +1,5 @@
 //Pain ray and its' related actors.
-Class MVP_PainRay : MVP_BaseTurret
+Class MVP_PainRay : KAI_BaseTurret
 {
 	Default
 	{
@@ -19,7 +19,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		AttackSound "Vehicle/ArmyCar/PainRay/Active";
 		+MissileMore;
 		+LookAllAround;
-		+MVP_BaseTurret.FallOnDeath;
+		+KAI_BaseTurret.FallOnDeath;
 	}
 	Int Patience;
 	Actor WarningZone;
@@ -45,7 +45,7 @@ Class MVP_PainRay : MVP_BaseTurret
 	States
 	{
 		Spawn:
-			MCR3 H 1 MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+			MCR3 H 1 KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			Loop;
 		See:
 			MCR3 H 1
@@ -66,7 +66,7 @@ Class MVP_PainRay : MVP_BaseTurret
 				If (Target && !Target.bNoPain)
 				{
 					//If the army car has no target anymore, then set the pain rays' current target as such.
-					If (Master && !Master.Target && !MVP_BaseVehicle(Master).IsPatrolling(Self))
+					If (Master && !Master.Target && !KAI_BaseVehicle(Master).IsPatrolling(Self))
 						Master.Target = Target;
 					
 					Int AttackChance = Random (0,256);
@@ -84,7 +84,7 @@ Class MVP_PainRay : MVP_BaseTurret
 				Else If (Target && Target.bNoPain)
 				{
 					//But do alert the car of their presense.
-					If (Master && !Master.Target && !MVP_BaseVehicle(Master).IsPatrolling(Self))
+					If (Master && !Master.Target && !KAI_BaseVehicle(Master).IsPatrolling(Self))
 						Master.Target = Target;
 					A_ClearTarget();
 				}
@@ -123,7 +123,7 @@ Class MVP_PainRay : MVP_BaseTurret
 					If (Victim.Health >= 400 || IsInState (Self,"Pain")) Continue;
 					
 					//Ignore yourself, inanimate objects, dormant monsters, allies, or actors that are just too far away.
-					If (Victim == Self || IsInanimateObject(Victim) || Victim.bDormant || !MVP_IsHostile(Self, Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;
+					If (Victim == Self || IsInanimateObject(Victim) || Victim.bDormant || !KAI_IsHostile(Self, Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;
 					
 					//And finally, check to see if the actor can even be targeted.
 					If (!CanBeTargeted (Self, Victim)) Continue;
@@ -247,7 +247,7 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 		Health 800;
 		GibHealth 200;
 		Tag "Army Car (Prop)";
-		MVP_BaseVehicle.VehicleTurret "MVP_PainRayProp";
+		KAI_BaseVehicle.VehicleTurret "MVP_PainRayProp";
 		DamageFactor "MarineGrenade", 1.25;
 		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
@@ -415,7 +415,7 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 	}
 }
 
-Class MVP_PainRayProp : MVP_BaseTurretProp
+Class MVP_PainRayProp : KAI_BaseTurretProp
 {
 	Default
 	{
@@ -428,7 +428,7 @@ Class MVP_PainRayProp : MVP_BaseTurretProp
 		DamageFactor "Electric", 1.25;
 		Obituary "%o was killed by a prop, somehow";
 		Tag "Pain Ray (Prop)";
-		+MVP_BaseTurret.FallOnDeath;
+		+KAI_BaseTurret.FallOnDeath;
 	}
 	States
 	{

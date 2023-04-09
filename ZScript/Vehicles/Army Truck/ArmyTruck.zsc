@@ -34,7 +34,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		DamageFactor "Autocannon", 1.25;
 		DamageFactor "RifleBullet", 0.95;
 		
-		+MVP_BaseVehicle.Transport; //Carries soldiers.
+		+KAI_BaseVehicle.Transport; //Carries soldiers.
 		+NoExtremeDeath; //So the truck doesn't gib enemies it runs over.
 	}
 	
@@ -201,7 +201,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		If (Health <= SpawnHealth()/4)
 			AggressionMultiplier *= 0.5;
 		
-		If (MVP_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
+		If (KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (User_MarineAmount > 0 && DeployTimer <= 0)
 			{
@@ -312,7 +312,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/ArmyTruck/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
-				MVP_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			}
 			Loop;
 		See:
@@ -321,9 +321,9 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
-				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous MVP_Chase property.
+				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous KAI_Chase property.
 				
-				MVP_Chase (MVPC_ATTACKWHENSCARED|(NoRandomTurn ? MVPC_NORANDOMTURN : 0),512);
+				KAI_Chase (KAIC_ATTACKWHENSCARED|(NoRandomTurn ? KAIC_NORANDOMTURN : 0),512);
 			}
 			Loop;
 		//The trucks' marine deploying loop.
