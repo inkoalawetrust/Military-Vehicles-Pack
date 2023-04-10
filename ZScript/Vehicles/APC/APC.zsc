@@ -285,7 +285,7 @@ Class MVP_APC : MVP_BaseVehicle
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
 				
-				SetOrigin (Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				SetOrigin (KAI_Math.Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;
@@ -310,7 +310,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				Vector3 OldPos = Pos;
 				Bool NoThrust = bNoDamageThrust; //In case it was actually on already for some reason.
-				SetOrigin (Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
+				SetOrigin (KAI_Math.Vec3OffsetRelative(Self,(32,-48,24)),False); //Makes the fire damage occur at roughly the actual position it should be, instead of the APC's center.
 				bNoDamageThrust = True;
 				A_Explode (1,64,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,False,64,damagetype:'Fire');
 				bNoDamageThrust = False;

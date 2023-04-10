@@ -118,7 +118,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			Victim.DamageMobj (Self,Self,Random (30,40)*Int(Clamp(Vel.XY.Length(),0.1,INT.MAX)),'Melee',angle:Angle); //Isekai the enemy.
 			
 			//Black box, no idea how to alter it to decrease/increase how much the truck is slowed down when ramming.
-			Double Mul = LinearMap(Victim.Mass, 2000, 100, 0.1, 0.995);
+			Double Mul = KAI_Math.LinearMap(Victim.Mass, 2000, 100, 0.1, 0.995);
 			Mul = Clamp(Mul, 0.0, 1.0);
 			Vel *= Mul;
 			

@@ -271,7 +271,7 @@ Class SmartMarineWarningZone : KAI_MixinActor
 		If (Master)
 			//SetOrigin (Master.Pos,True);
 			//SetOrigin (Master.Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle),Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Offset.Z),True); //Copied from SpawnMarine().
-			SetOrigin (Vec3OffsetRelative (Master,Offset),True);
+			SetOrigin (KAI_Math.Vec3OffsetRelative (Master,Offset),True);
 		
 		If ((Flags & MWRN_VEHICLEDEATH) && Master && Master Is "MVP_BaseVehicle") //If you are set to disappear when the vehicle has no death flames left. 
 			If (!MVP_BaseVehicle(Master).DeathFlames.Size())

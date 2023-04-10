@@ -197,7 +197,7 @@ Class MVP_Flame : KAI_MixinActor
 		
 		//Stick to your master, if any.
 		If (Master)
-			SetOrigin(Vec3OffsetRelative (Master,Offsets,flags:V3R_ANGLEONLY),True);
+			SetOrigin(KAI_Math.Vec3OffsetRelative (Master,Offsets,flags:KAI_Math.V3R_ANGLEONLY),True);
 		
 		If (!InStateSequence(CurState,ResolveState ("Death")))
 		{
