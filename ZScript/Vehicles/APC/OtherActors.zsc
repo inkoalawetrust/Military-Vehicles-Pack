@@ -1,5 +1,5 @@
 //$GZDB_SKIP
-Class MVP_APCMachineGun : KAI_BaseTurret
+Class MVP_APCMachineGun : MVP_BaseTurret
 {
 	Default
 	{
@@ -57,7 +57,7 @@ Class MVP_APCMachineGun : KAI_BaseTurret
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,DualMGAttackHeight,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAI_IsHostile (Self,Target)&& MGLOFCheck())
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAIVehicle_IsHostile (Self,Target)&& MGLOFCheck())
 		{
 			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
@@ -316,7 +316,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAI_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,400,128,(0,0,12)))
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAIVehicle_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,400,128,(0,0,12)))
 		{
 			If (!NoStateJump)
 			{
@@ -466,7 +466,7 @@ Mixin Class MVP_AutocannonWarningZoneHandling
 	//Fire a ray from the direction the turret is facing and return a position to where the ray stopped, which should also be where the projectile with hit.
 	Override Vector3 GetAttackLocation ()
 	{
-		Let Check = New ("KAI_GenericWarnMarineCheck");
+		Let Check = New ("MVP_GenericWarnMarineCheck");
 		
 		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 		
@@ -479,7 +479,7 @@ Mixin Class MVP_AutocannonWarningZoneHandling
 }
 
 //The smaller MG turret that is attached on the autocannon.
-Class MVP_APCMGTurret : KAI_BaseTurret
+Class MVP_APCMGTurret : MVP_BaseTurret
 {
 	Default
 	{
@@ -527,7 +527,7 @@ Class MVP_APCMGTurret : KAI_BaseTurret
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAI_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,150,0,(0,0,8)))
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAIVehicle_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,150,0,(0,0,8)))
 		{
 			If (!NoStateJump)
 			{
@@ -686,7 +686,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		If (!Victim || Victim && Victim == DontCollide) Return 1;
 		If (Victim.bSolid && !Victim.bShootable) Return 1; //Don't stop at decorations that normally block projectiles.
 		
-		If (Target && !IsInanimateObject(Victim) && !KAI_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.
 		If ((HasGodMode(Victim) || IsIndestructible(Victim) && !IsInanimateObject(Victim)) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10),attenuation:0.75)) {bRipper = False; Return 1;}
@@ -794,7 +794,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim || Victim && Victim == DontCollide) Return 1;
-		If (Target && !IsInanimateObject(Victim) && !KAI_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.
 		If ((HasGodMode(Victim) || IsIndestructible(Victim) && !IsInanimateObject(Victim)) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10))) Return 1;
@@ -905,7 +905,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim) Return 1;
-		If (Target && !IsInanimateObject(Victim) && !KAI_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		If (Victim.SpawnHealth() <= 400) bExtremeDeath = True; //Always gib weak enough enemies.
 		Else bExtremeDeath = False;

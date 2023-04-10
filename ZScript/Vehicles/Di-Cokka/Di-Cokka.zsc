@@ -1,5 +1,5 @@
 //The Di-Cokka has very weak stats compared to the other vehicles, and especially future ones. This is because it's a cartoony vehicle from Metal Slug.
-Class MVP_DiCokka : KAI_BaseVehicle
+Class MVP_DiCokka : MVP_BaseVehicle
 {
 	Default
 	{
@@ -207,7 +207,7 @@ Class MVP_DiCokka : KAI_BaseVehicle
 	}
 }
 
-Class MVP_DiCokkaTurret : KAI_BaseTurret
+Class MVP_DiCokkaTurret : MVP_BaseTurret
 {
 	Default
 	{
@@ -273,7 +273,7 @@ Class MVP_DiCokkaTurret : KAI_BaseTurret
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!KAI_BaseTurret.ShouldAttack()) Return False;
+		If (!MVP_BaseTurret.ShouldAttack()) Return False;
 		If (!CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,14,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
@@ -284,7 +284,7 @@ Class MVP_DiCokkaTurret : KAI_BaseTurret
 		Else
 			AggressionMultiplier = Default.AggressionMultiplier;
 		
-		If (!RefireDelay && Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAI_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
+		If (!RefireDelay && Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && KAIVehicle_IsHostile (Self,Target) && KAI_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
 		{
 			If (!NoStateJump)
 			{
@@ -398,7 +398,7 @@ Class MVP_DiCokkaTurret : KAI_BaseTurret
 	//Fire a ray from the direction the turret is facing and return a position to where the ray stopped, which should also be where the projectile with hit.
 	Override Vector3 GetAttackLocation ()
 	{
-		Let Check = New ("KAI_GenericWarnMarineCheck");
+		Let Check = New ("MVP_GenericWarnMarineCheck");
 		
 		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 		

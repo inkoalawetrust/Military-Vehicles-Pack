@@ -1,4 +1,4 @@
-Class MVP_ArmyCar : KAI_BaseVehicle
+Class MVP_ArmyCar : MVP_BaseVehicle
 {
 	Default
 	{

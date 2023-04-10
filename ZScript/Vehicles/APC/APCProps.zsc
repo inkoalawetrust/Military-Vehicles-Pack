@@ -186,7 +186,7 @@ Class MVP_APCProp : MVP_BaseProp
 	}
 }
 
-Class MVP_APCMachineGunProp : KAI_BaseTurretProp
+Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 {
 	Default
 	{

@@ -1,5 +1,5 @@
 //Pain ray and its' related actors.
-Class MVP_PainRay : KAI_BaseTurret
+Class MVP_PainRay : MVP_BaseTurret
 {
 	Default
 	{
@@ -123,7 +123,7 @@ Class MVP_PainRay : KAI_BaseTurret
 					If (Victim.Health >= 400 || IsInState (Self,"Pain")) Continue;
 					
 					//Ignore yourself, inanimate objects, dormant monsters, allies, or actors that are just too far away.
-					If (Victim == Self || IsInanimateObject(Victim) || Victim.bDormant || !KAI_IsHostile(Self, Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;
+					If (Victim == Self || IsInanimateObject(Victim) || Victim.bDormant || !KAIVehicle_IsHostile(Self, Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;
 					
 					//And finally, check to see if the actor can even be targeted.
 					If (!CanBeTargeted (Self, Victim)) Continue;

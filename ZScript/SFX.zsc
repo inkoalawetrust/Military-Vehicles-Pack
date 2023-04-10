@@ -145,7 +145,7 @@ Class MVP_LiquidSplash : KAI_MixinActor
 			Stop;
 	}
 }
-
+*/
 Class MVP_Flame : KAI_MixinActor
 {
 	Default
@@ -235,7 +235,7 @@ Class MVP_Flame : KAI_MixinActor
 			Stop;
 	}
 }
-
+/*
 //A generic tracer effect particle.
 Class MVP_Tracer : KAI_MixinActor
 {
