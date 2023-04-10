@@ -87,10 +87,18 @@ Class MVP_BaseTurret : KAI_BaseTurret
 
 Class MVP_BaseProp : KAI_BaseProp
 {
+	Default
+	{
+		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
+	}
 }
 
 Class MVP_BaseTurretProp : KAI_BaseTurretProp
 {
+	Default
+	{
+		Tag "Military Vehicle Turret Prop Base (You really shouldn't be seeing this in-game)";
+	}
 }
 
 Class MVP_BaseProjectile : KAI_BaseProjectile
@@ -123,6 +131,17 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 		}
 		
 		Return Null;
+	}
+}
+
+//The MVPs' stock bullet tracer.
+Class MVP_Tracer : KAI_Tracer
+{
+	States
+	{
+		Spawn:
+			MVP1 B -1 Bright;
+			Stop;
 	}
 }
 

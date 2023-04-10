@@ -683,7 +683,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 	
 	Override Int SpecialMissileHit (Actor Victim)
 	{
-		If (!Victim || Victim && Victim == DontCollide) Return 1;
+		If (Super.SpecialMissileHit(Victim) == -1) Return -1;
 		If (Victim.bSolid && !Victim.bShootable) Return 1; //Don't stop at decorations that normally block projectiles.
 		
 		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
@@ -793,7 +793,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 	
 	Override Int SpecialMissileHit (Actor Victim)
 	{
-		If (!Victim || Victim && Victim == DontCollide) Return 1;
+		If (Super.SpecialMissileHit(Victim) == -1) Return -1;
 		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.

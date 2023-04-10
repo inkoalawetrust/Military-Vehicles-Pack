@@ -1,5 +1,5 @@
 //Common effects used by most or all vehicles.
-/*
+
 //Customizable explosion actor.
 Class MVP_BigExplosion : Actor
 {
@@ -56,7 +56,7 @@ Class MVP_Explosion : Actor
 			Stop;
 	}
 }
-*/
+
 //Randomize the scale of the splashes and the APC shell explosions a bit.
 Class MVP_LiquidSplash : KAI_MixinActor
 {
@@ -265,7 +265,7 @@ Class MVP_Tracer : KAI_MixinActor
 			Stop;
 	}
 }
-
+*/
 Class MVP_Spark : Actor
 {
 	Default
