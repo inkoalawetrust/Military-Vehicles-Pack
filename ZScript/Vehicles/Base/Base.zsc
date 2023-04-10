@@ -1,9 +1,88 @@
 Class MVP_BaseVehicle : KAI_BaseVehicle
 {
+	Default
+	{
+		//Properties, in essense most of these are just the properties for the army car, which is the weakest vehicle.
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
+		RipLevelMin 3;
+		FriendlySeeBlocks 48;
+		Species "Military";
+		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
+		
+		//Damage factors that act as the vehicles "armor".
+		DamageFactor 0.9; //Generic damage factor for all damage.
+		DamageFactor "Drowning", 0.0;
+		DamageFactor "Poison", 0.0;
+		DamageFactor "PoisonCloud", 0.0;
+		DamageFactor "Melee", 0.2; //May change this to have melee damage do nothing to the vehicles, unless it exceeds a certain ammount.
+		DamageFactor "Electric", 0.2;
+		DamageFactor "ExplosiveImpact", 0.75;
+		DamageFactor "Explosion", 0.75;
+		DamageFactor "Explosive", 0.75;
+		DamageFactor "Grenade", 0.7;
+		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.8;
+		DamageFactor "Crush", 1.5;
+		DamageFactor "Disintegrate", 1.5;
+		DamageFactor "Railgun", 2.0;
+		DamageFactor "Falling", 1.25;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.8;
+		DamageFactor "MarineGrenade", 0.7;
+		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "RifleBullet", 0.8;
+	}
 }
 
 Class MVP_BaseTurret : KAI_BaseTurret
 {
+	Default
+	{
+		//Copied from MVP_BaseVehicle
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
+		RipLevelMin 3;
+		FriendlySeeBlocks 48;
+		Species "Military";
+		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
+		
+		//Damage factors that act as the vehicles "armor".
+		DamageFactor 0.9; //Generic damage factor for all damage.
+		DamageFactor "Drowning", 0.0;
+		DamageFactor "Poison", 0.0;
+		DamageFactor "PoisonCloud", 0.0;
+		DamageFactor "Melee", 0.2; //May change this to have melee damage do nothing to the vehicles, unless it exceeds a certain ammount.
+		DamageFactor "Electric", 0.2;
+		DamageFactor "ExplosiveImpact", 0.75;
+		DamageFactor "Explosion", 0.75;
+		DamageFactor "Explosive", 0.75;
+		DamageFactor "Grenade", 0.7;
+		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.8;
+		DamageFactor "Crush", 1.5;
+		DamageFactor "Disintegrate", 1.5;
+		DamageFactor "Railgun", 2.0;
+		DamageFactor "Falling", 1.25;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.8;
+		DamageFactor "MarineGrenade", 0.7;
+		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "RifleBullet", 0.8;
+		//=========================
+		RipLevelMin 2;
+		Mass 500;
+		KAI_BaseTurret.TurnAmount 0.15;
+		KAI_BaseTurret.TurnSoundRadius 2;
+		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
+		DamageFactor "MarineGrenade", 0.9;
+		DamageFactor "Grenade", 0.9;
+		DamageFactor "MarineRifle", 0.75;
+	}
 }
 
 Class MVP_BaseProp : KAI_BaseProp
