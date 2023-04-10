@@ -56,7 +56,7 @@ Class MVP_Explosion : Actor
 			Stop;
 	}
 }
-
+*/
 //Randomize the scale of the splashes and the APC shell explosions a bit.
 Class MVP_LiquidSplash : KAI_MixinActor
 {
@@ -87,7 +87,7 @@ Class MVP_LiquidSplash : KAI_MixinActor
 			SplashSound = "SFX/LiquidExplosion";
 	}
 	
-	//Mixin MVP_UniversalFunctions;
+	Mixin MVP_UniversalFunctions;
 	Name ExplosionDamageType;
 	Int RadiusDamage;
 	Sound SplashSound;
@@ -145,7 +145,7 @@ Class MVP_LiquidSplash : KAI_MixinActor
 			Stop;
 	}
 }
-*/
+
 Class MVP_Flame : KAI_MixinActor
 {
 	Default
