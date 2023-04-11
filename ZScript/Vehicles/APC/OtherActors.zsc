@@ -681,9 +681,10 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 	Const Rips = 5; //Roughly how many actors it'll rip.
 	Bool HitLiquid;
 	
+	//BUG: The rounds don't seem to deflect off indestructible enemies anymore. Probably because of the Super. call below.
 	Override Int SpecialMissileHit (Actor Victim)
 	{
-		If (Super.SpecialMissileHit(Victim) == -1) Return -1;
+		If (Super.SpecialMissileHit(Victim) == 1) Return 1;
 		If (Victim.bSolid && !Victim.bShootable) Return 1; //Don't stop at decorations that normally block projectiles.
 		
 		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
@@ -793,7 +794,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 	
 	Override Int SpecialMissileHit (Actor Victim)
 	{
-		If (Super.SpecialMissileHit(Victim) == -1) Return -1;
+		If (Super.SpecialMissileHit(Victim) == 1) Return 1;
 		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.
