@@ -64,36 +64,18 @@ Class MVP_APC : MVP_BaseVehicle
 	{
 		If (User_Turret ~== "Machine Gun" || User_Turret ~== "MachineGun" || User_Turret ~== "MG")
 		{
-			Turret = MVP_BaseTurret(Spawn ("MVP_APCMachineGun",Pos+TurretOffsets));
+			SpawnTurret ("MVP_APCMachineGun");
 			If (Turret)
 			{
-				Turret.CopyFriendliness (Self,False);
-				Turret.SpawnFlags = SpawnFlags;
-				Turret.HandleSpawnFlags();
-				Turret.Angle = Angle;
-				Turret.Pitch = Pitch;
-				Turret.Master = Self;
-				Double HealthFactor = Double(Health) / Double(Default.Health);
-				Turret.Health *= HealthFactor;
-				Turret.TurretOffsets = TurretOffsets;
 				If (User_NoTargetPrediction) Turret.bNoTargetPrediction = True;
 				SetTag ("Armored Personnel Carrier (Machine Gun)");
 			}
 		}
 		Else If (User_Turret ~== "Autocannon")
 		{
-			Turret = MVP_BaseTurret(Spawn ("MVP_APCAutocannon",Pos+TurretOffsets));
+			SpawnTurret ("MVP_APCAutocannon");
 			If (Turret)
 			{
-				Turret.CopyFriendliness (Self,False);
-				Turret.SpawnFlags = SpawnFlags;
-				Turret.HandleSpawnFlags();
-				Turret.Angle = Angle;
-				Turret.Pitch = Pitch;
-				Turret.Master = Self;
-				Double HealthFactor = Double(Health) / Double(Default.Health);
-				Turret.Health *= HealthFactor;
-				Turret.TurretOffsets = TurretOffsets;
 				If (User_FocusFire) MVP_APCAutocannon(Turret).FocusFire = True;
 				If (User_NoTargetPrediction) Turret.bNoTargetPrediction = True;
 				SetTag ("Armored Personnel Carrier (Autocannon)");
