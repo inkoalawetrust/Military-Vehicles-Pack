@@ -217,7 +217,8 @@ Mixin Class MVP_SharedFunctions
 		KAIC_NOTURRETRETARGET =	1 << 4, //The vehicle will never target the hull of a vehicle instead of its' turret. Even if doing so would be better.
 	}
 	
-	//TODO: Move this to the KAI as the generic (land) vehicle chase function. Later though, when I'm less distraught from how awful this transition was.
+	//TODO: Move this to the KAI as the generic (land) vehicle chase function. Later though, because I need to turn IsPowerful() into a generic threat level system.
+	//Honestly this probably just needs a rewrite, because it's essentially the same code as when I had first made the Army Car. https://github.com/inkoalawetrust/Military-Vehicles-Pack/blob/0.1.0/ZScript/Vehicles/Army%20Car/ArmyCar.zsc#L168-L225
 	//Generic chase function shared by all vehicles.
 	//Flags: Look above for available flags.
 	//FollowDist: The distance below which the vehicle will stop trying to follow the player, to not get in their way.
@@ -291,11 +292,11 @@ Mixin Class MVP_SharedFunctions
 					If (!CorpseTarget) //Still no corpse found.
 						A_Chase (Null,Null,CHF_DONTIDLE | ((Flags & KAIC_NORANDOMTURN) ? CHF_NORANDOMTURN : 0));
 					Else
-						KAI_MoveTowards (CorpseTarget);
+						KAI_MoveTowards (CorpseTarget.Pos);
 				}
 				//There is an available corpse to head to and crush.
 				Else
-					KAI_MoveTowards (CorpseTarget);
+					KAI_MoveTowards (CorpseTarget.Pos);
 			}
 			Else
 				A_Chase (Null,Null,CHF_DONTIDLE | ((Flags & KAIC_NORANDOMTURN) ? CHF_NORANDOMTURN : 0));
