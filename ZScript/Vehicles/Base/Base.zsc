@@ -40,6 +40,11 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		Super.PostBeginPlay();
 		If (!bFriendly) Species = 'MilitaryHostile';
 	}
+	
+	Override Bool IsActorHostile (Actor Other)
+	{
+		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
+	}
 }
 
 Class MVP_BaseTurret : KAI_BaseTurret
@@ -92,6 +97,11 @@ Class MVP_BaseTurret : KAI_BaseTurret
 	{
 		Super.PostBeginPlay();
 		If (!bFriendly) Species = 'MilitaryHostile';
+	}
+	
+	Override Bool IsActorHostile (Actor Other)
+	{
+		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
 	}
 }
 

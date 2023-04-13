@@ -346,7 +346,7 @@ Class MVP_DiCokkaShell : MVP_BaseProjectile
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (!Victim) Return 1;
-		If (Target && !IsInanimateObject(Victim) && !KAIVehicle_IsHostile (Target,Victim)) Return 1; //Don't harm the shooter or allies.
+		If (Target && !IsInanimateObject(Victim) && !IsHostileToShooter (Victim)) Return 1; //Don't harm the shooter or allies.
 		Return -1;
 	}
 	

@@ -357,6 +357,42 @@ Mixin Class MVP_SharedFunctions
 			bDontFollowPlayers = (Distance3DSquared (Players[FriendPlayer].Mo) <= MaxDist*MaxDist);
 	}
 	
+	//Is the other actor hostile?
+	/*NOTE: This is here because the transition of the base vehicle code to my KAI library was kinda rough. Because the MVP vehicles have different criteria
+	for if another actor is hostile. I replaced the function in the KAI with a more generic IsTargettingAllies() function and an IsActorHostile() virtual.
+	To allow to define different hostility criteria for MVP vehicles than stock KAI actors (And so other modders can do that too I guess).
+	As of the time I'm typing this the MVP vehicles' IsActorHostile() runs IsHostile() and IsTargettingAllies() but if potential regressions persist.
+	Then I will have them use this function again.*/
+	Bool MVP_IsHostile (Actor Caller, Actor Other)
+	{
+		If (!Caller || !Other) Return False;
+		
+		If (Caller.bFriendly) //It's as shrimple as that.
+			Return Caller.IsHostile (Other);
+		//Enemy vehicles are the reason this function exists.
+		//They generally don't attack other non-enemy military NPCs. But they will do so if those NPCs are targetting them, or another enemy military NPC.
+		Else
+		{
+			//Non-friendly actors always hate players and their allies.
+			If (Other.Player || Other.bFriendly)
+				Return True;
+			
+			//Don't consider own species hostile.
+			//If (Caller.bNoInfightSpecies && Caller.Species == Other.Species)
+			//	{console.printf ("that's my own species");Return False;} //DEBUG
+			
+			//Is the other actor targetting you or your turret ?
+			If (Other.Target && (Other.Target == Caller || Other.Target == MVP_BaseVehicle(Caller).Turret))
+				Return True;
+			
+			//Is the other actor targetting an actor with the same species as you ? Then they are an enemy as far as you are concerned.
+			If (Other.Target && (Caller.bNoInfightSpecies && Caller.Species == Other.Target.Species))
+				Return True;
+		}
+		
+		Return False;
+	}
+	
 	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
 	//Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
 	//Range: The range around which to check for enemies.
@@ -457,7 +493,7 @@ Class MVP_GenericWarnMarineCheck : KAI_LOFRaycast
 		Actor Mobj = Results.HitActor;
 		
 		//Standard KAI projectiles go through allies.
-		If (Mobj && (IsInanimateObject (Mobj) || Shooter && KAIVehicle_IsHostile (Shooter,Mobj)))
+		If (Mobj && (IsInanimateObject (Mobj) || Shooter && IsHostile (Shooter,Mobj)))
 			Return Trace_Stop;
 		
 		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.
