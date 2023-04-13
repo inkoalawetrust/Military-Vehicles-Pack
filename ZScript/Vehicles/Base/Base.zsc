@@ -123,6 +123,10 @@ Class MVP_BaseTurretProp : KAI_BaseTurretProp
 
 Class MVP_BaseProjectile : KAI_BaseProjectile
 {
+	Default
+	{
+		+KAI_BaseProjectile.NoFriendlyFire; //MVP projectiles do not hit allies by default.
+	}
 	Mixin MVP_UniversalFunctions;
 	//Allows to quickly set up a spawned liquid splash, and then returns a pointer the splash to allow for further modifications, like making it visually larger or calling A_QuakeEx from it.
 	Actor SpawnLiquidSplash (Int LiquidType = LIQUID_WATER, Sound SplashSound = "SFX/LiquidExplosion", Double Volume = 1.0, Double Attenuation = 0.5,
