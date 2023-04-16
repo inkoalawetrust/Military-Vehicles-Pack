@@ -25,6 +25,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurret";
 		KAI_BaseVehicle.MaxCorpseRadius 24; //Only crushes human sized objects. And only incidentally.
 		KAI_BaseVehicle.MaxCorpseHeight 60;
+		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL; //The Di-Cokkas' threat level is basically static.
 		
 		-NoPain; //This vehicle CAN feel pain.
 		PainChance 30;
@@ -222,6 +223,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		MaxTargetRange 6144;
 		Tag "Di-Cokka Turret";
 		Obituary "%o was blown up by a Rebel tank.";
+		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
 		KAI_BaseTurret.MaximumPitch -20;
 		KAI_BaseTurret.MinimumPitch 10;
 		KAI_BaseTurret.CombatAngleTurnRate 24; //The M4 Shermans' turret traverse rate, since the Di-Cokka kinda looks like a cartoony Sherman with a German turret.

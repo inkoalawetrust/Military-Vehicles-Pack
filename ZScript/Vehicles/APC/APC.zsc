@@ -20,6 +20,7 @@ Class MVP_APC : MVP_BaseVehicle
 		Tag "Armored Personnel Carrier";
 		ActiveSound "Vehicle/APC/Moving";
 		DeathSound "SFX/Explosion";
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //Maybe it should be THREAT_VERYDANGEROUS instead, at least when it has a turret. But I think I'll reserve that for future vehicles like the MBT.
 		
 		//"Armor"
 		DamageFactor 0.75; //Generic damage factor.
@@ -83,6 +84,12 @@ Class MVP_APC : MVP_BaseVehicle
 		}
 	}
 	
+	Override Void OnTurretDeath (Actor DeadTurret, Bool Removed)
+	{
+		Super.OnTurretDeath(DeadTurret, Removed);
+		UpdateThreatLevel();
+	}
+	
 	Override Void SpawnHeadlights ()
 	{
 		Headlights.Push (SpawnVehicleHeadlight (Self,(112,20,16),intensity:384));
@@ -108,7 +115,7 @@ Class MVP_APC : MVP_BaseVehicle
 		//More likely to drop marines when about to die.
 		If (Health <= SpawnHealth()/4)
 			AggressionMultiplier *= 0.5;
-		
+		UpdateThreatLevel();
 		If (KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (User_MarineAmount > 0)
@@ -148,6 +155,20 @@ Class MVP_APC : MVP_BaseVehicle
 			}
 		}
 		Return False;
+	}
+	
+	//Called to update the APCs' threat level.
+	Void UpdateThreatLevel()
+	{
+		//If the autocannon or dual MG is attached and still alive.
+		If (Turret && !IsDead(Turret))
+			ThreatLevel = THREAT_DANGEROUS;
+		//If it has no turret (Or a living one), it can still be classed as dangerous. Unless it has less than 5 marines. In which case it's merely above normal. 
+		Else If (User_MarineAmount < 5)
+			ThreatLevel = THREAT_ABOVENORMAL;
+		//No attacks = No threat
+		Else If (!CanAttack())
+			ThreatLevel = THREAT_NONE;
 	}
 	
 	Int MarinesToSpawn, Recursions, DeployTimer;
@@ -237,6 +258,7 @@ Class MVP_APC : MVP_BaseVehicle
 						DeployTimer = Random (2,7)*35;
 					Else
 						DeployTimer = Random (1,3)*35; //Have a smaller delay if about to die, and you still have troops.
+					UpdateThreatLevel();
 				}
 				Goto See;
 		//Waiting for TG5 to finish the sprite edits of the marine crew getting out of the APC and autocannon.

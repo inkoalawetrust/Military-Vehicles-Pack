@@ -14,6 +14,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		Speed 12;
 		FastSpeed 18;
 		RipLevelMin 2;
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //Carries a lot of soldiers by default.
 		
 		Obituary "%o was ran over by a truck.";
 		Tag "Army Truck";
@@ -58,6 +59,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 	{
 		Super.PostBeginPlay();
 		
+		If (User_MarineAmount <= 0) ThreatLevel = THREAT_NONE; //It's got no marines so it's no threat unless it rams.
+		Else If (User_MarineAmount >= 5) ThreatLevel = THREAT_ABOVENORMAL; //Has too few marines to be classed as dangerous.
 		MissileState = FindState ("DeployMarines");
 		MeleeState = FindState ("ChargeLoop"); //Most actual ramming code runs in Slam() below, not this state.
 		//Marine dropping states.
@@ -200,6 +203,10 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		//More likely to drop marines or ram when about to die.
 		If (Health <= SpawnHealth()/4)
 			AggressionMultiplier *= 0.5;
+		
+		If (User_MarineAmount <= 0) ThreatLevel = THREAT_NONE; //It's defenseless so it's no threat unless it's ramming.
+		Else If (User_MarineAmount >= 5) ThreatLevel = THREAT_DANGEROUS; //It's got 5+ soldiers so it's dangerous. Default
+		Else ThreatLevel = THREAT_ABOVENORMAL; //It's got less than 5 soldiers so it's merely an above average threat.
 		
 		If (KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
@@ -361,6 +368,10 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;
 					User_MarineAmount--;
+					If (User_MarineAmount < 5)
+						ThreatLevel = THREAT_ABOVENORMAL; //If it has few marines left, then it's merely an above normal threat.
+					Else
+						ThreatLevel = THREAT_DANGEROUS; //Otherwise it stays dangerous like default.
 				}
 				Loop;
 			EndDeploy:
@@ -388,7 +399,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				VelFromAngle (14);
 				ChaseTimer = 0; //Just in case.
 				WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,512,towho:Self);
-				
+				ThreatLevel = THREAT_VERYDANGEROUS; //Very dangerous when ramming.
 				Return State (Null);
 			}
 		ChargeLoop:
@@ -472,6 +483,11 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				
 				If (Vel.XY.Length() <= 4.5) //Go back to see once the velocity is low enough again.
 				{
+					If (User_MarineAmount >= 5)
+						ThreatLevel = THREAT_DANGEROUS; //If the truck still has marines, then it goes back to "just" being dangerous.
+					Else
+						ThreatLevel = THREAT_ABOVENORMAL; //If it has few or no marines left. Then it's just an above normal threat when not charging.
+					
 					A_StopSound (CHAN_MOVING);
 					Friction = Default.Friction;
 					Return ResolveState ("See");

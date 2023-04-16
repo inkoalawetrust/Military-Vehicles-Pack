@@ -17,6 +17,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		Tag "Pain Ray";
 		DeathSound "Vehicle/ArmyCar/PainRay/Break";
 		AttackSound "Vehicle/ArmyCar/PainRay/Active";
+		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		+MissileMore;
 		+LookAllAround;
 		+KAI_BaseTurret.FallOnDeath;
@@ -84,7 +85,7 @@ Class MVP_PainRay : MVP_BaseTurret
 				Else If (Target && Target.bNoPain)
 				{
 					//But do alert the car of their presense.
-					If (Master && !Master.Target && !KAI_BaseVehicle(Master).IsPatrolling(Self))
+					If (Master && !Master.Target && !KAI_BaseVehicle(Master).IsPatrolling(Master))
 						Master.Target = Target;
 					A_ClearTarget();
 				}
@@ -164,10 +165,6 @@ Class MVP_PainRay : MVP_BaseTurret
 			TNT1 A 0
 			{
 				A_StartSound ("Vehicle/ArmyCar/PainRay/Break",CHAN_VOICE);
-				
-				//The pain ray is dead, mark it as such on the army car.
-				If (Master && Master Is "MVP_ArmyCar")
-					MVP_ArmyCar(Master).User_PainRay = False;
 				
 				If (WarningZone) WarningZone.Destroy(); //Remove the warning zone around the pain rays' target, if there was any.
 				

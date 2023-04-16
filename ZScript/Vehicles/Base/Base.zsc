@@ -1,3 +1,17 @@
+//TODO:
+//Add threat levels to the vehicles, and dynamic threat level changes, becoming less dangerous when out of attacks. Maybe some different threat level assessment for some vehicles like the APC too.
+
+//FIXME:
+/*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
+The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
+first tick. Which is literally worse than the turrets spawning on the ground.*/
+//Remake the .50 cal bullet and 30mm shell sprites. So that the whole round, casing included, isn't fired. Maybe add the casings as a visual effect instead.
+
+//IDEA:
+//Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
+//Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Probably needs a rewrite of the marines.
+//Add smoke that can come off of vehicles when they are low on health.
+
 Class MVP_BaseVehicle : KAI_BaseVehicle
 {
 	Default

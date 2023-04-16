@@ -15,6 +15,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		KAI_BaseTurret.TurnSoundRadius 4;
 		KAI_BaseTurret.CombatAngleTurnRate 55;
 		KAI_BaseTurret.CombatPitchTurnRate 30;
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
 		DamageFactor "Autocannon", 0.8;
@@ -226,7 +227,7 @@ Class MVP_APCMachineGunLOFCheck : KAI_LOFRaycast
 	{
 		Actor Mobj = Results.HitActor;
 		
-		If (!Shooter) Return Trace_Stop; //Not sure if this should return BadLOF too.
+		If (!Shooter || !Mobj) Return Trace_Stop;
 		
 		AddToMobjList (Mobj);
 		
@@ -496,6 +497,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		KAI_BaseTurret.MinimumPitch 20;
 		KAI_BaseTurret.CombatAngleTurnRate 50;
 		KAI_BaseTurret.CombatPitchTurnRate 37;
+		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL; //Not as dangerous as the autocannon or dual MG.
 		Obituary "%o found out that rifle rounds are more dangerous than in the movies";
 		Tag "7.62mm Turret";
 		AttackSound "Vehicle/APC/SmallMGFire";

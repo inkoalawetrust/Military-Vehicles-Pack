@@ -182,9 +182,6 @@ Mixin Class MVP_SharedFunctions
 		Return True;
 	}
 	
-	//AI FUNCTIONS YADDA YADDA GOD I FUCKING HATE SCRIPTING
-	/*TODO: This should be replaced with some kind of generic actor threat level tier system. That is available to the KAI library.
-	And includes a threat level assessment function like this. This would be far better than this hardcoded shit.*/
 	//Add a function that determines if the vehicles' target is a VERY powerful enemy. //10/4/2023 update: How about we don't ?
 	Bool IsPowerful (Actor Other)
 	{

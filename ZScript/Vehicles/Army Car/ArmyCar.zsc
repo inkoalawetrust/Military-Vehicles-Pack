@@ -12,6 +12,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		GibHealth 200;
 		Tag "Army Car";
 		KAI_BaseVehicle.VehicleTurret "MVP_PainRay";
+		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
 		DamageFactor "MarineGrenade", 1.25;
 		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
@@ -26,6 +27,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		TurretOffsets = (0,0,1.25);
 		Super.PostBeginPlay();
 		
+		If (!CanAttack()) ThreatLevel = THREAT_NONE;
 		If (HasSupplies()) SetTag ("Army Car (Open Trunk)");
 		
 		MissileState = FindState ("DeployMarines"); //Car uses a custom ranged attack state, these states are set so that internal flags like AvoidMelee work properly.
@@ -59,6 +61,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			Super.SpawnVehicleTurret();
 	}
 	
+	Override Void OnTurretDeath (Actor DeadTurret, Bool Removed)
+	{
+		Super.OnTurretDeath(DeadTurret,Removed);
+		
+		User_PainRay = False; //No more painray.
+		If (!CanAttack()) ThreatLevel = THREAT_NONE; //Check if the car has no attacks left to lower the threat level.
+	}
+	
 	Override Void SpawnHeadlights ()
 	{
 		Headlights.Push(SpawnVehicleHeadlight(Self,(64,28,8)));
@@ -75,7 +85,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Override Bool CanAttack ()
 	{
-		Return (User_NoMarines || User_PainRay);
+		Return (!User_NoMarines || User_PainRay);
 	}
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
@@ -263,6 +273,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-56,0),True); //Back right door.
 				Marines[2] = SpawnMarine ((-Default.Radius*0.75,56,0),True); //Back left door.
 				User_NoMarines = True;
+				If (!CanAttack()) ThreatLevel = THREAT_NONE; //Check if the car has no attacks left to lower the threat level.
 			}
 			#### G 12 A_StartSound ("Vehicle/ArmyCar/DoorHandle",flags:CHANF_OVERLAP);
 			#### F 8;
