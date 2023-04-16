@@ -49,16 +49,6 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		DamageFactor "Autocannon", 0.8;
 		DamageFactor "RifleBullet", 0.8;
 	}
-	Override Void PostBeginPlay()
-	{
-		Super.PostBeginPlay();
-		If (!bFriendly) Species = 'MilitaryHostile';
-	}
-	
-	Override Bool IsActorHostile (Actor Other)
-	{
-		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
-	}
 }
 
 Class MVP_BaseTurret : KAI_BaseTurret
@@ -106,16 +96,6 @@ Class MVP_BaseTurret : KAI_BaseTurret
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
-	}
-	Override Void PostBeginPlay()
-	{
-		Super.PostBeginPlay();
-		If (!bFriendly) Species = 'MilitaryHostile';
-	}
-	
-	Override Bool IsActorHostile (Actor Other)
-	{
-		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
 	}
 }
 

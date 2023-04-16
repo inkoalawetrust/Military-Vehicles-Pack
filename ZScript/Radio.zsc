@@ -101,9 +101,10 @@ Class MVP_Radio : Weapon
 		
 		If (!Other) Return;
 		
-		If (Other.bDormant || MVP_BaseVehicle(Other) && MVP_BaseVehicle(Other).bNoRadio || !MarineFollowsCommands (Other) ) Return;
+		If (Other.bDormant || MVP_BaseVehicle(Other) && MVP_BaseVehicle(Other).bNoOrders || !MarineFollowsCommands (Other) ) Return;
 		
 		//You are ordering a Smart Marine, so do the order by remotely calling Used() on the marine, and change CurrentMarineOrder manually.
+		//BUG: Ordering marines with the radio is fucking broken. Like everything on the marines always is.
 		If (Other Is CustomMarine)
 		{
 			If (Invoker.CurrentOrder == MarineGetCurrentOrder (Other)+1) Return;
