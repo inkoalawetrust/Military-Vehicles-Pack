@@ -354,6 +354,12 @@ Class MVP_DiCokkaShell : MVP_BaseProjectile
 		Splash.bXFlip = Random (False,True);
 	}
 	
+	Override Void OnDestroy()
+	{
+		Super.OnDestroy();
+		If (Light) Light.Destroy();
+	}
+	
 	DynamicLight Light;
 	Bool HitLiquid; //Removes the shell if it hit a liquid texture.
 	States

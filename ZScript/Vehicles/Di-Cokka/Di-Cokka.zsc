@@ -139,6 +139,13 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				KAI_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:KAIL_CHASETARGET);
 			}
 			Loop;
+		Idle:
+			MSV1 AABBCCDDEEFF 2
+			{a_log ("wandering");
+				A_Wander();
+				KAI_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:KAIL_CHASETARGET);
+			}
+			Loop;
 		//The hull is basically just a moving platform for the turret, so its' AI is just whatever KAI_Chase has.
 		See:
 			MSV1 AABBCCDDEEFF 2
@@ -146,7 +153,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
-				KAI_Chase (followdist:256);
+				KAI_LandVehicleChase ("Spawn",followdist:256,User_RetreatDistance);
 				If (!User_NoCorpseCrush) KAI_CrushCorpses (1);
 			}
 			Loop;
@@ -428,8 +435,9 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 				If (WarningZone) WarningZone.Destroy();
 				A_FaceTarget (3,3,flags:FAF_MIDDLE);
 				RotateToVehicle();
-				A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
-				KAI_Chase (KAIC_NOCHASE);
+				//A_Chase (Null,Null,CHF_DONTIDLE|CHF_DONTMOVE|CHF_NODIRECTIONTURN);
+				//KAI_Chase (KAIC_NOCHASE);
+				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();
 				Frame = UpdateTurretElevation (10,6,8,8); //K, G, I, I
 			}
