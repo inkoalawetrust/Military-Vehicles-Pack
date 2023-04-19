@@ -17,6 +17,7 @@ Class MVP_APC : MVP_BaseVehicle
 		RipLevelMin 5;
 		Mass 28000;
 		MaxStepHeight 48;
+		MeleeRange 64; //Used for when the APC runs away.
 		Tag "Armored Personnel Carrier";
 		ActiveSound "Vehicle/APC/Moving";
 		DeathSound "SFX/Explosion";
@@ -121,6 +122,7 @@ Class MVP_APC : MVP_BaseVehicle
 			If (User_MarineAmount > 0)
 			{
 				If (!NoStateJump) SetStateLabel ("DeployMarines");
+				CorpseTarget = Null;
 				Return True;
 			}
 		}
@@ -196,15 +198,53 @@ Class MVP_APC : MVP_BaseVehicle
 				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			}
 			Loop;
+		Idle:
+			APC1 AABBCCDD 2
+			{
+				A_StopSound (CHAN_IDLING);
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
+				
+				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+				a_log ("roaming the earth");
+				//Archvile trolling move activated.
+				If (User_CrushMode == CRUSH_ACTIVE)
+				{
+					If (CorpseTarget && CorpseTarget.bDontGib) CorpseTarget = Null; //Disgard crushed corpses.
+					//Don't have a corpse to crush already.
+					If (!CorpseTarget)
+					{
+						//CorpseTarget = FindNearestCorpse();
+						If (CorpseTarget = FindNearestCorpse()) //Nearby corpse found, go and crush it.
+							KAI_MoveTowards (CorpseTarget.Pos);
+						Else //Still no corpse found, so just begin wandering around.
+							A_Wander();
+					}
+					
+					//There is an available corpse to head to and crush.
+					If (CorpseTarget)
+						KAI_MoveTowards (CorpseTarget.Pos);
+				}
+				Else
+					A_Wander();
+					
+				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
+			}
+			Loop;
 		See:
 			APC1 AABBCCDD 2
 			{
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
-				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous KAI_Chase property.
+				//Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous KAI_Chase property.
+				MoveToParams Params;
+				Params.DetourFactor = 0.8;
+				Params.Attempts = 32;
+				Params.StepThreshold = 32;
+				Params.RunRad = 384;
 				
-				KAI_Chase (KAIC_ATTACKWHENSCARED|(NoRandomTurn ? KAIC_NORANDOMTURN : 0)|(User_CrushMode == CRUSH_ACTIVE ? KAIC_CORPSESEEKER : 0),512);
+				KAI_LandVehicleChase ("Spawn",LVC_ATTACKWHENSCARED,turnradius:8,512,User_RetreatDistance,Params);
+				
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
 			Loop;

@@ -67,6 +67,7 @@ Mixin Class MVP_UniversalFunctions
 Mixin Class MVP_SharedFunctions
 {
 	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
+	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
 	//=====|Virtual functions|=====\\
 	Override Void PostBeginPlay()
 	{
@@ -117,6 +118,12 @@ Mixin Class MVP_SharedFunctions
 	Override Bool IsActorHostile (Actor Other)
 	{
 		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
+	}
+	
+	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
+	{
+		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		CorpseTarget = Null;
 	}
 	
 	Bool CustomMarinesAvailable()
@@ -236,6 +243,7 @@ Mixin Class MVP_SharedFunctions
 	}
 	
 	//Add a function that determines if the vehicles' target is a VERY powerful enemy. //10/4/2023 update: How about we don't ?
+	//TODO: Remove this, and replace all instances of this being called with checking if the actors' threat level is higher than the vehicles' threshold !
 	Bool IsPowerful (Actor Other)
 	{
 		Name CustomMarine = 'SmartMarine';
@@ -258,310 +266,49 @@ Mixin Class MVP_SharedFunctions
 		Return False;
 	}
 	
-	Enum KAIChaseFlags
+	
+	Enum FindCorpseFlags
 	{
-		KAIC_ATTACKWHENSCARED = 1 << 0, //The vehicle will still be very likely to attack when scared of an enemy.
-		KAIC_NORANDOMTURN = 	1 << 1, //Turns on CHF_NORANDOMTURN on the A_Chase calls. TODO: Remove this too. Just use the A_Chase flags so they are passed to KAI_MoveTowards !
-		KAIC_NOCHASE = 			1 << 2, //Don't run any code related to the vehicle moving. Useful for vehicle turrets turrets. TODO: Probably replace this with the CHF_DONTMOVE A_Chase flag.
-		KAIC_CORPSESEEKER = 	1 << 3,	//The vehicle will actively go after corpses to crush them if it has nothing else to do. TODO: Move this behavior to the MVP and remove this flag.
-		KAIC_NOTURRETRETARGET =	1 << 4, //The vehicle will never target the hull of a vehicle instead of its' turret. Even if doing so would be better.
-		//TODO: Add a PLAYERSASTHREATS flag. That optionally allows to consider the threat level of players with god or buddha mode.
+		FNCF_RAISABLEONLY	= 1 << 0, //Only look for corpses that can be resurrected.
+		FNCF_NOSIZECHECK	= 1 << 1, //Ignore the MaxCorpseRadius and MaxCorpseHeight properties.
+		FNCF_STOPFORVILES	= 1 << 2, //Abort the check if a friendly Archvile-type NPC is in the search radius. This is handled here to not have to run another iterator just for the Vile search.
 	}
 	
-	//The standard land vehicle chase function.
-	//WaitState: The state the vehicle should wait in if it stopped at a delayed patrol point. No state means it just calls SetState.
-	//Flags: The flags to use. Look above for a list.
-	//ChaseFlags: The A_Chase flags to use. Supports the same flags' KAI_MoveTowards does.
-	//TurnRadius: How wide the turns the vehicle takes are, the smaller the number the bigger the turn. Default is 10 degrees per step.
-	//FollowDist: The minimum distance the vehicle must have from its' friend player (If friendly) before it stops following them. To prevent dogpiling.
-	//RetreatDist: The amount of distance the vehicle generally keeps from enemies. Quadrupled for actors whose threat level is above the ThreatLevelThreshold property.
-	Void KAI_LandVehicleChase (StateLabel WaitState = Null, Int Flags = 0, Int ChaseFlags = 0, Double TurnRadius = 10, Double FollowDist = 384, Double RetreatDist = 768)
+	//Find the crushable corpse nearest to the vehicle. Used to get vehicles to crush corpses to deny enemy Archviles ando ther necormancer-type enemies.
+	Actor FindNearestCorpse (Int Flags = FNCF_RAISABLEONLY|FNCF_STOPFORVILES)
 	{
-		Bool MovedAlready; //If one of the KAI_MoveTowards/Away calls was made. Don't call the rest.
-		Double MajorThreatRange = (RetreatDist*4)*(RetreatDist*4);
-		//Temporarily store the aggro multiplier that is changed by the fear code. Then reset it after ShouldAttack() finishes.
-		Double OldAggro = AggressionMultiplier;
+		Array <Actor> NearbyCorpses;
+		Double NearestDistance = INT.MAX;
 		
-		//ZScript exports of different segments of GZDooms' native AI code. This is the stuff not needed for movement.
-		KAI_Chase_PreChecks(ChaseFlags);
-		KAI_Chase_FriendsAttackPlayerEnemies(ChaseFlags); //This and Chase_Retarget are handled here, so the fear checks below work properly.
-		KAI_Chase_Retarget(ChaseFlags);
-		KAI_Chase_HandleActiveSound(ChaseFlags);
+		BlockThingsIterator CorpseSearch = BlockThingsIterator.Create (Self,1024);
 		
-		//Handle making the vehicle run away from its' target if it's a major threat. Or it's powerless.
-		If (!bNoFear && Target && !(Goal && bChaseGoal))
+		While (CorpseSearch.Next())
 		{
-			If (!(Flags & KAIC_NOCHASE) && !(ChaseFlags & CHF_DONTMOVE))
-			{
-				//If you can't attack, run. Also run if the other actor is frightening or you're frightened.
-				If (!CanAttack() || bFrightened || IsFrightening (Target) ||
-				//If the targets' threat level is over the threshold, and it's visible and nearby, GTFO.
-				ThreatLevelThreshold != THREAT_ASSESS && AssessThreatLevel(Target, False) >= ThreatLevelThreshold && (Distance3DSquared(Target) < MajorThreatRange && CheckSight (Target)))
-				{a_log ("oh god oh fuck");
-					KAI_MoveAway (Target,runrad:256,detourfactor:0.5,anglelimit:TurnRadius,chaseflags:ChaseFlags,flags:KMT_CHASEGOAL);
-					MovedAlready = True;
-				}
-			}
+			Actor Mobj = CorpseSearch.Thing;
 			
-			If (Flags & KAIC_ATTACKWHENSCARED)
-				AggressionMultiplier *= 0.5;
+			//Skip this actor if it's invalid or yourself.
+			If (!Mobj || Mobj == Self) Continue;
+
+			//Don't crush anything if a friendly necromancer is nearby.
+			If (Flags & FNCF_STOPFORVILES && !IsDead(Mobj) && IsNecromancer(Mobj) && !IsActorHostile (Mobj) && CheckSight (Mobj)) Return Null;
+			
+			//Skip this actor if it's already your corpse target, is alive, is already crushed, is not a dead corpse, or cannot be targeted.
+			If (Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || Mobj.bDontCorpse || !CanBeTargeted (Self, Mobj)) Continue;
+			
+			If (!Mobj.bIsMonster && !Mobj.Player) Continue; //Ignore destroyed props.
+			
+			If (Flags & FNCF_RAISABLEONLY && !Mobj.CanRaise()) Continue; //Cannot even be resurrected.
+			
+			If (Mobj.Pos.Z > Mobj.FloorZ) Continue; //Corpse is off the ground. Like if it's falling.
+			
+			If (!(Flags & FNCF_NOSIZECHECK) && Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
+			
+			If (!CheckSight (Mobj)) Continue; //And at last, check if the corpse is even visible.
+			
+			NearbyCorpses.Push(Mobj); //Add it to the list.
 		}
 		
-		FollowPlayerControl (FollowDist); //Handle turning on bDontFollowPlayers if you are too close to your friendplayer.
-		
-		//If you can move and haven't done so already.
-		If (!(Flags & KAIC_NOCHASE) && !(ChaseFlags & CHF_DONTMOVE) && !MovedAlready)
-		{
-			If (!(IsPatrolling(Self) && bChaseGoal)) NearestEnemy = FindNearestEnemy (RetreatDist);
-			//If you aren't patrolling and not allowed off your route, and there is an enemy nearby.
-			If (NearestEnemy)
-			{a_log ("the danger zone");
-				KAI_MoveAway (NearestEnemy,runrad:256,detourfactor:0.5,anglelimit:TurnRadius,chaseflags:ChaseFlags); //Keep your distance.
-				MovedAlready = True;
-			}
-			//If your turrets' target is too high up for it to reach.
-			Else If (Turret && Turret.Target && Turret.ElevationState == Turret.ELEVATION_TOOHIGH)
-			{a_log ("moving back so my turret can fire");
-				KAI_MoveAway (Turret.Target,runrad:256,detourfactor:0.5,anglelimit:TurnRadius,chaseflags:ChaseFlags); //Back off to allow your turret to shoot.
-				MovedAlready = True;
-			}
-			//TODO: Move this to the OnWander virtual I'm adding later.
-			/*Else If (Flags & KAIC_CORPSESEEKER && !Target && !IsPatrolling (Self) && CurrentOrder == ORDER_WANDER)
-			{
-				//Don't have a corpse to crush already.
-				If (!CorpseTarget)
-				{
-					If (CorpseTarget = FindNearestCorpse();)
-						KAI_MoveTowards (CorpseTarget.Pos);
-				}
-				//There is an available corpse to head to and crush.
-				Else
-					KAI_MoveTowards (CorpseTarget.Pos);
-			}*/
-			//If none of the other conditions are true. Run the standard A_Chase code (Minus movement), and KAI_MoveTowards.
-			Else
-			{
-				Bool B;
-				//A_Chase (Null,Null,CHF_DONTMOVE|CHF_DONTTURN|ChaseFlags); //This breaks the custom movement despite the self-explanatory flags. Okay GZDoom.
-				KAI_Chase_HandleStrafing (Target,ChaseFlags); //No idea why the fuck you'd want a ground vehicle to do this. But here you go.
-				[B,MovedAlready] = KAI_Chase_PatrolHandling(WaitState, 0.2, anglelimit:TurnRadius, chaseflags:ChaseFlags);
-				//Finding a new target should be handled by the above A_Chase call, however if no new target was found. Call OnWander().
-				//If (!Target && !(ChaseFlags & CHF_DONTIDLE))
-				//	OnWander();
-				
-				//Finally, if you do have a target, DO move towards it, but with KAI_MoveTowards instead of the shitty native movement code.
-				If (Target && !MovedAlready)
-					KAI_MoveTowards (Target.Pos, anglelimit:TurnRadius, chaseflags:ChaseFlags, KMT_CHASEGOAL);
-			}
-			
-			MovedAlready = True;
-		}
-		
-		If (!(Flags & KAIC_NOTURRETRETARGET)) RetargetVehicleHull(); //If targeting another vehicles' turret. See if targeting the vehicle itself would be better.
-		Actor CheckFrom = Turret; //Check from the turret if you should maybe stay still and shoot.
-		If (!CheckFrom) CheckFrom = Self; //If you have no turret, check from yourself.
-		If (StayStillAndShoot (CheckFrom)) Return;
-		
-		If (ShouldAttack()) //Run the unique attack decision code of the vehicle.
-		{
-			AggressionMultiplier = OldAggro; //Reset aggression chance.
-			ChaseTimer = 0;
-			CorpseTarget = Null;
-			Return; //End the function if the vehicle should attack.
-		}
-		AggressionMultiplier = OldAggro; //Reset aggression chance.
-		
-		HandleChaseTimer();
-	}
-	
-	//Breakdown of what this does in order:
-	/*Makes the vehicle run away from powerful targets. It will run until the enemy is not visible, or it's 4 times further from the enemy than its' retreat distance.
-	Once that happens, it will set a temporary delay where it will still run away, before chasing the target again. To not rubberband behind corners.*/
-	//When scared, it will also halve the aggression multiplier for KAI_CheckMissileRange().
-	//If NOCHASE is off and the vehicle is allowed to move:
-		//The vehicle will move away from the nearest enemy if it's within the retreat distance. And the vehicle is not already scared of a powerful enemy or patrolling.
-		//If the vehicle has a turret, and the turrets' target is too high for it to shoot it. The vehicle will drive away from it until the turret can shoot it.
-		//If the vehicle has no target, isn't patrolling, and is ordered to wander around. It will drive to and crush the nearest corpse. This one makes little sense to port to the KAI since it's so specific.
-		//If none of the above are the casse, THEN the vehicle will call normal A_Chase for its' movement.
-	//The vehicle will run RetargetVehicleHull() if allowed. Basically check if the target is a vehicle turret, and if I'd be better to target the other vehicle itself.
-	//Run the StayStillAndShoot() virtual.
-	//Run the ShouldAttack() virtual, which is where the actually attack decision code in the vehicle chase function is handled.
-	//Handle the chase timer, which makes the vehicle remove its' target pointer after a set amount of time.
-	
-	//Generic chase function shared by all vehicles.
-	//Flags: Look above for available flags.
-	//FollowDist: The distance below which the vehicle will stop trying to follow the player, to not get in their way.
-	Void KAI_Chase (Int Flags = 0, Double FollowDist = 384)
-	{
-		Bool AlreadyRetreating; //The vehicle is already running away from something that doesn't involve the enemy avoiding code, so don't bother to run from nearby enemies.
-		Double PowerfulEnemyRetreatRange = (User_RetreatDistance*4)*(User_RetreatDistance*4); //Vehicles stay 4 times further away from powerful enemies than normal ones.
-		
-		//Temporarily store the values that are changed by the fear code.
-		Double OldAggro = AggressionMultiplier;
-		
-		//Vehicles get scared if they have a living, visible target, and are either defenseless or the target is too powerful.
-		If (!bNoFear)
-		{
-			If (Target && !CanAttack() || Target && IsPowerful (Target) && Distance3DSquared (Target) <= PowerfulEnemyRetreatRange)
-				If (!IsDead (Target) && IsVisible(Target, True))
-				{
-					FearTimer = Random (2,64);
-					bFrightened = AlreadyRetreating = True;
-				}
-				Else
-					bFrightened = False;
-			Else
-				bFrightened = False;
-			
-			If (FearTimer)
-			{
-				FearTimer--;
-				bFrightened = AlreadyRetreating = True;
-			}
-			
-			If ((Flags & KAIC_ATTACKWHENSCARED) && bFrightened)
-				AggressionMultiplier *= 0.5;
-		}
-		
-		If (!(Flags & KAIC_NOCHASE))
-		{
-			FollowPlayerControl (FollowDist);
-			
-			//Vehicles try to stay away from enemies that are too close.
-			Actor OldTarget;
-			If (!(IsPatrolling(Self) && bChaseGoal)) NearestEnemy = FindNearestEnemy (User_RetreatDistance); //Only retreat from enemies if NOT set to patrol AND ignore targets.
-			//Have a close enemy, and not already retreating from something like a powerful target.
-			If (NearestEnemy && !AlreadyRetreating)
-			{
-				OldTarget = Target;
-				Target = NearestEnemy;
-				bFrightened = True;
-				FearTimer = Random (2,48);
-				//KAI_MoveAway (NearestEnemy,detourfactor:0.5);
-				A_Chase (Null,Null,CHF_DONTIDLE | ((Flags & KAIC_NORANDOMTURN) ? CHF_NORANDOMTURN : 0)); //So move away from the nearest enemy.
-				Target = OldTarget;
-			}
-			//If the vehicle turrets' target is too high, move away from it to allow the turret to shoot it.
-			Else If (Turret && Turret.Target && Turret.ElevationState == Turret.ELEVATION_TOOHIGH)
-			{
-				OldTarget = Target;
-				Target = Turret.Target;
-				bFrightened = True;
-				FearTimer = Random (8,32);
-				//KAI_MoveAway (Turret.Target,detourfactor:0.5);
-				A_Chase (Null,Null,CHF_DONTIDLE | ((Flags & KAIC_NORANDOMTURN) ? CHF_NORANDOMTURN : 0));
-				Target = OldTarget;
-			}
-			//Archvile trolling mode activated.
-			Else If (!Target && !IsPatrolling(Self) && !NearestEnemy && CurrentOrder == ORDER_WANDER && (Flags & KAIC_CORPSESEEKER))
-			{
-				//Don't have a corpse to crush already.
-				If (!CorpseTarget)
-				{
-					CorpseTarget = FindNearestCorpse();
-					
-					If (!CorpseTarget) //Still no corpse found.
-						A_Chase (Null,Null,CHF_DONTIDLE | ((Flags & KAIC_NORANDOMTURN) ? CHF_NORANDOMTURN : 0));
-					Else
-						KAI_MoveTowards (CorpseTarget.Pos);
-				}
-				//There is an available corpse to head to and crush.
-				Else
-					KAI_MoveTowards (CorpseTarget.Pos);
-			}
-			Else
-				A_Chase (Null,Null,CHF_DONTIDLE | ((Flags & KAIC_NORANDOMTURN) ? CHF_NORANDOMTURN : 0));
-		}
-		
-		If (!(Flags & KAIC_NOTURRETRETARGET)) RetargetVehicleHull();
-		Actor CheckFrom = Turret;
-		If (!CheckFrom) CheckFrom = Self; 
-		If (StayStillAndShoot (CheckFrom)) Return;
-		
-		If (ShouldAttack()) //Run the unique attack decision code of the vehicle.
-		{
-			AggressionMultiplier = OldAggro; //Reset aggression chance.
-			ChaseTimer = 0;
-			CorpseTarget = Null;
-			Return; //End the function if the vehicle should attack.
-		}
-		AggressionMultiplier = OldAggro; //Reset aggression chance.
-		
-		HandleChaseTimer();
-	}
-	
-	Void HandleChaseTimer() //Made into a separate function so it can be called independently by turrets and such.
-	{
-		//They also eventually stop chasing their target after it's out of sight for long enough.
-		If (User_ChaseTime > 0)
-		{
-			If (ChaseTimer >= User_ChaseTime)
-			{
-				A_ClearTarget();
-				ChaseTimer = 0;
-				//Vehicles ordered to stay also go back to standing still once the timer runs out.
-				If (CurrentOrder == ORDER_STAY)
-				{
-					SetStateLabel ("Spawn");
-					Return;
-				}
-			}
-			
-			If (!IsPatrolling(Self))
-			{
-				If (!Target || Target && !CheckSight (Target,SF_SEEPASTBLOCKEVERYTHING))
-					ChaseTimer++;
-				//Target is visible again, reset the timer.
-				Else
-					ChaseTimer = 0;
-			}
-		}
-	}
-	
-	//As a friendly vehicle, only follow the player until within a certain distance from them, to prevent the player from being dogpiled by vehicles.
-	Void FollowPlayerControl (Double MaxDist = 384)
-	{
-		If (!PlayerInGame[FriendPlayer] || CurrentOrder == ORDER_WANDER)
-			Return;
-		
-		If (bFriendly)
-			bDontFollowPlayers = (Distance3DSquared (Players[FriendPlayer].Mo) <= MaxDist*MaxDist);
-	}
-	
-	//Is the other actor hostile?
-	/*NOTE: This is here because the transition of the base vehicle code to my KAI library was kinda rough. Because the MVP vehicles have different criteria
-	for if another actor is hostile. I replaced the function in the KAI with a more generic IsTargettingAllies() function and an IsActorHostile() virtual.
-	To allow to define different hostility criteria for MVP vehicles than stock KAI actors (And so other modders can do that too I guess).
-	As of the time I'm typing this the MVP vehicles' IsActorHostile() runs IsHostile() and IsTargettingAllies() but if potential regressions persist.
-	Then I will have them use this function again.*/
-	Bool MVP_IsHostile (Actor Caller, Actor Other)
-	{
-		If (!Caller || !Other) Return False;
-		
-		If (Caller.bFriendly) //It's as shrimple as that.
-			Return Caller.IsHostile (Other);
-		//Enemy vehicles are the reason this function exists.
-		//They generally don't attack other non-enemy military NPCs. But they will do so if those NPCs are targetting them, or another enemy military NPC.
-		Else
-		{
-			//Non-friendly actors always hate players and their allies.
-			If (Other.Player || Other.bFriendly)
-				Return True;
-			
-			//Don't consider own species hostile.
-			//If (Caller.bNoInfightSpecies && Caller.Species == Other.Species)
-			//	{console.printf ("that's my own species");Return False;} //DEBUG
-			
-			//Is the other actor targetting you or your turret ?
-			If (Other.Target && (Other.Target == Caller || Other.Target == MVP_BaseVehicle(Caller).Turret))
-				Return True;
-			
-			//Is the other actor targetting an actor with the same species as you ? Then they are an enemy as far as you are concerned.
-			If (Other.Target && (Caller.bNoInfightSpecies && Caller.Species == Other.Target.Species))
-				Return True;
-		}
-		
-		Return False;
+		Return GetClosestActor (NearbyCorpses,Self.Pos);
 	}
 	
 	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.

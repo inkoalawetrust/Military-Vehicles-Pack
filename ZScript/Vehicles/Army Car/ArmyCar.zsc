@@ -229,11 +229,13 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound ("Vehicle/ArmyCar/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.8);
 				
-				LookExParams ArmyCarSight;
-				ArmyCarSight.MaxDist = 2048*FRandom (1.0,1.25);
-				Bool NoRandomTurn = ((!Target || User_NoMarines) && !IsPatrolling(Self)); //Return this bool in the NoRandomTurn parameter of KAI_Chase
+				MoveToParams Params;
+				Params.DetourFactor = 0.70;
+				Params.Attempts = 32;
+				Params.StepThreshold = 48;
+				Params.RunRad = 384;
 				
-				KAI_Chase ((NoRandomTurn ? KAIC_NORANDOMTURN : 0));
+				KAI_LandVehicleChase(chaseflags:CHF_DONTIDLE,retreatdist:User_RetreatDistance,moveparams:Params);
 				
 				Return State (Null);
 			}

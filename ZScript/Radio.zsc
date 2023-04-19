@@ -130,7 +130,12 @@ Class MVP_Radio : Weapon
 		{
 			Vehicle.bDontFollowPlayers = True;
 			If (Vehicle.Target == Null)
-				Vehicle.SetStateLabel ("See");
+			{
+				If (!Vehicle.FindState ("Idle"))
+					Vehicle.SetStateLabel ("See");
+				Else
+					Vehicle.SetStateLabel ("Idle");
+			}
 			Return;
 		}
 		Else If (Invoker.CurrentOrder == ORDER_FOLLOW)
