@@ -126,6 +126,17 @@ Mixin Class MVP_SharedFunctions
 		CorpseTarget = Null;
 	}
 	
+	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
+	{
+		If (!Other || IsDead (Other)) Return THREAT_NONE;
+		
+		//Enemy players or marines on turrets are very dangerous.
+		If (MarineOrPlayerOnTurret (Other)) Return THREAT_VERYDANGEROUS;
+		
+		Return Super.AssessThreatLevel (Other, CheckPlayers);
+	}
+	
+	//=====|Marine related functions|=====\\
 	Bool CustomMarinesAvailable()
 	{
 		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
@@ -136,7 +147,6 @@ Mixin Class MVP_SharedFunctions
 			Return False;
 	}
 	
-	//=====|Marine related functions|=====\\
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)
 	{
@@ -154,6 +164,18 @@ Mixin Class MVP_SharedFunctions
 		Return False;
 	}
 	
+	//Is the other actor a smart marine or player on a turret ?
+	Bool MarineOrPlayerOnTurret (Actor Other)
+	{
+		If (!Other) Return False;
+		Name CustomMarine = 'SmartMarine';
+		Name CustomTurretMarine = "TurretMarine";
+		Name TurretWeapon = 'SmartMarineMGWeapon';
+		Return (CustomMarinesAvailable() && (Other Is CustomMarine && MarineIsOnTurret (Other)
+		|| Other Is CustomTurretMarine
+		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon));
+	}
+	
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
 	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False)
 	{
@@ -168,9 +190,6 @@ Mixin Class MVP_SharedFunctions
 		Else
 			WhatToSpawn = "MarineChaingun";
 		
-		//[b,Spawnee] = A_SpawnItemEx (WhatToSpawn,Position.X,Position.Y,GetZAt (Position.X,Position.Y),flags:SXF_NOCHECKPOSITION | SetMaster ? SXF_SETMASTER : 0);
-		//Position = Vec2Offset (Position.X * Cos (Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle));
-		//Spawnee = Spawn (WhatToSpawn,Vec3Offset (Position.X * Cos(Angle) + Position.Y * Sin (Angle),Position.X * Sin (Angle) - Position.Y * Cos (Angle),(Position.Z == 0 ? GetZAt (Position.X,Position.Y) : Position.Z)));
 		Spawnee = Spawn (WhatToSpawn,KAI_Math.Vec3OffsetRelative (Self,Position,flags:KAI_Math.V3R_ANGLEONLY),ALLOW_REPLACE);
 		If (Target != Goal)
 			Spawnee.CopyFriendliness (Self,True);
@@ -242,31 +261,6 @@ Mixin Class MVP_SharedFunctions
 		Return True;
 	}
 	
-	//Add a function that determines if the vehicles' target is a VERY powerful enemy. //10/4/2023 update: How about we don't ?
-	//TODO: Remove this, and replace all instances of this being called with checking if the actors' threat level is higher than the vehicles' threshold !
-	Bool IsPowerful (Actor Other)
-	{
-		Name CustomMarine = 'SmartMarine';
-		Name CustomTurretMarine = "TurretMarine";
-		Name TurretWeapon = 'SmartMarineMGWeapon';
-		
-		If (!Other)
-			Return False;
-		
-		//Is the other actor a smart marine or player on a turret ?
-		If (CustomMarinesAvailable() && (Other Is CustomMarine && MarineIsOnTurret (Other)
-		|| Other Is CustomTurretMarine
-		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon))
-			Return True;
-		
-		//Does the actor have 2500 health or more, is sufficiently large, or can reflect projectiles ?
-		If ((Other.SpawnHealth() >= 2500 || Other.Health >= 2500) || (Other.Height >= 80 && Other.Radius >= 72) || Other.bReflective)
-			Return True;
-		
-		Return False;
-	}
-	
-	
 	Enum FindCorpseFlags
 	{
 		FNCF_RAISABLEONLY	= 1 << 0, //Only look for corpses that can be resurrected.
@@ -312,9 +306,10 @@ Mixin Class MVP_SharedFunctions
 	}
 	
 	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
-	//Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
+	//TODO: Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
 	//Range: The range around which to check for enemies.
 	//AvoidAllies: Deduct points from the score for any allies in the AOE.
+	//IDEA: Make the chance increment by the actors' threat level instead ?
 	Int AttackByQuantity (Double Range = 256, Bool AvoidAllies = False)
 	{
 		Actor Mobj;
@@ -344,7 +339,8 @@ Mixin Class MVP_SharedFunctions
 				Else
 					Chance += 1;
 				
-				If (IsPowerful (Mobj))
+				//If the mobj is very dangerous, significantly raise the count.
+				If (AssessThreatLevel (Mobj) >= THREAT_DANGEROUS)
 					Chance += 25;
 			}
 		}

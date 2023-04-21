@@ -87,7 +87,8 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	Override Bool StayStillAndShoot(Actor CheckSightFrom)
 	{
 		If (Health <= SpawnHealth()/2.5) Return False; //Don't stop if health is low. No need to check the turret, since it transfers its' damage.
-		If (IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) Return False; //Don't stop if your or your targets' turret is too powerful.
+		//Don't stop if your or your turrets' target is more dangerous than you.
+		If (AssessThreatLevel (Target) > Self.ThreatLevel || Turret && AssessThreatLevel (Turret.Target) > Self.ThreatLevel) Return False;
 		If (Turret && !Turret.bDontStayAround && KAI_BaseVehicle.StayStillAndShoot (CheckSightFrom))
 		{
 			A_StopSound (CHAN_MOVING);

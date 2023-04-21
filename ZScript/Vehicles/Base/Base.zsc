@@ -1,5 +1,7 @@
 //TODO:
 //Add the same dynamic lighting system that the Di-Cokkas' shells use to the other projectiles, it's way better than trying to time A_AttachLight.
+//Add different a AssessThreatLevel for the APC, maybe. Where actors are considered less dangerous as long as the APC has its' MG or autocannon.
+//Change the chances of staying still to shoot for the vehicles. The replacement of MVP_Chace seems to have made them way more likely to sit and shoot.
 
 //FIXME:
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.

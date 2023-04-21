@@ -101,20 +101,23 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Override Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
-		//If you have dropped your marines, still have a turret the RNG is on your side, AND neither the turret or vehicle have a powerful target.
-		If (User_NoMarines && User_PainRay && Random[pr_cajump](0,255) < 4 && (Target || Turret && Turret.Target)
-		&& !(IsPowerful (Target) || Turret && IsPowerful (Turret.Target)) && Turret.Health > Turret.SpawnHealth()/4 )
+		If (Random[pr_cajump](0,255) >= 4) Return False; //Luck is not on your side.
+		If (Turret.Health <= Turret.SpawnHealth()/4) Return False; //The pain ray is really weak, so don't risk losing it.
+		If (!User_NoMarines || User_NoMarines && !User_PainRay) {a_log ("not now");Return False;} //Still have marines in, or the no pain ray, so don't stop.
+		//Don't stop if you or your turrets' target is more dangerous than you.
+		If (AssessThreatLevel (Target) > Self.ThreatLevel || Turret && AssessThreatLevel (Turret.Target) > Self.ThreatLevel) {a_log ("too strong");Return False;}
+		
+		//And at last, run the standard KAI vehicle checks.
+		If (KAI_BaseVehicle.StayStillAndShoot(CheckSightFrom))
 		{
-			If (KAI_BaseVehicle.StayStillAndShoot(CheckSightFrom))
-			{
-				A_StopSound (CHAN_MOVING);
-				A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
-				ChaseTimer = Random (16,32);
-				StayStillDelay = ChaseTimer+(Random (2,4)*GameTicRate);
-				SetStateLabel ("StickAround");
-				Return True;
-			}
+			A_StopSound (CHAN_MOVING);
+			A_StartSound("Vehicle/ArmyCar/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.8);
+			ChaseTimer = Random (16,32);
+			StayStillDelay = ChaseTimer+(Random (2,4)*GameTicRate);
+			SetStateLabel ("StickAround");
+			Return True;
 		}
+		
 		Return False;
 	}
 	

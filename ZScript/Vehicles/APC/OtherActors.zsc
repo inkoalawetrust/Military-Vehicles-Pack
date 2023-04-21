@@ -593,8 +593,8 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				}
 				
 				//If you share a target with the autocannon, then try finding a different one.
-				//Unless the shared target is powerful, in which case don't force yourself to attack a different target.
-				If (!FocusFire && Target && Master && Target == Master.Target && !IsPowerful(Master.Target))
+				//Unless the shared target is stronger than the turret you are on, in which case don't force yourself to attack a different target.
+				If (!FocusFire && Target && Master && Target == Master.Target && AssessThreatLevel (Master.Target, False) <= KAI_Actor(Master).ThreatLevel)
 				{
 					Actor NewTarget = PickDifferentTarget (Master.Target,Master.Target,2048,512);
 					If (NewTarget)

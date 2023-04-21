@@ -21,7 +21,7 @@ Class MVP_APC : MVP_BaseVehicle
 		Tag "Armored Personnel Carrier";
 		ActiveSound "Vehicle/APC/Moving";
 		DeathSound "SFX/Explosion";
-		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //Maybe it should be THREAT_VERYDANGEROUS instead, at least when it has a turret. But I think I'll reserve that for future vehicles like the MBT.
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //MAYDO: It should be THREAT_VERYDANGEROUS instead, at least when it has a turret. But I think I'll reserve that for future vehicles like the MBT.
 		
 		//"Armor"
 		DamageFactor 0.75; //Generic damage factor.
@@ -132,16 +132,35 @@ Class MVP_APC : MVP_BaseVehicle
 		Return False;
 	}
 	
+	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
+	{
+		Int Lvl = Super.AssessThreatLevel (Other, CheckPlayers);
+		
+		//If you have a turret, and the other actor is not unstoppable, harmless, or a marine or player on a turret.
+		//Then dial down the returned threat level a notch. Since armored APCs' trivialize a lot of enemies.
+		If (Turret && !IsDead (Turret) && Lvl != THREAT_UNSTOPPABLE && Lvl <= THREAT_NONE && !MarineOrPlayerOnTurret (Other))
+			Return Lvl-1;
+		
+		Return Lvl;
+	}
+	
 	Override Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
 		//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
 		Double Range;
 		If (Turret) Range = Turret.MaxTargetRange;
 		Else Range = MaxTargetRange;
+		
 		If (Turret && (Turret.Target && Distance3DSquared (Turret.Target) <= Range*Range || Target && Distance3DSquared (Target) <= Range*Range))
 		{
-			If (Turret && Turret.Health >= Turret.SpawnHealth()/4 && (Target || Turret.Target) && !(IsPowerful (Target) || IsPowerful (Turret.Target)))
+			//Don't attack if your or your targets' target are more powerful.
+			If (AssessThreatLevel (Target, False) > ThreatLevel || Turret.Target && AssessThreatLevel (Turret.Target, False) > Turret.ThreatLevel)
+				Return False;
+
+			//Don't stop if your turret is too weak.
+			If (Turret && Turret.Health >= Turret.SpawnHealth()/4)
 			{
+				//Less like to stop if marines are inside still.
 				If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
 				{
 					If (KAI_BaseVehicle.StayStillAndShoot (CheckSightFrom)) //Run basic checks.

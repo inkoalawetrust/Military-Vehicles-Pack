@@ -127,8 +127,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			Vel *= Mul;
 			
 			//Stop ramming if you've hit a powerful enemy,  or one that shouldn't be pushed.
-			//Maybe change this in the future to have the truck stop only if it hit a VERY powerful enemy ?
-			If (IsPowerful (Victim) || !IsThrustable (Victim) && IsIndestructible (Victim))
+			//MAYDO: Change this in the future to have the truck stop only if it hit a VERY powerful enemy ?
+			If (AssessThreatLevel (Victim) >= THREAT_VERYDANGEROUS || !IsThrustable (Victim) && IsIndestructible (Victim))
 			{
 				HitThings.Clear();
 				TotalMassHit = 0;
