@@ -154,6 +154,13 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 		
 		Return Null;
 	}
+	
+	Override Void TrailSpawn (Actor Trail)
+	{
+		Super.TrailSpawn(Trail);
+		
+		Trail.bNeverRespawn = True; //Make bullet and missile tracers vanish once the projectile vanishes or explodes.
+	}
 }
 
 //The MVPs' stock bullet tracer.

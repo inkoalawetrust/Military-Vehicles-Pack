@@ -14,7 +14,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		Speed 12;
 		FastSpeed 18;
 		RipLevelMin 2;
-		MeleeRange 72; //Used for when the truck runs away.
+		MeleeRange 96; //Used for when the truck runs away.
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //Carries a lot of soldiers by default.
 		
 		Obituary "%o was ran over by a truck.";
@@ -323,20 +323,27 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			}
 			Loop;
+		Idle:
+			TRK1 AABBCCDD 2
+			{
+				A_StopSound (CHAN_IDLING);
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
+				
+				KAI_Wander (48,512,detourfactor:0.75,anglelimit:6);
+				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+			}
 		See:
 			TRK1 AABBCCDD 2
 			{
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
-				Bool NoRandomTurn = ((!Target || !User_MarineAmount) && !IsPatrolling(Self)); //Use this for the eponymous KAI_Chase property.
-				
 				MoveToParams Params;
 				Params.DetourFactor = 0.9;
 				Params.Attempts = 32;
 				Params.StepThreshold = 56;
 				Params.RunRad = 512;
-				KAI_LandVehicleChase (flags:LVC_ATTACKWHENSCARED,chaseflags:CHF_DONTIDLE,turnradius:6,followdist:512,retreatdist:User_RetreatDistance,moveparams:Params);
+				KAI_LandVehicleChase (flags:LVC_ATTACKWHENSCARED|LVC_MAKEFRIENDSIDLE,turnradius:6,followdist:384,retreatdist:User_RetreatDistance,moveparams:Params);
 			}
 			Loop;
 		//The trucks' marine deploying loop.

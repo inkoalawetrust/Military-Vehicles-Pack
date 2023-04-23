@@ -102,7 +102,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	Override Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
 		If (Random[pr_cajump](0,255) >= 4) Return False; //Luck is not on your side.
-		If (Turret.Health <= Turret.SpawnHealth()/4) Return False; //The pain ray is really weak, so don't risk losing it.
+		If (Turret && Turret.Health <= Turret.SpawnHealth()/4) Return False; //The pain ray is really weak, so don't risk losing it.
 		If (!User_NoMarines || User_NoMarines && !User_PainRay) {a_log ("not now");Return False;} //Still have marines in, or the no pain ray, so don't stop.
 		//Don't stop if you or your turrets' target is more dangerous than you.
 		If (AssessThreatLevel (Target) > Self.ThreatLevel || Turret && AssessThreatLevel (Turret.Target) > Self.ThreatLevel) {a_log ("too strong");Return False;}
@@ -226,6 +226,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 					SetStateLabel ("See");
 			}
 			Loop;
+		Idle:
+			#### DDDDCCCCBBBBAAAA 2
+			{
+				A_StopSound (CHAN_IDLING);
+				A_StartSound ("Vehicle/ArmyCar/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.8);
+				KAI_Wander (32,512,32,0.25);
+				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
+			}
 		See:
 			#### DDDDCCCCBBBBAAAA 2
 			{

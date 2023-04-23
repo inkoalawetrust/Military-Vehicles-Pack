@@ -122,7 +122,8 @@ Class MVP_Radio : Weapon
 		If (Invoker.CurrentOrder == ORDER_STAY)
 		{
 			Vehicle.ChaseTimer = 0;
-			If (Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("See")))
+			If (Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("See")) ||
+			Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("Idle")))
 				Vehicle.SetStateLabel ("Spawn");
 			Return;
 		}
@@ -145,7 +146,7 @@ Class MVP_Radio : Weapon
 				SetFriendPlayer (Player);
 			If (Vehicle.Target == Null)
 			{
-				Vehicle.A_Face (Self);
+				//Vehicle.A_Face (Self);
 				Vehicle.SetStateLabel ("See");
 			}
 			Return;

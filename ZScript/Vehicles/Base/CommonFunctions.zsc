@@ -67,11 +67,15 @@ Mixin Class MVP_UniversalFunctions
 Mixin Class MVP_SharedFunctions
 {
 	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
+	
+	//Internal variables
+	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
 	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
 	//=====|Virtual functions|=====\\
 	Override Void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
+		UpdateUserVariables(); //Pass the vehicles' user variables as properties to the KAI library.
 		If (!bFriendly) Species = 'MilitaryHostile';
 		
 		If (!User_DefaultOrder || User_DefaultOrder ~== "")
@@ -261,6 +265,15 @@ Mixin Class MVP_SharedFunctions
 		Return True;
 	}
 	
+	//=====|Other functions|=====\\
+	//Pass the vehicles' user variables as properties.
+	Void UpdateUserVariables()
+	{
+		//RetreatRange = User_RetreatDistance;
+		//ChaseTime = User_ChaseTime;
+		//bNoHeadlights = User_NoHeadlights;
+	}
+	
 	Enum FindCorpseFlags
 	{
 		FNCF_RAISABLEONLY	= 1 << 0, //Only look for corpses that can be resurrected.
@@ -356,7 +369,7 @@ Mixin Class MVP_SharedFunctions
 		FSP_VEHICLEDEATH = 1 << 1 //Mark the warning zone as needing to vanish once all of the flames have evaporated.
 	}
 	
-	//FIXME: Fix a bug where sometimes no flames will spawn, not sure why it happens, but it seems to occur in crammed spaces usually.
+	//FIXME: Fix the bug that for some reason spawns flames halfway merged to the floor. Despite the spawnpos coordinates being fine.
 	//Creates multiple flames within the bounding box of the vehicle. Used to create flaming wrecks when vehicles are gibbed.
 	//Flags: The flags that control the spawning behavior, look at KAIFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
 	//Amount: The random amount of flames that will be created, the X component is the minimum amount of flames, and Y is the maximum.
@@ -366,19 +379,27 @@ Mixin Class MVP_SharedFunctions
 		Int RandomFlames = Random (Int(Amount.X),Int(Amount.Y));
 		Actor Flame;
 		Vector3 SpawnPos;
+		console.printf ("my pos: %d %d %d",pos.x,pos.y,pos.z);
 		//Spawn a random amount of flames around the APC wreck.
 		For (Int I = 0; I < RandomFlames; I++)
 		{
-			SpawnPos = (FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius),0);
-			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y) + 8 + FRandom (0, Height - 8);
+			SpawnPos.XY = Vec2Offset(FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius));
+			Sector Sec = Level.PointInSector(SpawnPos.XY);
+			SpawnPos.Z = Sec.NextLowestFloorAt(SpawnPos.X,SpawnPos.Y,0) + FRandom (8,Height);
+			//SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8,Height);
+			
+			//SpawnPos += (0, 0, SpawnPos.Z);
+			//console.printf ("%d",GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8, Height - 8));
+			console.printf ("pos1: %d %d %d",spawnpos.x,spawnpos.y,spawnpos.z);
 			//If the random position relative to the vehicle is valid.
-			If (Level.IsPointInLevel (Vec3Offset(SpawnPos.X,SpawnPos.Y,SpawnPos.Z)))
-				Flame = Spawn ("MVP_Flame",Vec3Offset(SpawnPos.X,SpawnPos.Y,SpawnPos.Z)); //Then spawn the flame.
+			If (Level.IsPointInLevel (SpawnPos))
+				Flame = Spawn ("MVP_Flame",SpawnPos); //Then spawn the flame.
+				else a_log ("fail");
 			
 			If (Flame)
 			{
 				Flame.Master = Self; //So the flame knows what actor to warp to.
-				MVP_Flame(Flame).Offsets = SpawnPos;
+				MVP_Flame(Flame).Offsets = Level.Vec3Diff (SpawnPos,Pos);
 				Flame.ReactionTime = Int(FRandom (Lifespan.X,LifeSpan.Y));
 				DeathFlames.Push (Flame); //Add the valid flame to the list.
 			}

@@ -17,7 +17,7 @@ Class MVP_APC : MVP_BaseVehicle
 		RipLevelMin 5;
 		Mass 28000;
 		MaxStepHeight 48;
-		MeleeRange 64; //Used for when the APC runs away.
+		MeleeRange 96; //Used for when the APC runs away.
 		Tag "Armored Personnel Carrier";
 		ActiveSound "Vehicle/APC/Moving";
 		DeathSound "SFX/Explosion";
@@ -224,7 +224,7 @@ Class MVP_APC : MVP_BaseVehicle
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
 				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
-				a_log ("roaming the earth");
+				
 				//Archvile trolling move activated.
 				If (User_CrushMode == CRUSH_ACTIVE)
 				{
@@ -234,17 +234,17 @@ Class MVP_APC : MVP_BaseVehicle
 					{
 						//CorpseTarget = FindNearestCorpse();
 						If (CorpseTarget = FindNearestCorpse()) //Nearby corpse found, go and crush it.
-							KAI_MoveTowards (CorpseTarget.Pos);
+							KAI_MoveTowards (CorpseTarget.Pos,0.8,8);
 						Else //Still no corpse found, so just begin wandering around.
-							A_Wander();
+							KAI_Wander(32,384,64,0.5,8);
 					}
 					
 					//There is an available corpse to head to and crush.
 					If (CorpseTarget)
-						KAI_MoveTowards (CorpseTarget.Pos);
+						KAI_MoveTowards (CorpseTarget.Pos,0.8,8);
 				}
 				Else
-					A_Wander();
+					KAI_Wander(32,384,64,0.5,8);
 					
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
@@ -262,7 +262,7 @@ Class MVP_APC : MVP_BaseVehicle
 				Params.StepThreshold = 32;
 				Params.RunRad = 384;
 				
-				KAI_LandVehicleChase ("Spawn",LVC_ATTACKWHENSCARED,turnradius:8,512,User_RetreatDistance,Params);
+				KAI_LandVehicleChase ("Spawn",LVC_ATTACKWHENSCARED|LVC_PLAYERSASTHREATS,turnradius:8,384,User_RetreatDistance,Params);
 				
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}

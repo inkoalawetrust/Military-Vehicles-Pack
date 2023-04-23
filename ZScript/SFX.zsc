@@ -215,6 +215,7 @@ Class MVP_Flame : KAI_MixinActor
 			F1RE A 0 NoDelay
 			{
 				bXFlip = Random (False,True);
+				Scale.X += FRandom (0.15,-0.15); Scale.Y += FRandom (0.15,-0.15);
 				
 				A_StartSound ("SFX/Fire",CHAN_BODY,flags:CHANF_LOOPING,0.5);
 				A_AttachLight ('Fire',DynamicLight.FlickerLight,"EBDB57",48,40,param:0.25);
