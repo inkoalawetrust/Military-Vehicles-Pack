@@ -93,7 +93,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		If (!User_NoMarines && DeployTimer <= 0 && KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (!NoStateJump) SetStateLabel ("DeployMarines");
-			Return True; //Tell KAI_Chase to end.
+			Return True; //Tell KAI_LandVehicleChase to end.
 		}
 		
 		Return False;
@@ -101,11 +101,13 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Override Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
-		If (Random[pr_cajump](0,255) >= 4) Return False; //Luck is not on your side.
-		If (Turret && Turret.Health <= Turret.SpawnHealth()/4) Return False; //The pain ray is really weak, so don't risk losing it.
-		If (!User_NoMarines || User_NoMarines && !User_PainRay) {a_log ("not now");Return False;} //Still have marines in, or the no pain ray, so don't stop.
+		If (!Turret || IsDead(Turret)) Return False;
+		If (Random[pr_cajump](0,255) >= 3) Return False; //Luck is not on your side.
+		If (Turret.Target && Turret.Distance3DSquared(Turret.Target) > Turret.MaxTargetRange*Turret.MaxTargetRange) Return False; //Too far
+		If (Turret.Health <= Turret.SpawnHealth()/4) Return False; //The pain ray is really weak, so don't risk losing it.
+		If (!User_NoMarines || User_NoMarines && !User_PainRay) Return False; //Still have marines in, or no pain ray, so don't stop.
 		//Don't stop if you or your turrets' target is more dangerous than you.
-		If (AssessThreatLevel (Target) > Self.ThreatLevel || Turret && AssessThreatLevel (Turret.Target) > Self.ThreatLevel) {a_log ("too strong");Return False;}
+		If (AssessThreatLevel (Target, False) > Self.ThreatLevel || AssessThreatLevel (Turret.Target, False) > Self.ThreatLevel) {a_log ("too strong");Return False;}
 		
 		//And at last, run the standard KAI vehicle checks.
 		If (KAI_BaseVehicle.StayStillAndShoot(CheckSightFrom))
@@ -231,7 +233,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_IDLING);
 				A_StartSound ("Vehicle/ArmyCar/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.8);
-				KAI_Wander (32,512,32,0.25);
+				KAI_Wander (48,768,48,0.25);
 				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			}
 		See:

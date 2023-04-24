@@ -94,7 +94,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 			A_StopSound (CHAN_MOVING);
 			A_StartSound("Vehicle/Di-Cokka/Idle",CHAN_IDLING,CHANF_LOOPING,0.4,0.8);
 			ChaseTimer = Random (64,96);
-		StayStillDelay = ChaseTimer+(Random (4,10)*GameTicRate);
+			StayStillDelay = ChaseTimer+(Random (4,10)*GameTicRate);
 			SetStateLabel ("StickAround");
 			Return True;
 		}

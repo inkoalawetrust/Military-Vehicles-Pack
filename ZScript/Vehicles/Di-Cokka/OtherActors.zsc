@@ -396,7 +396,7 @@ Class MVP_DiCokkaShell : MVP_BaseProjectile
 				}
 				
 				A_StartSound ("SFX/MSExplosion",volume:0.7,0.5);
-				MakeAlliesImmuneToExplosion (128);
+				MakeAlliesImmuneToExplosion (Target, 128);
 				A_Explode (128,128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}

@@ -126,7 +126,7 @@ Class MVP_LiquidSplash : KAI_MixinActor
 			{
 				If (RadiusDamage > 0)
 				{
-					MakeAlliesImmuneToExplosion (RadiusDamage);
+					MakeAlliesImmuneToExplosion (Target, RadiusDamage);
 					A_Explode (RadiusDamage,Int(MaxTargetRange),(DontHarmSource ? 0 : XF_HURTSOURCE)|XF_EXPLICITDAMAGETYPE,fulldamagedistance:Int(MeleeRange),damagetype:ExplosionDamageType);
 					RemoveAllyExplosionImmunity();
 				}

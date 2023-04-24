@@ -969,7 +969,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 			GXPL B 4 Bright
 			{
 				A_StartSound ("Vehicle/APC/AutocannonHit",attenuation:0.3);
-				MakeAlliesImmuneToExplosion (128);
+				MakeAlliesImmuneToExplosion (Target, 128);
 				A_Explode (96,128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}
@@ -993,7 +993,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 			GAXP A 4 Bright;
 			GAXP B 4 Bright
 			{
-				MakeAlliesImmuneToExplosion (128);
+				MakeAlliesImmuneToExplosion (Target, 128);
 				A_Explode (96,192,XF_EXPLICITDAMAGETYPE,True,48,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}

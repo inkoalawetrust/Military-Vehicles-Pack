@@ -329,7 +329,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
-				KAI_Wander (48,512,detourfactor:0.75,anglelimit:6);
+				KAI_Wander (48,768,96,detourfactor:0.75,anglelimit:6);
 				KAI_Look (maxseedist:DEFAULT_SEEDISTANCE,DEFAULT_HEARDISTANCE);
 			}
 		See:

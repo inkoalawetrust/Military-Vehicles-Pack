@@ -1,7 +1,5 @@
 //TODO:
 //Add the same dynamic lighting system that the Di-Cokkas' shells use to the other projectiles, it's way better than trying to time A_AttachLight.
-//Add different a AssessThreatLevel for the APC, maybe. Where actors are considered less dangerous as long as the APC has its' MG or autocannon.
-//Change the chances of staying still to shoot for the vehicles. The replacement of MVP_Chace seems to have made them way more likely to sit and shoot.
 
 //FIXME:
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
@@ -11,7 +9,7 @@ first tick. Which is literally worse than the turrets spawning on the ground.*/
 
 //IDEA:
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
-//Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Probably needs a rewrite of the marines.
+//Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Definitely needs a rewrite of the marines.
 //Add smoke that can come off of vehicles when they are low on health.
 
 Class MVP_BaseVehicle : KAI_BaseVehicle
@@ -51,6 +49,12 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.8;
 		DamageFactor "RifleBullet", 0.8;
+	}
+	
+	Override Void UserVariableDefaults ()
+	{
+		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
+		If (User_ChaseTime == 0) User_ChaseTime = (35/2)*30; //This is 35/2, because it assumes that the default See state on the vehicles has 2 tic long states.
 	}
 }
 
@@ -100,6 +104,12 @@ Class MVP_BaseTurret : KAI_BaseTurret
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
+	}
+	
+	Override Void UserVariableDefaults ()
+	{
+		User_RetreatDistance = -1; //Turrets can't move or be scared anyway.
+		User_ChaseTime = 30*4;
 	}
 }
 

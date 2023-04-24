@@ -67,6 +67,9 @@ Mixin Class MVP_UniversalFunctions
 Mixin Class MVP_SharedFunctions
 {
 	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
+	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
+	Int User_ChaseTime; //How much time the vehicle spends looking for its out-of-sight target before giving up.
+	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
 	
 	//Internal variables
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
@@ -119,15 +122,15 @@ Mixin Class MVP_SharedFunctions
 		}
 	}
 	
-	Override Bool IsActorHostile (Actor Other)
-	{
-		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
-	}
-	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 		CorpseTarget = Null;
+	}
+	
+	Override Bool IsActorHostile (Actor Other)
+	{
+		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
 	}
 	
 	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
@@ -269,9 +272,9 @@ Mixin Class MVP_SharedFunctions
 	//Pass the vehicles' user variables as properties.
 	Void UpdateUserVariables()
 	{
-		//RetreatRange = User_RetreatDistance;
-		//ChaseTime = User_ChaseTime;
-		//bNoHeadlights = User_NoHeadlights;
+		RetreatRange = User_RetreatDistance;
+		SearchTime = User_ChaseTime;
+		bNoHeadlights = User_NoHeadlights;
 	}
 	
 	Enum FindCorpseFlags

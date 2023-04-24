@@ -146,6 +146,8 @@ Class MVP_APC : MVP_BaseVehicle
 	
 	Override Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
+		If (User_MarineAmount > 0 || (!Turret || IsDead(Turret))) Return False; //If you still have marines, you are already sitting still enough to drop them.
+		If (!(Random[pr_cajump](0,255) < 2)) Return False; //Not yet your chance to stop.
 		//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
 		Double Range;
 		If (Turret) Range = Turret.MaxTargetRange;
@@ -158,20 +160,16 @@ Class MVP_APC : MVP_BaseVehicle
 				Return False;
 
 			//Don't stop if your turret is too weak.
-			If (Turret && Turret.Health >= Turret.SpawnHealth()/4)
+			If (Turret.Health >= Turret.SpawnHealth()/4)
 			{
-				//Less like to stop if marines are inside still.
-				If (User_MarineAmount <= 0 && Random[pr_cajump](0,255) < 4 || User_MarineAmount > 0 && Random[pr_cajump](0,255) < 2)
+				If (KAI_BaseVehicle.StayStillAndShoot (CheckSightFrom)) //Run basic checks.
 				{
-					If (KAI_BaseVehicle.StayStillAndShoot (CheckSightFrom)) //Run basic checks.
-					{
-						A_StopSound (CHAN_MOVING);
-						A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
-						ChaseTimer = Random (16,48);
-						StayStillDelay = ChaseTimer+(Random (2,4)*GameTicRate);
-						SetStateLabel ("StickAround");
-						Return True;
-					}
+					A_StopSound (CHAN_MOVING);
+					A_StartSound("Vehicle/APC/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.6);
+					ChaseTimer = Random (16,48);
+					StayStillDelay = ChaseTimer+(Random (2,4)*GameTicRate);
+					SetStateLabel ("StickAround");
+					Return True;
 				}
 			}
 		}
@@ -236,7 +234,7 @@ Class MVP_APC : MVP_BaseVehicle
 						If (CorpseTarget = FindNearestCorpse()) //Nearby corpse found, go and crush it.
 							KAI_MoveTowards (CorpseTarget.Pos,0.8,8);
 						Else //Still no corpse found, so just begin wandering around.
-							KAI_Wander(32,384,64,0.5,8);
+							KAI_Wander(48,768,72,0.5,8);
 					}
 					
 					//There is an available corpse to head to and crush.
@@ -244,7 +242,7 @@ Class MVP_APC : MVP_BaseVehicle
 						KAI_MoveTowards (CorpseTarget.Pos,0.8,8);
 				}
 				Else
-					KAI_Wander(32,384,64,0.5,8);
+					KAI_Wander(48,768,72,0.5,8);
 					
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
