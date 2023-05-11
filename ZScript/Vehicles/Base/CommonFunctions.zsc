@@ -70,7 +70,6 @@ Mixin Class MVP_SharedFunctions
 	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
 	Int User_ChaseTime; //How much time the vehicle spends looking for its out-of-sight target before giving up.
 	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
-	
 	//Internal variables
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
 	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
@@ -418,6 +417,31 @@ Mixin Class MVP_SharedFunctions
 				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);
 			Else
 				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);
+	}
+	
+	//Throws actors away from the caller, the code is mostly copied from BlastActor.
+	Void FlingActor (Actor Victim, Double Speed, Bool Harmless, Bool PushImmovables = False)
+	{
+		Double Ang = AngleTo(Victim);
+		Vector2 Move = AngleToVector(Ang, Speed);
+		
+		Victim.Vel.XY = Move;
+		Victim.Vel.Z = 500. / Victim.Mass;
+		
+		If (Victim.Player)
+		{
+			// Players handled automatically
+		}
+		Else If (!Harmless)
+		{
+			Victim.bBlasted = True;
+		}
+		
+		If (Victim.bTouchy) // Touchy objects die when blasted
+		{
+			Victim.bArmed = False; // Disarm
+			Victim.DamageMobj(Self, Self, Victim.Health, 'Melee', DMG_FORCED|DMG_EXPLOSION);
+		}
 	}
 }
 

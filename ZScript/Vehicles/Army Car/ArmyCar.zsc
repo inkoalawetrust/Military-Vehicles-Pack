@@ -85,7 +85,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	
 	Override Bool CanAttack ()
 	{
-		Return (!User_NoMarines || User_PainRay);
+		Return (!(CurSector.Flags & Sector.SECF_NOATTACK) && (!User_NoMarines || User_PainRay));
 	}
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
@@ -248,7 +248,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Params.StepThreshold = 48;
 				Params.RunRad = 384;
 				
-				KAI_LandVehicleChase(chaseflags:CHF_DONTIDLE,retreatdist:User_RetreatDistance,moveparams:Params);
+				KAI_LandVehicleChase(chaseflags:CHF_DONTIDLE,moveparams:Params);
 				
 				Return State (Null);
 			}

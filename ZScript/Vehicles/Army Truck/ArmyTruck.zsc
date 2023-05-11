@@ -91,13 +91,18 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		"%o is really bad at bullfighting.",
 		"A trucks' passion was more than %o's heart could withstand."};
 		
-		If (Inflictor && Inflictor != Self) //If another actor get killed the player on your behalf.
+		If (Inflictor && Inflictor != Self) //If another actor killed the player on your behalf.
 			Return Inflictor.Obituary;
 		
 		If (MOD == 'Melee')
 			Return MeleeObituaries [Random (0,MeleeObituaries.Size() - 1)];
 		
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+	
+	Bool CanDriveOver (Actor Other)
+	{
+		Return (Other.bSolid && (Other.Pos.Z + Other.Height - Pos.Z <= MaxStepHeight/4));
 	}
 	
 	//https://www.youtube.com/watch?v=J9FImc2LOr8
@@ -110,8 +115,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			Return False;
 		
 		//Make the truck able to climb over really short actors.
-		If (IsInanimateObject (Victim) && Victim.bSolid && (Victim.Pos.Z + Victim.Height - Pos.Z <= MaxStepHeight/4))
-			SetOrigin ((Pos.X,Pos.Y,Victim.Pos.Z+Victim.Height),True);
+		If (IsInanimateObject (Victim) && CanDriveOver (Victim))
+			SetOrigin ((Pos.X,Pos.Y,Victim.Pos.Z+Victim.Height+2),True);
 		
 		//Allows both friends and enemies to be pushed out of the way, while only damaging enemies.
 		If (IsThrustable (Victim))
@@ -127,8 +132,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			Vel *= Mul;
 			
 			//Stop ramming if you've hit a powerful enemy,  or one that shouldn't be pushed.
-			//MAYDO: Change this in the future to have the truck stop only if it hit a VERY powerful enemy ?
-			If (AssessThreatLevel (Victim) >= THREAT_VERYDANGEROUS || !IsThrustable (Victim) && IsIndestructible (Victim))
+			If (AssessThreatLevel (Victim) >= THREAT_VERYDANGEROUS || !IsThrustable (Victim) && IsIndestructible (Victim) && !CanDriveOver(Victim))
 			{
 				HitThings.Clear();
 				TotalMassHit = 0;
@@ -265,7 +269,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		If (!(Mobj.Pos.Z + Mobj.Height > Pos.Z && Mobj.Pos.Z + Mobj.Height < Pos.Z + Height)) Return False; //Actor is too high or low from the truck.
 		
-		If (IsHostile (Mobj)) Return True; //Enemy in the way.
+		If (IsActorHostile (Mobj)) Return True; //Enemy in the way.
 		
 		If (HostileOnly) Return False;
 		
@@ -273,7 +277,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		If (!IsIndestructible (Mobj) && IsInanimateObject (Mobj) && Mobj.Health <= 500 && IsThrustable (Mobj)) Return True; //Calling this means the truck is already aimed at a target, and if only a (Relatively) weak destructible prop is in the way, then charge anyway.
 		
-		If (IsIndestructible (Mobj) && !IsThrustable (Mobj)) Return False; //Hit an unpushable object, or rather, one that shouldn't be flung around.
+		If (IsIndestructible (Mobj) && !IsThrustable (Mobj) && !CanDriveOver(Mobj)) Return False; //Hit an unpushable object, or rather, one that shouldn't be flung around.
 		
 		Return True;
 	}
@@ -343,7 +347,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				Params.Attempts = 32;
 				Params.StepThreshold = 56;
 				Params.RunRad = 512;
-				KAI_LandVehicleChase (flags:LVC_ATTACKWHENSCARED|LVC_MAKEFRIENDSIDLE,turnradius:6,followdist:384,retreatdist:User_RetreatDistance,moveparams:Params);
+				KAI_LandVehicleChase (flags:LVC_ATTACKWHENSCARED|LVC_MAKEFRIENDSIDLE,turnradius:6,followdist:384,moveparams:Params);
 			}
 			Loop;
 		//The trucks' marine deploying loop.
@@ -452,7 +456,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				If (TotalMassHit >= 10000 || !Target || CancelCharge)
 				{
 					HitThings.Clear();
-					TotalMassHit = 0;
+					TotalMassHit = 0;a_log ("enough smashing");
 					bSkullFly = bSlidesOnWalls = CancelCharge = False;
 					If (WarningZone)
 						WarningZone.Destroy();

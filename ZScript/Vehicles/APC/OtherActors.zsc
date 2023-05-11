@@ -131,6 +131,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			APC3 # 1
 			{
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				//DoCombatTraverse (Target);
 				RotateToVehicle();
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();
@@ -346,6 +347,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			{
 				If (WarningZone) WarningZone.Destroy();
 				A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				//DoCombatTraverse (Target);
 				RotateToVehicle();
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();
@@ -556,6 +558,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			{
 				If (WarningZone) WarningZone.Destroy();
 				A_FaceTarget (6,6,flags:FAF_MIDDLE);
+				//DoCombatTraverse (Target);
 				RotateToVehicle();
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();
@@ -680,7 +683,6 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 	Const Rips = 5; //Roughly how many actors it'll rip.
 	Bool HitLiquid;
 	
-	//BUG: The rounds don't seem to deflect off indestructible enemies anymore. Probably because of the Super. call below.
 	Override Int SpecialMissileHit (Actor Victim)
 	{
 		If (Super.SpecialMissileHit(Victim) == 1) Return 1;
@@ -798,7 +800,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		//Be at least somewhat likely to bounce off if hitting an APC.
 		Else If ((Victim Is "MVP_APC" || Victim Is "MVP_APCProp") && DeflectProjectile (Victim,128,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10))) Return 1;
 		//Be very likely to bounce off a non-bleeding actor with a lot of health.
-		Else If (Victim.bNoBlood && !IsIndestructible (Victim) && Victim.SpawnHealth() >= 2000 && DeflectProjectile (Victim,64,FRandom(0.5,0.7),FRandom (1.,0.8),(6,-6),(6,-6),attenuation:0.75)) {bRipper = False; Return 1;}
+		Else If (Victim.bNoBlood && !IsIndestructible (Victim) && Victim.SpawnHealth() >= 2000 && DeflectProjectile (Victim,64,FRandom(0.5,0.7),FRandom (1.,0.8),(6,-6),(6,-6),attenuation:0.75)) Return 1;
 		
 		
 		Return -1;

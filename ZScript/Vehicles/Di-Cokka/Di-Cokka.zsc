@@ -147,7 +147,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
-				KAI_LandVehicleChase ("Spawn",chaseflags:CHF_DONTIDLE,followdist:256,User_RetreatDistance);
+				KAI_LandVehicleChase ("Spawn",chaseflags:CHF_DONTIDLE,followdist:256);
 				If (!User_NoCorpseCrush) KAI_CrushCorpses (1);
 			}
 			Loop;

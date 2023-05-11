@@ -108,7 +108,7 @@ Class MVP_APC : MVP_BaseVehicle
 	
 	Override Bool CanAttack ()
 	{
-		Return (User_MarineAmount > 0 || Turret && !IsDead(Turret));
+		Return (!(CurSector.Flags & Sector.SECF_NOATTACK) && (User_MarineAmount > 0 || Turret && !IsDead(Turret)));
 	}
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
@@ -136,9 +136,9 @@ Class MVP_APC : MVP_BaseVehicle
 	{
 		Int Lvl = Super.AssessThreatLevel (Other, CheckPlayers);
 		
-		//If you have a turret, and the other actor is not unstoppable, harmless, or a marine or player on a turret.
-		//Then dial down the returned threat level a notch. Since armored APCs' trivialize a lot of enemies.
-		If (Turret && !IsDead (Turret) && Lvl != THREAT_UNSTOPPABLE && Lvl <= THREAT_NONE && !MarineOrPlayerOnTurret (Other))
+		//If you have a turret, and the other actor is not above THREAT_VERYDANGEROUS, harmless, or a marine or player on a turret.
+		//Then dial down the returned threat level a notch. Since armed APCs' trivialize a lot of enemies.
+		If (Turret && !IsDead (Turret) && Lvl <= THREAT_VERYDANGEROUS && Lvl <= THREAT_NONE && !MarineOrPlayerOnTurret (Other))
 			Return Lvl-1;
 		
 		Return Lvl;
@@ -147,7 +147,7 @@ Class MVP_APC : MVP_BaseVehicle
 	Override Bool StayStillAndShoot (Actor CheckSightFrom)
 	{
 		If (User_MarineAmount > 0 || (!Turret || IsDead(Turret))) Return False; //If you still have marines, you are already sitting still enough to drop them.
-		If (!(Random[pr_cajump](0,255) < 2)) Return False; //Not yet your chance to stop.
+		If (!(Random[pr_cajump](0,255) < 1)) Return False; //Not yet your chance to stop.
 		//Have a chance to stop and just have your turret go to town, but be more likely to do so if there's no more marines inside.
 		Double Range;
 		If (Turret) Range = Turret.MaxTargetRange;
@@ -260,7 +260,7 @@ Class MVP_APC : MVP_BaseVehicle
 				Params.StepThreshold = 32;
 				Params.RunRad = 384;
 				
-				KAI_LandVehicleChase ("Spawn",LVC_ATTACKWHENSCARED|LVC_PLAYERSASTHREATS,turnradius:8,384,User_RetreatDistance,Params);
+				KAI_LandVehicleChase ("Spawn",LVC_ATTACKWHENSCARED,turnradius:8,384,Params);
 				
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
