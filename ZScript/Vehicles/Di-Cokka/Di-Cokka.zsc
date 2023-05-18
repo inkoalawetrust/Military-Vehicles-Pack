@@ -73,7 +73,9 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		If (Turret)
 		{
 			Turret.bNoTargetPrediction = !User_TargetPrediction;
-			Turret.bNoCombatTraverse = !User_RealisticTurretTurn;
+			//Turret.bNoCombatTraverse = !User_RealisticTurretTurn;
+			If (!User_RealisticTurretTurn)
+				Turret.CombatAngleTurnRate = Turret.CombatPitchTurnRate = 105;
 		}
 	}
 	
@@ -229,6 +231,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		KAI_BaseTurret.MinimumPitch 10;
 		KAI_BaseTurret.CombatAngleTurnRate 24; //The M4 Shermans' turret traverse rate, since the Di-Cokka kinda looks like a cartoony Sherman with a German turret.
 		KAI_BaseTurret.CombatPitchTurnRate 24;
+		KAI_BaseTurret.AttackSpeed 25;
+		KAI_BaseTurret.FastAttackSpeed 30;
 		+KAI_BaseTurret.TransferDamage;
 		+KAI_BaseTurret.DontStayAround;
 		
@@ -277,7 +281,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!MVP_BaseTurret.ShouldAttack()) Return False;
-		If (!CheckFOV (Target,90/2)) Return False;
+		If (Target && !CheckFOV (Target,90/2)) Return False;
 		If (IsOverPitchLimits (Target,14,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		//Increase attack chance when close to death.
@@ -368,7 +372,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Vector2 HorzSpread = !IsTripleShot ? (0.2,-0.2) : (0.4,-0.4);
 		Vector2 VertSpread = !IsTripleShot ? (0.25,-0.25) : (0.5,-0.5);
 		Proj = A_SpawnProjectile ("MVP_DiCokkaShell",14,flags:CMF_AIMDIRECTION,Pitch);
-		HandleTargetPrediction (Proj,HorzSpread,VertSpread,128);
+		//HandleTargetPrediction (Proj,HorzSpread,VertSpread,128);
+		AddProjectileSpread (Proj,HorzSpread,VertSpread);
 		Proj.Species = Species;
 		Proj.bDontHarmSpecies = True;
 		Return TurretVisualElevation;
@@ -427,7 +432,8 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 			MSV1 # 1
 			{
 				If (WarningZone) WarningZone.Destroy();
-				A_FaceTarget (3,3,flags:FAF_MIDDLE);
+				//If (bNoCombatTraverse) A_FaceTarget (3,3,flags:FAF_MIDDLE);
+				DoCombatTraverse();
 				RotateToVehicle();
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();

@@ -13,6 +13,8 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		KAI_BaseTurret.MaximumPitch -60;
 		KAI_BaseTurret.MinimumPitch 20;
 		KAI_BaseTurret.TurnSoundRadius 4;
+		KAI_BaseTurret.AttackSpeed 230;
+		KAI_BaseTurret.AttackSpeed 250;
 		KAI_BaseTurret.CombatAngleTurnRate 55;
 		KAI_BaseTurret.CombatPitchTurnRate 30;
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
@@ -33,8 +35,18 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	Bool MGLOFCheck()
 	{
 		Let Check = New ("MVP_APCMachineGunLOFCheck");
-		
-		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		TurretAimPos = UpdateTurretAimPos();
+		Vector3 Direction;
+		//If you have a target, fire the LOF check straight at the actor for the LOF check.
+		If (Target)
+		{
+			Double PitchTo = PitchTo (Target,14,GetTurretAimPosOffset());
+			Direction = (AngleToVector(AngleTo(Target), Cos(PitchTo)), -Sin(PitchTo));
+		}
+		//If no target, fire it at the actual aiming direction. This is how it used to be done, but because turrets now (12/5/2023) actually rotate ahead
+		//of their target, that would lead to issues with the LOF returning false.
+		Else
+			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 		
 		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
 		Check.Shooter = Self;
@@ -43,6 +55,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		
 		If (Check.BadLOF)
 		{
+		a_log ("bad lof");
 			bDontStayAround = True;
 			Check.Destroy();
 			Return False;
@@ -55,7 +68,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!KAI_BaseTurret.ShouldAttack()) Return False;
-		If (!CheckFOV (Target,90/2)) Return False;
+		If (Target && !CheckFOV (Target,90/2)) Return False; //KLUDGE: We need to do the null check here, because as of GZDoom 4.10, it's not done internally. Crashing the game.
 		If (IsOverPitchLimits (Target,DualMGAttackHeight,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target)&& MGLOFCheck())
@@ -130,8 +143,8 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		See:
 			APC3 # 1
 			{
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				//DoCombatTraverse (Target);
+				//A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				DoCombatTraverse();
 				RotateToVehicle();
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();
@@ -149,7 +162,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				//A_FaceTarget(0,0,flags:FAF_MIDDLE);
 				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
-				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
+				AddProjectileSpread (Proj,(0.8,-0.8),(1.0,-1.0));
 				Frame = UpdateTurretElevation (4,1,7,10); //E, B, H, K
 			}
 			APC3 # 3 Light ("50CalFiringLight") Bright //Left shot
@@ -157,7 +170,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				//A_FaceTarget(0,0,flags:FAF_MIDDLE);
 				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
-				HandleTargetPrediction (Proj,(0.8,-0.8),(1.0,-1.0),1280);
+				AddProjectileSpread (Proj,(0.8,-0.8),(1.0,-1.0));
 				Frame = UpdateTurretElevation (5,2,8,11); //F, C, I, L
 			}
 			APC3 # 1
@@ -171,6 +184,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				}
 				
 				If (Random2[pr_monsterrefire]() < 48 &&
+				//If the target is too high or low to shoot.
 				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
 				!MGLOFCheck()))
 				{
@@ -183,7 +197,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				Frame = UpdateTurretElevation (3,0,6,9); //D, A, G, J
 				Return State (Null);
 			}
-			APC3 # 0 KAI_TurretRefire (48,"See",True);
+			APC3 # 0 KAI_TurretRefire (48,"See",True,fov:90/2);
 			Goto Fire+6;
 		Death:
 			APC3 M 0 {Actor Boom = Spawn ("MVP_Explosion",Pos); Boom.bNoGravity = True;}
@@ -286,6 +300,8 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		KAI_BaseVehicle.VehicleTurret "MVP_APCMGTurret";
 		KAI_BaseTurret.MaximumPitch -50;
 		KAI_BaseTurret.MinimumPitch 20;
+		KAI_BaseTurret.AttackSpeed 180;
+		KAI_BaseTurret.FastAttackSpeed 200;
 		KAI_BaseTurret.TurnSoundRadius 4;
 		+MissileEvenMore;
 	}
@@ -314,7 +330,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!KAI_BaseTurret.ShouldAttack()) Return False;
-		If (!CheckFOV (Target,90/2)) Return False;
+		If (Target && !CheckFOV (Target,90/2)) Return False; //KLUDGE: We need to do the null check here, because as of GZDoom 4.10, it's not done internally. Crashing the game.
 		If (IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,400,128,(0,0,12)))
@@ -346,8 +362,8 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			APC2 # 1
 			{
 				If (WarningZone) WarningZone.Destroy();
-				A_FaceTarget (5,5,flags:FAF_MIDDLE);
-				//DoCombatTraverse (Target);
+				//A_FaceTarget (5,5,flags:FAF_MIDDLE);
+				DoCombatTraverse();
 				RotateToVehicle();
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();
@@ -365,7 +381,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				If (bNoCombatTraverse) A_FaceTarget (0,0,flags:FAF_MIDDLE);
 				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
 				Actor Proj = A_SpawnProjectile ("MVP_AutocannonShell",16,flags:CMF_AIMDIRECTION,Pitch); //pew pew
-				HandleTargetPrediction (Proj,(0.3,-0.3),(0.45,-0.45),768);
+				AddProjectileSpread (Proj,(0.3,-0.3),(0.45,-0.45));
 				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then use the proximity fuze.
 				If (Target && IsFlying (Target) && !Target.bNoRadiusDmg)
 				{
@@ -397,7 +413,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				Frame = UpdateTurretElevation (2,0,4,6); //C, A, E, G
 				Return State (Null);
 			}
-			APC2 # 0 KAI_TurretRefire (10,"See",True);
+			APC2 # 0 KAI_TurretRefire (10,"See",True,fov:90/2);
 			Goto Fire+6;
 		Death: //When TG5 finishes the sprites for the gunner getting out the turret, add code to make them work here.
 			APC2 Q 0
@@ -495,6 +511,8 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 		FriendlySeeBlocks 48; //Reduced sight range too.
 		KAI_BaseTurret.MaximumPitch -50; //Doesn't elevate quite as high as the other APC turrets.
 		KAI_BaseTurret.MinimumPitch 20;
+		KAI_BaseTurret.AttackSpeed 200;
+		KAI_BaseTurret.FastAttackSpeed 220;
 		KAI_BaseTurret.CombatAngleTurnRate 50;
 		KAI_BaseTurret.CombatPitchTurnRate 37;
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL; //Not as dangerous as the autocannon or dual MG.
@@ -526,7 +544,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!KAI_BaseTurret.ShouldAttack()) Return False;
-		If (!CheckFOV (Target,90/2)) Return False;
+		If (Target && !CheckFOV (Target,90/2)) Return False; //KLUDGE: We need to do the null check here, because as of GZDoom 4.10, it's not done internally. Crashing the game.
 		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
 		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,150,0,(0,0,8)))
@@ -557,8 +575,8 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			APC2 # 1
 			{
 				If (WarningZone) WarningZone.Destroy();
-				A_FaceTarget (6,6,flags:FAF_MIDDLE);
-				//DoCombatTraverse (Target);
+				//A_FaceTarget (6,6,flags:FAF_MIDDLE);
+				DoCombatTraverse();
 				RotateToVehicle();
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
 				UpdateTurretSnapTimer();
@@ -582,7 +600,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 					A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);
 				
 				Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",8,flags:CMF_AIMDIRECTION,Pitch);
-				HandleTargetPrediction (Proj,(0.4,-0.4),(0.55,-0.55),1024);
+				AddProjectileSpread (Proj,(0.4,-0.4),(0.55,-0.55));
 				Frame = UpdateTurretElevation (11,9,13,15); //L, J, N, P
 			}
 			APC2 # 1
@@ -617,7 +635,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				Frame = UpdateTurretElevation (10,8,12,14); //K, I, M, O
 				Return State (Null);
 			}
-			APC2 # 0 KAI_TurretRefire (128,"See",True);
+			APC2 # 0 KAI_TurretRefire (128,"See",True,fov:90/2);
 			Goto Fire+6;
 		Death:
 			APC2 V 20
@@ -879,7 +897,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		If (IsAirburst && Tracer && bMissile) //bMissile is removed when projectiles explode. Making this check not run on exploded shells.
 		{
 			//And are within blast range of the tracer.
-			If (Tracer.Health > 0 && Distance3DSquared (Tracer) <= 176*176)
+			If (!IsDead(Tracer) && Distance3DSquared (Tracer) <= 176*176)
 			{
 				FLineTraceData TracerCheck;
 				

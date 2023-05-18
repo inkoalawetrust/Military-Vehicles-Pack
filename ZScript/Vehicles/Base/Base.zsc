@@ -1,5 +1,8 @@
 //TODO:
 //Add the same dynamic lighting system that the Di-Cokkas' shells use to the other projectiles, it's way better than trying to time A_AttachLight.
+//Add smoke that can come off of vehicles when they are low on health.
+//Add spent casings as a temporary visual effect when the vehicles shoot.
+//Add the whizzing sound bullets make on the rifle and 50 BMG rounds, by playing them on loop on the bullet itself obviously. Also at bullet cracks.
 
 //FIXME:
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
@@ -10,7 +13,7 @@ first tick. Which is literally worse than the turrets spawning on the ground.*/
 //IDEA:
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
 //Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Definitely needs a rewrite of the marines.
-//Add smoke that can come off of vehicles when they are low on health.
+//Make bullet splashes work on swimmable 3D floors.
 
 Class MVP_BaseVehicle : KAI_BaseVehicle
 {
@@ -117,6 +120,8 @@ Class MVP_BaseProp : KAI_BaseProp
 {
 	Default
 	{
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
 		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
 	}
 }
@@ -125,6 +130,8 @@ Class MVP_BaseTurretProp : KAI_BaseTurretProp
 {
 	Default
 	{
+		XScale 0.65;
+		YScale 0.541666; //0.65 / 1.2
 		Tag "Military Vehicle Turret Prop Base (You really shouldn't be seeing this in-game)";
 	}
 }

@@ -20,6 +20,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		+MissileMore;
 		+LookAllAround;
+		+KAI_BaseTurret.NoCombatTraverse; //Keep legacy code.
 		+KAI_BaseTurret.FallOnDeath;
 	}
 	Int Patience;
