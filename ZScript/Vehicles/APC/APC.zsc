@@ -7,6 +7,7 @@ Class MVP_APC : MVP_BaseVehicle
 		//$Sprite APC1A1
 		Health 1500;
 		GibHealth 500;
+		WoundHealth 500; //Every wound health I decide on ends up matching up with the gib health for some reason lmao.
 		Speed 12;
 		FastSpeed 16;
 		Height 72;
@@ -52,6 +53,8 @@ Class MVP_APC : MVP_BaseVehicle
 		AttackStates.Push (FindState("SpawnLoop",True));
 		AttackStates.Push (FindState("EndDeploy",True));
 	}
+	
+	Mixin MVP_APC_Smoke;
 	
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
@@ -442,5 +445,26 @@ Class MVP_APC : MVP_BaseVehicle
 				SpawnDeathFlames();
 			}
 			Stop;
+	}
+}
+
+Mixin Class MVP_APC_Smoke
+{
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!Super.SpawnDamageSmoke()) Return False;
+		Console.Printf ("Where there's smoke, there's fire. - %s, 2023",GetClassName());
+		Double CardAng = GetNearestCardinalAngle();
+		Vector3 OldPos = Pos;
+		Vector3 SpawnPos = Vec3Angle (-40,CardAng);
+		SetXYZ (SpawnPos);
+		SpawnPos = KAI_Math.Vec3OffsetRelative (Self,(FRandom(-24,24),FRandom(-4,4)-48,56));
+		SetXYZ (OldPos);
+		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Smoke.Roll = FRandom(-180,180);
+		Smoke.A_SetScale (FRandom(0.7,1.2));
+		Smoke.Vel.Y = Smoke.Vel.X * Sin (CardAng) - FRandom (-1,-2) * Cos (CardAng);
+		Smoke.Vel.Z = FRandom (1.5,6);
+		Return True;
 	}
 }

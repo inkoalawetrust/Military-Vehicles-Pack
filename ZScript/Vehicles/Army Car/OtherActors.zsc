@@ -244,6 +244,7 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 		YScale 0.541666; //0.65 / 1.2
 		Health 800;
 		GibHealth 200;
+		WoundHealth 200;
 		Tag "Army Car (Prop)";
 		KAI_BaseVehicle.VehicleTurret "MVP_PainRayProp";
 		DamageFactor "MarineGrenade", 1.25;
@@ -269,6 +270,8 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 				Turret.Angle += FRandom (0,360);
 		}
 	}
+	
+	Mixin MVP_ArmyCar_Smoke;
 	
 	Override Void SpawnHeadlights ()
 	{
@@ -382,7 +385,7 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 				
 				//Spawn parts of the vehicle as debris.
 				A_SpawnItemEx ("MVP_ArmyCarDoor",-Default.Radius*0.75,-48,32,FRandom(-0.3,0.3),FRandom (-16,-32),FRandom (4,12),flags:SXF_SETTARGET);
-				A_SpawnItemEx ("MVP_ArmyCarHood",64,0,38,FRandom(-1,1),FRandom (-1,1),FRandom (8,32),flags:SXF_SETTARGET);
+				A_SpawnItemEx ("MVP_ArmyCarHood",70,0,38,FRandom(-1,1),FRandom (-1,1),FRandom (8,32),flags:SXF_SETTARGET);
 				
 				//Don't spawn the spare wheel if the car had a back open trunk, since if it did, that would mean that it had no spare wheel visible on it.
 				If (!HasSupplies())

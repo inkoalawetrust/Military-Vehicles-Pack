@@ -289,3 +289,12 @@ Class MVP_Spark : Actor
 			Stop;
 	}
 }
+
+Class MVP_DamageSmoke : RocketSmokeTrail
+{
+	Default
+	{
+		+WindThrust; //Doesn't work for some reason ? There's nothing internally that should stop wind from working on the smoke particles.
+		+RollSprite;
+	}
+}

@@ -64,6 +64,29 @@ Mixin Class MVP_UniversalFunctions
 	}
 }
 
+Mixin Class MVP_DamageSmokeHandling
+{
+	Int DamageSmokeDelay;
+	Property SmokeDelay : DamageSmokeDelay;
+	
+	//Handle spawning damage smoke when below WoundHealth.
+	//Technically this would cause smoke to spawn on most vehicles if you set their health to something like 100, but whatever.
+	Virtual Bool SpawnDamageSmoke()
+	{
+		If (Health > WoundHealth || IsDead(Self)) Return False;
+		Return True;
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (IsFrozen()) Return;
+		
+		If (DamageSmokeDelay <= 0 || GetAge() % DamageSmokeDelay)
+			SpawnDamageSmoke();
+	}
+}
+
 Mixin Class MVP_SharedFunctions
 {
 	String User_DefaultOrder; //The default order the vehicle follows upon spawning.

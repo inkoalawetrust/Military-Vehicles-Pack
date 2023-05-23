@@ -8,6 +8,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		//$Sprite MSV1Z1
 		Health 600;
 		GibHealth 100;
+		WoundHealth 300;
 		Radius 48;
 		Height 60;
 		Speed 8;
@@ -520,6 +521,19 @@ Mixin Class MVP_DiCokkaSharedVirtuals
 	{
 		Headlights.Push (SpawnVehicleHeadlight (Self,(32,32,24),spotlightangles:(20,30)));
 		Headlights.Push (SpawnVehicleHeadlight (Self,(32,-32,24),spotlightangles:(20,30)));
+	}
+	
+	//Visible damage was added after the Di-Cokka was made. So it's kinda like having a cartoony and less cartoony damage indicator now lol.
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!Super.SpawnDamageSmoke()) Return False;
+		Vector3 SpawnPos = Vec3Angle (32,GetNearestCardinalAngle());
+		SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-4,4),FRandom(-12,12),56));
+		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Smoke.Roll = FRandom(-180,180);
+		Smoke.A_SetScale (FRandom(0.7,1.2));
+		Smoke.Vel.Z = FRandom (1,4);
+		Return True;
 	}
 	
 	Override Void Tick()

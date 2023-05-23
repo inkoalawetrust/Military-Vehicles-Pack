@@ -8,6 +8,7 @@ Class MVP_ArmyTruckProp : MVP_BaseProp
 		//$Sprite TRK1A1
 		Health 700;
 		GibHealth 300;
+		WoundHealth 300;
 		XScale 0.65;
 		YScale 0.541666; //0.65 / 1.2
 		Height 96;
@@ -40,6 +41,8 @@ Class MVP_ArmyTruckProp : MVP_BaseProp
 		Headlights.Push(SpawnVehicleHeadlight(Self,(128,28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
 		Headlights.Push(SpawnVehicleHeadlight(Self,(128,-28,8),VHSF_BACKLIGHT,(255,0,0),32,(40,80)));
 	}
+	
+	Mixin MVP_ArmyTruck_Smoke;
 	
 	Bool User_OpenBackDoor;
 	

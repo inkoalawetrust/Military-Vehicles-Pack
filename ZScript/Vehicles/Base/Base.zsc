@@ -1,5 +1,4 @@
 //TODO:
-//Add smoke that can come off of vehicles when they are low on health by spawning RocketSmokeTrail in set spots relative to the vehicle.
 //Move the MVP documentation to a Github wiki instead of the document I currently use.
 
 //FIXME:
@@ -24,6 +23,7 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		Species "Military";
 		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
 		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
+		MVP_BaseVehicle.SmokeDelay 12;
 		
 		//Damage factors that act as the vehicles "armor".
 		DamageFactor 0.9; //Generic damage factor for all damage.
@@ -56,6 +56,8 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
 		If (User_ChaseTime == 0) User_ChaseTime = (35/2)*30; //This is 35/2, because it assumes that the default See state on the vehicles has 2 tic long states.
 	}
+	
+	Mixin MVP_DamageSmokeHandling;
 }
 
 Class MVP_BaseTurret : KAI_BaseTurret
@@ -120,7 +122,9 @@ Class MVP_BaseProp : KAI_BaseProp
 		XScale 0.65;
 		YScale 0.541666; //0.65 / 1.2
 		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
+		MVP_BaseProp.SmokeDelay 12;
 	}
+	Mixin MVP_DamageSmokeHandling;
 }
 
 Class MVP_BaseTurretProp : KAI_BaseTurretProp

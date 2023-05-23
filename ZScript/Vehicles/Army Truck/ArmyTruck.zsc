@@ -7,6 +7,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		//$Sprite TRK1A1
 		Health 900;
 		GibHealth 250;
+		WoundHealth 300;
 		Height 96;
 		Radius 72;
 		DeathHeight 88;
@@ -55,6 +56,8 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		
 		If (DeployTimer) DeployTimer--;
 	}
+	
+	Mixin MVP_ArmyTruck_Smoke;
 	
 	Override Void PostBeginPlay ()
 	{
@@ -550,5 +553,23 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			}
 			TRK1 N -1;
 			Stop;
+	}
+}
+
+Mixin Class MVP_ArmyTruck_Smoke
+{
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!Super.SpawnDamageSmoke()) Return False;
+		
+		Double CardAng = GetNearestCardinalAngle();
+		Vector3 SpawnPos = Vec3Angle (-130,CardAng);
+		SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-16,16),FRandom(-16,16),48));
+		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Smoke.Roll = FRandom(-180,180);
+		Smoke.A_SetScale (FRandom(0.7,1.2));
+		Smoke.Vel.X = FRandom (1,2) * Cos (CardAng);
+		Smoke.Vel.Z = FRandom (1.5,6);
+		Return True;
 	}
 }

@@ -7,6 +7,7 @@ Class MVP_APCProp : MVP_BaseProp
 		//$Sprite APC1A1
 		Health 1500;
 		GibHealth 500;
+		WoundHealth 500;
 		Height 72;
 		DeathHeight 72;
 		Radius 64;
@@ -36,6 +37,8 @@ Class MVP_APCProp : MVP_BaseProp
 		TurretOffsets = (0.1,0,4.25);
 		Super.PostBeginPlay();
 	}
+	
+	Mixin MVP_APC_Smoke;
 	
 	//Handle spawning either the autocannon or MG turret prop.
 	Override Void SpawnVehicleTurret ()

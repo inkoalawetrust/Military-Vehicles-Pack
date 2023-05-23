@@ -10,6 +10,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		FastSpeed 24;
 		Health 800;
 		GibHealth 200;
+		WoundHealth 200;
 		Tag "Army Car";
 		KAI_BaseVehicle.VehicleTurret "MVP_PainRay";
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
@@ -46,6 +47,8 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		
 		If (DeployTimer) DeployTimer--;
 	}
+	
+	Mixin MVP_ArmyCar_Smoke;
 	
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
@@ -317,7 +320,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				
 				//Spawn parts of the vehicle as debris.
 				A_SpawnItemEx ("MVP_ArmyCarDoor",-Default.Radius*0.75,-48,32,FRandom(-0.3,0.3),FRandom (-16,-32),FRandom (4,12),flags:SXF_SETTARGET);
-				A_SpawnItemEx ("MVP_ArmyCarHood",64,0,38,FRandom(-1,1),FRandom (-1,1),FRandom (8,32),flags:SXF_SETTARGET);
+				A_SpawnItemEx ("MVP_ArmyCarHood",70,0,38,FRandom(-1,1),FRandom (-1,1),FRandom (8,32),flags:SXF_SETTARGET);
 				
 				//Don't spawn the spare wheel if the car had a back open trunk, since if it did, that would mean that it had no spare wheel visible on it.
 				If (!HasSupplies())
@@ -353,5 +356,20 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 			MCR1 ABCDEFG 0;
 			MCR2 ABCDEFG 0;
 			Stop;
+	}
+}
+
+Mixin Class MVP_ArmyCar_Smoke
+{
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!Super.SpawnDamageSmoke()) Return False;
+		Vector3 SpawnPos = Vec3Angle (-70,GetNearestCardinalAngle());
+		SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-4,4),FRandom(-4,4),38));
+		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Smoke.Roll = FRandom(-180,180);
+		Smoke.A_SetScale (FRandom(0.7,1.2));
+		Smoke.Vel.Z = FRandom (1,4);
+		Return True;
 	}
 }
