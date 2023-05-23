@@ -1,14 +1,11 @@
 //TODO:
-//Add the same dynamic lighting system that the Di-Cokkas' shells use to the other projectiles, it's way better than trying to time A_AttachLight.
-//Add smoke that can come off of vehicles when they are low on health.
-//Add spent casings as a temporary visual effect when the vehicles shoot.
-//Add the whizzing sound bullets make on the rifle and 50 BMG rounds, by playing them on loop on the bullet itself obviously. Also at bullet cracks.
+//Add smoke that can come off of vehicles when they are low on health by spawning RocketSmokeTrail in set spots relative to the vehicle.
+//Move the MVP documentation to a Github wiki instead of the document I currently use.
 
 //FIXME:
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
 The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
 first tick. Which is literally worse than the turrets spawning on the ground.*/
-//Remake the .50 cal bullet and 30mm shell sprites. So that the whole round, casing included, isn't fired. Maybe add the casings as a visual effect instead.
 
 //IDEA:
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
@@ -170,6 +167,21 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 		}
 		
 		Return Null;
+	}
+	
+	//Plays a sound when the projectile is a certain distance near the camera.
+	Void PlayFlybySound (Sound WhatToPlay, Int Slot = CHAN_BODY, Int Flags = 0, Double Volume = 1.0, Double Attenuation = ATTN_NORM,
+	Double Pitch = 1.0, Double StartTime = 0.0, Double Distance = 512)
+	{
+		If (PlayerInGame[ConsolePlayer])
+		{
+			Let Cam = Players [ConsolePlayer].Camera;
+			If (!Cam)
+				Players[ConsolePlayer].Mo;
+			
+			If (Cam && Distance3DSquared(Cam) <= Distance*Distance)
+				A_StartSound (WhatToPlay,Slot,Flags,Volume,Attenuation,Pitch,StartTime);
+		}
 	}
 	
 	Override Void TrailSpawn (Actor Trail)

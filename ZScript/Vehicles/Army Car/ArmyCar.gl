@@ -37,7 +37,7 @@ PointLight CarDeath5
 	Offset 0 0 -12
 	//Attenuate 1
 }
-
+/*
 Object MVP_ArmyCar
 {
 	Frame MCR1H {Light CarDeath1}

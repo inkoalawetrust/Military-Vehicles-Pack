@@ -208,6 +208,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	Int WaitTimer; //Makes the car stop for a bit after picking up supplies, so you don't have to chase it.
 	Int DeployTimer; //Stops infinite recursions when trying to drop marines.
 	Int Recursions; //Keeps track of how many times the vehicle tried spawning a marine in an invalid spot, to stop infinite recursions.
+	DynamicLight Light;
 	States
 	{
 		Spawn:
@@ -297,6 +298,12 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Death:
 			MCR1 H 4 Bright
 			{
+				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
+				If (Light)
+				{
+					Light.Args[3] = 192; //Intensity
+					Light.Args[0] = 226; Light.Args[1] = 195; Light.Args[2] = 142; //RGB
+				}
 				A_Explode (128,80,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
 				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.6);
 				A_StopSound (CHAN_IDLING);
@@ -316,8 +323,9 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				If (!HasSupplies())
 					A_SpawnItemEx ("MVP_ArmyCarWheel",-96,0,38,FRandom(-10,-16),FRandom (-2,2),FRandom (-0.5,4),flags:SXF_SETTARGET);
 			}
-			MCR1 IJ 6 Bright;
-			MCR1 KL 8 Bright;
+			MCR1 IJ 6 Bright {If (Light) Light.Args[3]-= 38.4;}
+			MCR1 KL 8 Bright {If (Light) Light.Args[3]-= 38.4;}
+			TNT1 A 0 {If (Light) Light.Destroy();}
 			MCR1 M 8;
 			MCR1 M -1;
 			Stop;

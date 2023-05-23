@@ -336,7 +336,7 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 	Bool User_PainRay; //Spawn the prop pain ray.
 	Bool User_OpenDoors; //Does the prop car have its' doors open ?
 	Double User_TurretAngle; //Change the exact angle the turret faces at, a value of -1 randomizes the turrets' angle relative to the car.
-	
+	DynamicLight Light;
 	States
 	{
 		Spawn:
@@ -364,6 +364,12 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 		Death:
 			MCR1 H 4 Bright
 			{
+				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
+				If (Light)
+				{
+					Light.Args[3] = 192; //Intensity
+					Light.Args[0] = 226; Light.Args[1] = 195; Light.Args[2] = 142; //RGB
+				}
 				A_Explode (128,80,XF_HURTSOURCE|XF_EXPLICITDAMAGETYPE,True,damagetype:'Explosion');
 				A_StartSound ("SFX/Explosion",CHAN_BODY,attenuation:0.6);
 				A_StopSound (CHAN_IDLING);
@@ -382,8 +388,9 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 				If (!HasSupplies())
 					A_SpawnItemEx ("MVP_ArmyCarWheel",-96,0,38,FRandom(-10,-16),FRandom (-2,2),FRandom (-0.5,4),flags:SXF_SETTARGET);
 			}
-			MCR1 IJ 6 Bright;
-			MCR1 KL 8 Bright;
+			MCR1 IJ 6 Bright {If (Light) Light.Args[3]-= 38.4;}
+			MCR1 KL 8 Bright {If (Light) Light.Args[3]-= 38.4;}
+			TNT1 A 0 {If (Light) Light.Destroy();}
 			MCR1 M 8;
 			MCR1 M -1;
 			Stop;

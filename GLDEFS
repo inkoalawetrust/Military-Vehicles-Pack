@@ -53,7 +53,7 @@ PointLight BigExplosion7
 	Size 48
 	//Attenuate 1
 }
-
+/*
 Object MVP_BigExplosion
 {
 	Frame MCR3A {Light BigExplosion1}
@@ -64,7 +64,7 @@ Object MVP_BigExplosion
 	Frame MCR5F {Light BigExplosion6}
 	Frame MCR5G {Light BigExplosion7}
 }
-
+*/
 //Normal explosion
 PointLight Explosion1
 {
@@ -150,9 +150,9 @@ PointLight AirExplosion3
 Object MVP_AutocannonShell
 {
 	//Airburst
-	Frame GAXPA {Light AirExplosion1}
-	Frame GAXPB {Light AirExplosion2}
-	Frame GAXPC {Light AirExplosion3}
+	//Frame GAXPA {Light AirExplosion1}
+	//Frame GAXPB {Light AirExplosion2}
+	//Frame GAXPC {Light AirExplosion3}
 	
 	//Ground explosion
 	/*Frame GXPLB {Light Explosion2}

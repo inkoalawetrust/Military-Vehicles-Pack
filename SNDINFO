@@ -16,6 +16,12 @@ SFX/BulletRicochet1 "Sounds/SFX/BulletRicochet1.ogg"
 SFX/BulletRicochet2 "Sounds/SFX/BulletRicochet2.ogg"
 SFX/BulletRicochet3 "Sounds/SFX/BulletRicochet3.ogg"
 SFX/BulletRicochet4 "Sounds/SFX/BulletRicochet4.ogg"
+SFX/BulletFlyby "Sounds/SFX/WhizzBy.ogg"
+SFX/CaseFall1 "Sounds/SFX/CaseFall1.ogg"
+SFX/CaseFall2 "Sounds/SFX/CaseFall2.ogg"
+SFX/CaseFall3 "Sounds/SFX/CaseFall3.ogg"
+SFX/CaseFall4 "Sounds/SFX/CaseFall4.ogg"
+SFX/CaseFall5 "Sounds/SFX/CaseFall5.ogg"
 //SFX/BulletRicochet5 "Sounds/SFX/BulletRicochet5.ogg"
 Weapon/RadioCall "Sounds/SFX/RadioCall.ogg"
 Weapon/DebugFire "Sounds/SFX/DebugGunFire.ogg"
@@ -43,6 +49,15 @@ $Random SFX/BulletRicochet
 	//SFX/BulletRicochet5
 }
 
+$Random SFX/CasingImpact
+{
+	SFX/CaseFall1
+	SFX/CaseFall2
+	SFX/CaseFall3
+	SFX/CaseFall4
+	SFX/CaseFall5
+}
+
 $Limit SFX/BigExplosion 0
 $Limit SFX/Explosion 0
 $Limit SFX/Fire 1
@@ -57,6 +72,12 @@ $Limit SFX/BulletRicochet1 0
 $Limit SFX/BulletRicochet2 0
 $Limit SFX/BulletRicochet3 0
 $Limit SFX/BulletRicochet4 0
+$Limit SFX/BulletFlyby 0
+$Limit SFX/CaseFall1 0
+$Limit SFX/CaseFall2 0
+$Limit SFX/CaseFall3 0
+$Limit SFX/CaseFall4 0
+$Limit SFX/CaseFall5 0
 $Limit SFX/MSExplosion1 0
 $Limit SFX/MSExplosion2 0
 //$Limit BulletRicochet5 0
