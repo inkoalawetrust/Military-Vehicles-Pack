@@ -20,6 +20,8 @@ Version "4.10.0"
 	#Include "ZScript/Vehicles/APC/APC.zsc"
 	#Include "ZScript/Vehicles/APC/APCProps.zsc" //The APC's OtherActors.zsc is already too long without the props.
 	#Include "ZScript/Vehicles/APC/OtherActors.zsc"
+	//Main Battle Tank
+	#Include "ZScript/Vehicles/MBT/MBT.zsc"
 	//MISSION 01 START
 	#Include "ZScript/Vehicles/Di-Cokka/Di-Cokka.zsc"
 	#Include "ZScript/Vehicles/Di-Cokka/OtherActors.zsc"

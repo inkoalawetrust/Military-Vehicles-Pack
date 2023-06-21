@@ -298,3 +298,60 @@ Class MVP_DamageSmoke : RocketSmokeTrail
 		+RollSprite;
 	}
 }
+
+Class MVP_FireParticle : MVP_DamageSmoke
+{
+	Default
+	{
+		Translation "ZDoomFire";
+		RenderStyle "Add";
+		Alpha 1;
+		+Bright;
+	}
+}
+
+Class MVP_BrightFireParticle : MVP_FireParticle
+{
+	Default
+	{
+		Translation "BrightZDoomFire";
+		Alpha 0.5; //Needs toning down by default otherwise bloom makes it TOO bright.
+	}
+}
+
+//IDEA: Maybe this would be better as a textured particle with a sizestep ? Would be a lot more optimized.
+//An expanding white ring, used by certain explosions.
+//Speed: How fast the ring expands in size every tick.
+//FastSpeed: How fast the ring fades every tick.
+//Threshold: How long before the ring begins fading.
+//ReactionTime: How long the ring will last before vanishing.
+Class MVP_ShockWaveRing : Actor
+{
+	Default
+	{
+		Scale 0;
+		Speed 0.25;
+		FastSpeed 0.25;
+		Threshold 3;
+		RenderStyle "Add";
+		Alpha 0.5;
+		ReactionTime 5;
+	}
+	Int Timer; //GetAge() still increments when frozen.
+	Override Void Tick()
+	{
+		If (IsFrozen()) Return;
+		
+		A_SetScale (Scale.X+Speed);
+		If (Threshold && Timer >= Threshold) A_FadeOut (FastSpeed);
+		Timer++;
+		If (Timer >= ReactionTime)
+			Destroy();
+	}
+	States
+	{
+		Spawn:
+			SHOK A -1;
+			Stop;
+	}
+}

@@ -1,0 +1,31 @@
+//Placeholder, the art assets aren't even finished yet !
+Class MVP_MBT : MVP_BaseVehicle
+{
+	Default
+	{
+		//$Title Main Battle Tank
+		//$Category Vehicles/Tanks
+		XScale 0.9;
+		YScale 0.75; //0.9 / 1.2
+		Radius 96;
+		Height 88; //For now, this is the combined height of the hull and main turret.
+	}
+	
+	//TODO: Make a generic A_TankFire() function that has 3 different firing types maybe ?
+	/*
+	Enum AmmoTypes
+	{
+		TYPE_HEAT 	= 0, //Standard ammo type, used for weak (Relatively) enemies, groups, etc.
+		TYPE_APFSDS	= 1, //Ripper that does a shitton of damage. Used for powerful enemies, like Cyberdemons and players with god/buddha mode 1.
+		TYPE_ATGM	= 2, //Homing missiles, have a chance to be fired at powerful enemies, and distant and/or fast enemies.
+	}
+	Void A_TankFire (Vector3 Offset, Int Type = TYPE_HEAT){}
+	*/
+	// Use +YFLIP for the aiming down elevations of the ATGM (And maybe rocket too), to save on frames and file size.
+	States
+	{
+		Spawn:
+			MMBT A -1;
+			Stop;
+	}
+}

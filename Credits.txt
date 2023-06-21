@@ -2,10 +2,7 @@ Mod made by Inkoalawetrust
 
 |==============|Code|==============|
 Any code not written by me (Inkoalawetrust) will be specified here.
-Custodian, for writing the base for the MVP_MoveTowards function, that I then extended.
 Help with coding by RaveYard.
-GetNearestCardinalAngle by Lewisk3.
-LinearMap function written by Agent_Ash.
 |==============|Code|==============|
 
 
@@ -17,6 +14,7 @@ LinearMap function written by Agent_Ash.
 All vehicle sprites are entirely made by me (Inkoalawetrust) unless otherwise specified.
 Di-Cokka sprites made by me, however the actual design is from Metal Slug.
 Original APC sprites by Gorman Freebmane: https://drive.google.com/file/d/1ETjHquh0woyRwo2sGBOOFPRHoIxC_xD5/view?usp=share_link
+Original tank sprites by Gorman Freebmane: https://drive.google.com/file/d/1GOwTYmJYxzZl-Qc4WniN6v17toQ_yLOM/view?usp=drive_link
 
 =====<SFX>=====
 Fire sprites (F1RE) are from Duke Nukem 3D, ripped from Project Brutality.
@@ -24,6 +22,7 @@ Large explosion (MCR3A0-MCR3G0) made by Inkoalawetrust.
 Spark sprites (SPKYA-SPKYF) made by Tormentor667 and Solarsnowfall.
 Air Explosion 1 sprites by Gorman Freebmane.
 Liquid explosion sprites are from Metal Slug.
+Shockwave ring (SHOKA0) made by inkoalawetrust.
 Di-Cokka firing, projectile, and debris sprites are from Metal Slug.
 
 =====<Other>=====
