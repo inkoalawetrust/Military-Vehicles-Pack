@@ -1,0 +1,34 @@
+#BIMP 2.6
+#MANIPULATION SET DEFINITION
+
+[USERDEF0]
+procedure=gimp-image-crop
+num_params=5
+PARAM0=NOT_USED
+PARAM1=118
+PARAM2=100
+PARAM3=221
+PARAM4=50
+
+[USERDEF1]
+procedure=gimp-image-convert-indexed
+num_params=7
+PARAM0=NOT_USED
+PARAM1=0
+PARAM2=0
+PARAM3=255
+PARAM4=0
+PARAM5=0
+PARAM6=
+
+[CHANGEFORMAT]
+format=4
+interlace=false
+compression=9
+savebgc=true
+savegamma=false
+saveoff=false
+savephys=true
+savetime=true
+savecomm=true
+savetrans=true

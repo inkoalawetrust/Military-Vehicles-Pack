@@ -366,7 +366,7 @@ Mixin Class MVP_ArmyCar_Smoke
 		If (!Super.SpawnDamageSmoke()) Return False;
 		Vector3 SpawnPos = Vec3Angle (-70,GetNearestCardinalAngle());
 		SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-4,4),FRandom(-4,4),38));
-		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Actor Smoke = Spawn ("MVP_BrightFireParticle",SpawnPos);
 		Smoke.Roll = FRandom(-180,180);
 		Smoke.A_SetScale (FRandom(0.7,1.2));
 		Smoke.Vel.Z = FRandom (1,4);

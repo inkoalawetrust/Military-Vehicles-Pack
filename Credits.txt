@@ -14,7 +14,7 @@ Help with coding by RaveYard.
 All vehicle sprites are entirely made by me (Inkoalawetrust) unless otherwise specified.
 Di-Cokka sprites made by me, however the actual design is from Metal Slug.
 Original APC sprites by Gorman Freebmane: https://drive.google.com/file/d/1ETjHquh0woyRwo2sGBOOFPRHoIxC_xD5/view?usp=share_link
-Original tank sprites by Gorman Freebmane: https://drive.google.com/file/d/1GOwTYmJYxzZl-Qc4WniN6v17toQ_yLOM/view?usp=drive_link
+Original MBT sprites by Gorman Freebmane: https://drive.google.com/file/d/1GOwTYmJYxzZl-Qc4WniN6v17toQ_yLOM/view?usp=drive_link
 
 =====<SFX>=====
 Fire sprites (F1RE) are from Duke Nukem 3D, ripped from Project Brutality.
@@ -23,6 +23,7 @@ Spark sprites (SPKYA-SPKYF) made by Tormentor667 and Solarsnowfall.
 Air Explosion 1 sprites by Gorman Freebmane.
 Liquid explosion sprites are from Metal Slug.
 Shockwave ring (SHOKA0) made by inkoalawetrust.
+Tank cannon firing and explosion sprites made by inkoalawetrust
 Di-Cokka firing, projectile, and debris sprites are from Metal Slug.
 
 =====<Other>=====
@@ -77,8 +78,8 @@ Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|TOOLS USED|==============|
 A list of all the tools I have used to make my own assets for this mod, and what I used them for.
 
-Blender (https://www.blender.org/): Modelling, texturing, and animating the actual vehicles.
-Sprite Batch Render Ex (https://github.com/nashmuhandes/SpriteBatchRender): Blender addon, used to render the vehicles into sprites with proper sprite names, I use the Blender3.2.1 branch.
+Blender (https://www.blender.org/): Modelling, texturing, animating, and rendering the actual vehicles.
+Sprite Batch Render Ex (https://github.com/nashmuhandes/SpriteBatchRender/tree/Blender3.2.1): Blender addon, used to render the vehicles into sprites with proper sprite names.
 Batch Image Manipulation Program (https://alessandrofrancesconi.it/projects/bimp/): Used to autocrop, convert to 8-Bit PNGs, and compress my sprites en mass. Here is a link to set of image manipulations I use(May be outdated): https://drive.google.com/file/d/1Yyq1X-TClofjVrcsoOsGxSPzehcS-Ads/view?usp=sharing
 SLADE: Used to automatically offset the sprites, and then for me to also manually adjust the offsets to be more accurate.
 DeflOpt, PNGCrush, PNGout: Plugged into SLADE, and used to even further compress sprites. Here is a guide on how to do that and where to find these programs: https://imgur.com/a/DJ4x4hS
