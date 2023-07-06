@@ -200,6 +200,7 @@ Class MVP_APC : MVP_BaseVehicle
 	Int User_CrushMode;
 	Bool User_NoTargetPrediction; //The vehicle will not calculate it's targets' movement and lead its' shots.
 	Bool User_FocusFire; //Makes the small MG on the autocannon turret not actively try to not target the same thing as the autocannon.
+	Int User_MarineTID; //The TID to assign to marines spawned by this vehicle, for ACS scripting.
 	
 	Enum CorpseCrushModes
 	{
@@ -302,6 +303,7 @@ Class MVP_APC : MVP_BaseVehicle
 				{
 					Actor Marine;
 					Marine = SpawnMarine ((-120, FRandom (10,-10),0));
+					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
 					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;

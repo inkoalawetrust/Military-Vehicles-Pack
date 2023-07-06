@@ -52,6 +52,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	// Make a User_Stationary variable. Especially useful for the SPAAG, and for making the normal tank act more like the HECU Abrams in Half Life 1.
 	// For the SPAAG, make it do more damage to flying actors using DoSpecialDamage on both the projectile and hitscan shrapnel puffs.
 	// Design wise, the back radar of the SPAAG should have a separate REAL hitbox that receives damage. Whose relative position snaps based on the turret angle.
+	// Make the hull actually reverse when driving away. Instead of turning around.
 	Enum TurretTypes
 	{
 		TURRET_NORMAL	= 0, //The normal MBT variant.

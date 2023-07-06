@@ -122,7 +122,7 @@ Class MVP_PainRay : MVP_BaseTurret
 					If (HasGodMode (Victim)) Continue;
 					
 					//Don't painlock actors with a lot of health. Or who are already in pain, to avoid breaking states.
-					If (Victim.Health >= 400 || IsInState (Self,"Pain")) Continue;
+					If (Victim.Health >= 400 || Victim.FindState ("Pain")) Continue;
 					
 					//Ignore yourself, inanimate objects, dormant monsters, allies, or actors that are just too far away.
 					If (Victim == Self || IsInanimateObject(Victim) || Victim.bDormant || !IsActorHostile(Victim)|| Target.Distance3DSquared (Victim) >= 512*512) Continue;

@@ -310,6 +310,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 	
 	Int User_MarineAmount; //The amount of marines still in the truck.
 	Bool User_Ramming; //Should the truck run shit over ?
+	Int User_MarineTID; //The TID to assign to marines spawned by this vehicle, for ACS scripting.
 	
 	Int MarinesToSpawn; //How many marines the truck should drop this time that it opened up.
 	Int DeployTimer; //Adds a delay until the next time the truck is able to drop marines again.
@@ -384,6 +385,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				{
 					Actor Marine;
 					Marine = SpawnMarine ((-128, FRandom (16,-16),0));
+					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
 					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;
