@@ -69,6 +69,18 @@ APC small machine gun fire sounds are from Half-Life 1, small machine gun impact
 Autocannon shell explosion sound (AutocannonHit.ogg) is from Call of Duty 2.
 Autocannon firing sound (AutocannonFire.ogg) is from Call of Duty United Offensive.
 
+Tank movement sound (TankMove.ogg): https://quicksounds.com/sound/21083/tank-treads-loop2
+Alt tank movement sound (TankMove2.ogg): https://quicksounds.com/sound/21082/tank-treads-loop1
+Tank idle sound (TankIdle.ogg): https://quicksounds.com/sound/21118/bulldozer-start-idle
+Tank small machine gun firing sound (TankSmallMG.ogg) is from Call of Duty 2.
+Tank cannon firing sounds (TankFire1-3.ogg) are from Call of Duty 2.
+Tank turret turn sound (TankTurn.ogg): https://quicksounds.com/sound/21001/tank-heavy-turret-motor
+Rocket artillery firing sounds:
+	TankRocketFire1.ogg: https://quicksounds.com/sound/18282/rocket-launcher-shot-50
+	TankRocketFire2.ogg: https://quicksounds.com/sound/18281/rocket-launcher-shot-49
+	TankRocketFire3.ogg: https://quicksounds.com/sound/18280/rocket-launcher-shot-48
+Original tank movement and turret turning sounds (TankMoveOriginal.ogg & TankTurnOriginal.ogg) are from Half Life 1.
+
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|Sounds|==============|
 

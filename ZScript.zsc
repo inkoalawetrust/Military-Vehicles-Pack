@@ -57,13 +57,14 @@ Class SM_MarineChecker : EventHandler
 	}
 	
 	//Just a test, returns the current date in 24 hour format.
-	Struct ScopeBypass ClearScope {String Time;}
+	Struct ScopeBypass ClearScope {String Time; String Date;}
 	ScopeBypass ScopeHack;
 	Override Void UITick()
 	{
 		Super.UITick();
 		
 		ScopeHack.Time = SystemTime.Format ("%R",SystemTime.Now());
+		ScopeHack.Date = SystemTime.Format ("%B %e %G",SystemTime.Now());
 	}
 	//=============================================================================================
 	

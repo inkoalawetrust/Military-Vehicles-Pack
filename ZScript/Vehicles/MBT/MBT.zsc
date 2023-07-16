@@ -1,7 +1,4 @@
-//TODO:
-// Add a user variable to give marines spawned by the APC, Army Car, Army Truck, and Tank (Through escaping) a TID for ACS scripting.
 //VARIANT IDEAS:
-//If the hull sprites (6 moving frames + 1 death rotation) are less than 200 KB total, make a variant with no sideskirts for the SPAAG and rocket variants.
 //Normal turret
 	//Make an alternate 3-barrel chaingun RWS for the tank. That fires MVP_RifleBullet instead of MVP_50CalBullet. Twice as fast, for painlocking enemies.
 //A BMPT Terminator.
@@ -25,19 +22,86 @@
 	//The top radar should not be cosmetic, and when destroyed halve the accuracy and sight range of the SPAAG, and limit its' FOV.
 	//It will only target flying enemies, unless there's literally none of them in sight, in which case it'll start sounding at ground enemies too.
 
-//Placeholder, the art assets aren't even finished yet !
+//FIXME:
+//The tank can't move over the ends of slopes, like crossing the top or bottom of a slope, what the fuck ??????
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
 	{
 		//$Title Main Battle Tank
 		//$Category Vehicles/Tanks
+		Health 6000;
+		Speed 10;
 		XScale 0.9;
 		YScale 0.75; //0.9 / 1.2
 		Radius 96;
 		Height 88; //For now, this is the combined height of the hull and main turret.
+		MeleeRange 88;
+		MaxSlopeSteepness 0.65;
+		KAI_BaseVehicle.MaxPushMass 25000;
+		KAI_BaseVehicle.MaxPushRadius 128;
+		KAI_BaseVehicle.MaxPushHeight 128;
+		KAI_BaseVehicle.CrushDamage 6;
+		KAI_BaseVehicle.MaxCrushRadius 64;
+		KAI_BaseVehicle.MaxCrushHeight /*64*/ 192; //The height is kinda fucky, but it's for the tank to be able to drive over street lights in gz_bigcity.
+		Tag "M6V3-EX Main Battle Tank";
+		ActiveSound "Vehicle/Tank/Move";
 	}
 	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		If (Random (False,True) == True) ActiveSound = "Vehicle/Tank/AltMove";
+		If (Random(0,255) < 8) ActiveSound = "Vehicle/Tank/MoveOriginal";
+		console.printf ("active sound is %s",activesound);
+	}
+	
+	Override Bool CanAttack()
+	{
+		/*If (Target && target.player && target.player.readyweapon && target.player.readyweapon.getclassname() == "Fist")*/ Return True;
+		Return False; //PLACEHOLDER
+	}
+	
+	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
+	{
+		If (Retreating)
+		{
+			A_SetSpriteRotation (0);
+			A_SetAngle (Angle+180);
+			Retreating = False;
+			RetreatLoops = 0;
+		}
+		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+	}
+	
+	//
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		String MeleeObituaries[] = {
+		"%o was ran over by a tank",
+		"%o didn't check both ways when crossing the street",
+		"%o became roadkill",
+		"%o is practicing their skidmark impression"
+		};
+		If (Inflictor == Self && (MOD == 'Crush' || MOD == 'TankCrush'))
+		{
+			Bool Placeholder = True;
+			//TODO: Add a check for if the tank intentionally ran over the player.
+			If (!Placeholder) //4/6/1989
+			{
+				Let Checker = SM_MarineChecker(EventHandler.Find ("SM_MarineChecker"));
+				String PlayerName;
+				If (Victim && Victim.Player)
+					PlayerName = Victim.Player.GetUsername();
+				Return String.Format ("%s 没有被压碎 %s",PlayerName,Checker.ScopeHack.Date);
+			}
+			Else
+				Return MeleeObituaries[Random(0,MeleeObituaries.Size()-1)];
+		}
+		
+		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+		
 	//TODO: Make a generic A_TankFire() function that has 3 different firing types maybe ?
 	/*
 	Enum AmmoTypes
@@ -60,11 +124,91 @@ Class MVP_MBT : MVP_BaseVehicle
 		TURRET_BMPT		= 3, //Light tank-ish variant of the tank. With only machine guns and rockets, and less health.
 		TURRET_SPAAG	= 4, //AA variant of the tank, with a functional top radar.
 	}
+	
+	Const TankAngleLimit = 3;
+	Bool Retreating;
+	Int RetreatLoops;
+	
+	Bool User_Stationary; //The tank always stays in place, similar to the HECU M1 Abrams tanks from Half-Life 1.
+	
 	States
 	{
 		Spawn:
-			MMBT [ -1;
-			Stop;
+			MMBT A 1
+			{
+				A_StopSound (CHAN_MOVING);
+				A_StartSound("Vehicle/Tank/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
+				KAI_Look (User_Stationary ? LOF_NOJUMP : 0,maxseedist:DEFAULT_SEEDISTANCE*2,DEFAULT_HEARDISTANCE*1.5);
+			}
+			Loop;
+		See:
+			MMBT ABCDEF 2
+			{
+				If (User_Stationary) //Shouldn't be here.
+					Return State (SpawnState);
+				//Console.Printf ("Sprite angle offset %d",SpriteRotation);
+				A_StopSound (CHAN_IDLING);
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
+				MoveToParams Params;
+				Params.DetourFactor = 0.25;
+				Params.Attempts = 32;
+				Params.StepThreshold = 32;
+				Params.RunRad = 384;
+				KAI_LandVehicleChase (flags:LVC_USERETREATSTATE,turnradius:TankAngleLimit,512);
+				Return State (Null);
+			}
+			Loop;
+		//Retreat by "reversing", AKA calling KAI_MoveAway, but using SpriteRotation and an inverted move animation to appear as facing the target.
+		//TODO: Add death checks and such, to stop retreating if the actor is dead or something.
+		Retreat:
+			TNT1 A 0
+			{
+				If (User_Stationary) //Shouldn't be here.
+					Return State (SpawnState);
+				Retreating = True;
+				A_SetSpriteRotation (180);
+				A_SetAngle (Angle-180);
+				Return State (Null);
+			}
+		Retreat.Move:
+			MMBT FEDCBA 2
+			{
+				A_StopSound (CHAN_IDLING);
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
+				KAI_VehicleRetreat (Target,96,512,32,0.25,TankAngleLimit);
+				//KAI_LandVehicleChase (turnradius:2.5,512);
+			}
+		Retreat.End:
+			TNT1 A 0
+			{
+				//Target no longer in sight, keep retreating for a bit before moving forward again.
+				If (!RetreatLoops && RetreatLoops != -1)
+				{
+					If (!CheckSight(Target))
+						RetreatLoops = Random (12,24);
+					If (!RetreatLoops && !FindNearestEnemy (RetreatRange))
+						RetreatLoops = Random (4,8);
+					If (!RetreatLoops && Turret && Turret.Target && Turret.ElevationState != Turret.ELEVATION_TOOHIGH)
+						RetreatLoops = Random (6,12);
+					
+					RetreatLoops = Random (12,24);
+				}
+					console.printf ("loops %d",retreatloops);
+				If (RetreatLoops > 0 && Target && !IsDead (Target))
+				{
+					RetreatLoops--;
+					If (RetreatLoops == 0)
+						RetreatLoops--;
+					Return FindState ("Retreat.Move",True);
+				}
+					
+				A_SetSpriteRotation (0);
+				A_SetAngle (Angle+180);
+				RetreatLoops = 0;
+				Retreating = False;
+				Return State (Null);
+			}
+			Goto See;
 	}
 }
 
