@@ -1,4 +1,6 @@
 //VARIANT IDEAS:
+//General
+//The SPAAG and artillery tanks should not try to intentionally run over enemies as an attack, and back off like normal vehicles instead.
 //Normal turret
 	//Make an alternate 3-barrel chaingun RWS for the tank. That fires MVP_RifleBullet instead of MVP_50CalBullet. Twice as fast, for painlocking enemies.
 //A BMPT Terminator.
@@ -22,8 +24,9 @@
 	//The top radar should not be cosmetic, and when destroyed halve the accuracy and sight range of the SPAAG, and limit its' FOV.
 	//It will only target flying enemies, unless there's literally none of them in sight, in which case it'll start sounding at ground enemies too.
 
-//FIXME:
-//The tank can't move over the ends of slopes, like crossing the top or bottom of a slope, what the fuck ??????
+//TODO:
+//Add a warning zone in front of the tank if crushing is enabled and it is moving.
+//Finish the low hanging fruit, adding engine smoke and fire effects to the engine. And headlights.
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
@@ -38,14 +41,24 @@ Class MVP_MBT : MVP_BaseVehicle
 		Height 88; //For now, this is the combined height of the hull and main turret.
 		MeleeRange 88;
 		MaxSlopeSteepness 0.65;
+		//TODO: Give the turrets roughly this range as well, except maybe the BMPT. The TOS-1 should have like double the range.
+		FriendlySeeBlocks 128;
+		MaxTargetRange 16384;
+		KAI_Actor.ThreatLevel THREAT_VERYDANGEROUS;
+		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
+		//KAI_BaseVehicle.VehicleTurret "MVP_MBTTurret"; //Normal tank turret.
 		KAI_BaseVehicle.MaxPushMass 25000;
 		KAI_BaseVehicle.MaxPushRadius 128;
 		KAI_BaseVehicle.MaxPushHeight 128;
-		KAI_BaseVehicle.CrushDamage 6;
+		KAI_BaseVehicle.CrushDamage 12;
 		KAI_BaseVehicle.MaxCrushRadius 64;
 		KAI_BaseVehicle.MaxCrushHeight /*64*/ 192; //The height is kinda fucky, but it's for the tank to be able to drive over street lights in gz_bigcity.
+		KAI_BaseVehicle.MaxCorpseRadius 88;
+		KAI_BaseVehicle.MaxCorpseHeight 64;
 		Tag "M6V3-EX Main Battle Tank";
 		ActiveSound "Vehicle/Tank/Move";
+		//TODO: Add tank specific flags like no morphing.
+		+LookAllAround;
 	}
 	
 	Override Void PostBeginPlay ()
@@ -56,10 +69,24 @@ Class MVP_MBT : MVP_BaseVehicle
 		console.printf ("active sound is %s",activesound);
 	}
 	
+	Override Void UserVariableDefaults ()
+	{
+		If (User_RetreatDistance == 0) User_RetreatDistance = 768;
+		Super.UserVariableDefaults();
+		
+		//If (TankCrushRange > 0) User_RetreatDistance = -1; //If you are going to crush your enemies, don't run away from them.
+		If (User_CrushMode == CRUSH_NONE) bNoCrushing = True;
+	}
+	
 	Override Bool CanAttack()
 	{
-		/*If (Target && target.player && target.player.readyweapon && target.player.readyweapon.getclassname() == "Fist")*/ Return True;
-		Return False; //PLACEHOLDER
+		Return True; //The tank always has a turret on it to attack with. Plus it might also be able to crush enemies on its; own.
+	}
+	
+	//Don't use the threat assessment of MVP vehicles, which considers players and marines on turrets as huge deal. Since they do little against the tank.
+	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
+	{
+		Return KAI_BaseVehicle.AssessThreatLevel(Other, CheckPlayers);
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
@@ -74,7 +101,7 @@ Class MVP_MBT : MVP_BaseVehicle
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 	}
 	
-	//
+	//Produce crushing related obituaries for players.
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
 		String MeleeObituaries[] = {
@@ -86,13 +113,15 @@ Class MVP_MBT : MVP_BaseVehicle
 		If (Inflictor == Self && (MOD == 'Crush' || MOD == 'TankCrush'))
 		{
 			Bool Placeholder = True;
-			//TODO: Add a check for if the tank intentionally ran over the player.
-			If (!Placeholder) //4/6/1989
+			//Print a "special" obituary if the player was intentionally crushed by the tank.
+			If (Target == Victim && User_CrushMode == CRUSH_ACTIVE && Random (0,255) < 255/4) //4/6/1989
 			{
 				Let Checker = SM_MarineChecker(EventHandler.Find ("SM_MarineChecker"));
 				String PlayerName;
 				If (Victim && Victim.Player)
 					PlayerName = Victim.Player.GetUsername();
+				Else If (Victim)
+					PlayerName = Victim.GetTag();
 				Return String.Format ("%s 没有被压碎 %s",PlayerName,Checker.ScopeHack.Date);
 			}
 			Else
@@ -101,7 +130,82 @@ Class MVP_MBT : MVP_BaseVehicle
 		
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
 	}
+	
+	Bool IsMeleeOnlyEnemy (Actor Other)
+	{
+		Return (Other && Other.MeleeState && !Other.MissileState);
+	}
+	
+	//Bool IsRangedEnemy (Actor Other)
+	
+	//Finds a living enemy to crush within Range, and sets it as the tanks' target.
+	//FOV: The FOV to use for the sight check.
+	//Range: The range to find a victim to run over in.
+	//MaxTurretRange: If the turrets' target is outside of this range from it, begin chasing that target instead.
+	Void MBT_RunShitOver (Double FOV = 45, Double Range = 512, Double MaxTurretRange = 2048)
+	{
+		If (Range <= 0 || bNoCrushing) Return;
+		//The turrets' target is too far from it or out of sight. So start chasing that instead.
+		If (Turret && Turret.Target && (Turret.Distance3DSquared (Turret.Target) > MaxTurretRange || !Turret.CheckSight(Turret.Target)))
+		{
+			Target = Turret.Target;
+			Return;
+		}
+		Actor Mobj;
+		Array <Actor> Candidates;
+		Let Roadkills = BlockThingsIterator.Create (Self,Range);
+		While (Roadkills.Next())
+		{
+			Mobj = RoadKills.Thing;
+			
+			If (!Mobj || Mobj == Self) Continue;
+			If (IsDead (Mobj) || IsInanimateObject (Mobj) || IsFlying (Mobj) || !IsCollidable (Mobj,Self) || !CanBeTargeted(Self,Mobj) || !IsActorHostile (Mobj)) Continue;
+			
+			Int Level = AssessThreatLevel (Mobj,True);
+			
+			//Don't fuck with super dangerous enemies.
+			Switch (Level)
+			{
+				Case THREAT_DANGEROUS:
+				Case THREAT_VERYDANGEROUS:
+				Case THREAT_SUPERDANGER:
+				Case THREAT_UNSTOPPABLE:
+					a_log ("too dangerous");
+					Continue;
+				Default:
+					Break;
+			}
+			
+			//If it's not a really weak enemy and they have some kind of range attack, avoid them. If they are weak, ignore that they have a range attack.
+			//If you are down to 1000 health however, just stop running enemies over.
+			If ((Health < 1000 || Level >= THREAT_NORMAL) && Mobj.MissileState) {a_log ("ranged");Continue;}
+			
+			//And at last, the distance and sight checks.
+			If (Distance3DSquared (Mobj) > Range*Range || !CheckSight (Mobj)) {a_log ("distance and sight");Continue;}
+			
+			Candidates.Push(Mobj);
+		}
 		
+		If (!Candidates.Size())
+		{a_log ("no crushees"); Return;}
+		
+		//LastEnemy = Target;
+		Target = GetClosestActor (Candidates,Self.Pos,Range);
+	}
+	
+	Void A_MBTLook ()
+	{
+		If (User_CrushMode != CRUSH_PASSIVE)
+			MBT_RunShitOver (360,TankCrushRange); //Find something to run over.
+		If (!Target) //Nothing found, just look for actors normally.
+			KAI_Look (User_Stationary ? LOF_NOJUMP : 0,maxseedist:MaxTargetRange,8192,360);
+		If (Turret && Turret.Target) //Still no target, so get your turrets' target instead.
+		{
+			Target = Turret.Target;
+			If (!User_Stationary) SetStateLabel ("See");
+		}
+	}
+	
 	//TODO: Make a generic A_TankFire() function that has 3 different firing types maybe ?
 	/*
 	Enum AmmoTypes
@@ -113,10 +217,8 @@ Class MVP_MBT : MVP_BaseVehicle
 	Void A_TankFire (Vector3 Offset, Int Type = TYPE_HEAT){}
 	*/
 	// Use +YFLIP for the aiming down elevations of the ATGM (And maybe rocket too), to save on frames and file size.
-	// Make a User_Stationary variable. Especially useful for the SPAAG, and for making the normal tank act more like the HECU Abrams in Half Life 1.
 	// For the SPAAG, make it do more damage to flying actors using DoSpecialDamage on both the projectile and hitscan shrapnel puffs.
 	// Design wise, the back radar of the SPAAG should have a separate REAL hitbox that receives damage. Whose relative position snaps based on the turret angle.
-	// Make the hull actually reverse when driving away. Instead of turning around.
 	Enum TurretTypes
 	{
 		TURRET_NORMAL	= 0, //The normal MBT variant.
@@ -125,12 +227,22 @@ Class MVP_MBT : MVP_BaseVehicle
 		TURRET_SPAAG	= 4, //AA variant of the tank, with a functional top radar.
 	}
 	
-	Const TankAngleLimit = 3;
+	Const TankAngleLimit = 3; //How much the tank can turn per step.
+	Const TankCrushRange = 640;
 	Bool Retreating;
 	Int RetreatLoops;
 	
 	Bool User_Stationary; //The tank always stays in place, similar to the HECU M1 Abrams tanks from Half-Life 1.
 	
+	//Original code donut stael.
+	//Main difference is that this control both corpse AND live enemy crushing.
+	Int User_CrushMode;
+	Enum CorpseCrushModes
+	{
+		CRUSH_NONE = -1, //No crushing at all, only pushing.
+		CRUSH_ACTIVE = 0, //Actively seek corpses and enemies.
+		CRUSH_PASSIVE = 1 //Crush enemies and corpses, but only by happenstance.
+	};
 	States
 	{
 		Spawn:
@@ -138,28 +250,71 @@ Class MVP_MBT : MVP_BaseVehicle
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/Tank/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
-				KAI_Look (User_Stationary ? LOF_NOJUMP : 0,maxseedist:DEFAULT_SEEDISTANCE*2,DEFAULT_HEARDISTANCE*1.5);
+				A_MBTLook();
+			}
+			Loop;
+		//High quality code rips.
+		Idle:
+			MMBT ABCDEF 2
+			{
+				A_QuakeEx (1,1,1,2,0,384,flags:QF_GROUNDONLY);
+				A_StopSound (CHAN_IDLING);
+				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
+				
+				A_MBTLook();
+				
+				//Archvile trolling move activated.
+				If (User_CrushMode == CRUSH_ACTIVE)
+				{
+					If (CorpseTarget && CorpseTarget.bDontGib) CorpseTarget = Null; //Disgard crushed corpses.
+					//Don't have a corpse to crush already.
+					If (!CorpseTarget)
+					{
+						CorpseTarget = FindNearestCorpse(); //Nearby corpse found, go and crush it.
+						If (CorpseTarget) 
+							KAI_MoveTowards (CorpseTarget.Pos,0.8,8);
+						Else //Still no corpse found, so just begin wandering around.
+							KAI_Wander(48,1024,128,0.5,TankAngleLimit);
+					}
+					
+					//There is an available corpse to head to and crush.
+					If (CorpseTarget)
+						KAI_MoveTowards (CorpseTarget.Pos,0.8,8);
+				}
+				Else
+					KAI_Wander(48,1024,128,0.5,TankAngleLimit);
+				
+				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
 			Loop;
 		See:
 			MMBT ABCDEF 2
 			{
+				A_QuakeEx (1,1,1,2,0,384,flags:QF_GROUNDONLY);
 				If (User_Stationary) //Shouldn't be here.
 					Return State (SpawnState);
 				//Console.Printf ("Sprite angle offset %d",SpriteRotation);
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
-				MoveToParams Params;
+				//Try to find someone else to run over before the stock retargeting code runs.
+				If (User_CrushMode == CRUSH_ACTIVE)
+					If (!Target || Target && Distance3DSquared (Target) > TankCrushRange*TankCrushRange)
+						MBT_RunShitOver (360,TankCrushRange);
+				MoveToParams Params;console.printf ("retreat dist %d",retreatrange);
 				Params.DetourFactor = 0.25;
 				Params.Attempts = 32;
 				Params.StepThreshold = 32;
 				Params.RunRad = 384;
-				KAI_LandVehicleChase (flags:LVC_USERETREATSTATE,turnradius:TankAngleLimit,512);
+				Int RealRange = RetreatRange;
+				//If moving to a target that is below the threat threshold, never retreat. In other words, don't retreat when trying to run over someone.
+				If (AssessThreatLevel (Target) < ThreatLevelThreshold && User_CrushMode == CRUSH_ACTIVE) RetreatRange = 0;
+				KAI_LandVehicleChase (flags:LVC_USERETREATSTATE|LVC_PLAYERSASTHREATS|LVC_MAKEFRIENDSIDLE,turnradius:TankAngleLimit,512);
+				RetreatRange = RealRange;
+				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 				Return State (Null);
 			}
 			Loop;
-		//Retreat by "reversing", AKA calling KAI_MoveAway, but using SpriteRotation and an inverted move animation to appear as facing the target.
-		//TODO: Add death checks and such, to stop retreating if the actor is dead or something.
+		//Retreat by "reversing", AKA calling KAI_VehicleRetreat, but using SpriteRotation and an inverted move animation to appear as facing the target.
 		Retreat:
 			TNT1 A 0
 			{
@@ -173,10 +328,11 @@ Class MVP_MBT : MVP_BaseVehicle
 		Retreat.Move:
 			MMBT FEDCBA 2
 			{
+				A_QuakeEx (1,1,1,2,0,384,flags:QF_GROUNDONLY);
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
 				KAI_VehicleRetreat (Target,96,512,32,0.25,TankAngleLimit);
-				//KAI_LandVehicleChase (turnradius:2.5,512);
+				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
 		Retreat.End:
 			TNT1 A 0

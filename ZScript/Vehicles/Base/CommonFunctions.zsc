@@ -157,8 +157,6 @@ Mixin Class MVP_SharedFunctions
 	
 	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
 	{
-		If (!Other || IsDead (Other)) Return THREAT_NONE;
-		
 		//Enemy players or marines on turrets are very dangerous.
 		If (MarineOrPlayerOnTurret (Other)) Return THREAT_VERYDANGEROUS;
 		
@@ -309,6 +307,7 @@ Mixin Class MVP_SharedFunctions
 	//Find the crushable corpse nearest to the vehicle. Used to get vehicles to crush corpses to deny enemy Archviles ando ther necormancer-type enemies.
 	Actor FindNearestCorpse (Int Flags = FNCF_RAISABLEONLY|FNCF_STOPFORVILES)
 	{
+		If (bNoCrushing) Return Null;
 		Array <Actor> NearbyCorpses;
 		Double NearestDistance = INT.MAX;
 		
@@ -339,8 +338,7 @@ Mixin Class MVP_SharedFunctions
 			
 			NearbyCorpses.Push(Mobj); //Add it to the list.
 		}
-		
-		Return GetClosestActor (NearbyCorpses,Self.Pos);
+		Return GetClosestActor (NearbyCorpses,Self.Pos,1024);
 	}
 	
 	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
