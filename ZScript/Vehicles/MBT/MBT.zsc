@@ -24,9 +24,6 @@
 	//The top radar should not be cosmetic, and when destroyed halve the accuracy and sight range of the SPAAG, and limit its' FOV.
 	//It will only target flying enemies, unless there's literally none of them in sight, in which case it'll start sounding at ground enemies too.
 
-//TODO:
-//Add a warning zone in front of the tank if crushing is enabled and it is moving.
-//Finish the low hanging fruit, adding engine smoke and fire effects to the engine. And headlights.
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
@@ -34,9 +31,10 @@ Class MVP_MBT : MVP_BaseVehicle
 		//$Title Main Battle Tank
 		//$Category Vehicles/Tanks
 		Health 6000;
+		WoundHealth 1500;
 		Speed 10;
-		XScale 0.9;
-		YScale 0.75; //0.9 / 1.2
+		XScale 1;
+		YScale 0.833333; //1 / 1.2
 		Radius 96;
 		Height 88; //For now, this is the combined height of the hull and main turret.
 		MeleeRange 88;
@@ -64,9 +62,19 @@ Class MVP_MBT : MVP_BaseVehicle
 	Override Void PostBeginPlay ()
 	{
 		Super.PostBeginPlay();
+		//Decide movement sound for this tank instance.
 		If (Random (False,True) == True) ActiveSound = "Vehicle/Tank/AltMove";
 		If (Random(0,255) < 8) ActiveSound = "Vehicle/Tank/MoveOriginal";
+		WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,128,Self,(96,0,Height/2));
 		console.printf ("active sound is %s",activesound);
+	}
+	
+	Override Void Tick ()
+	{
+		Super.Tick();
+		If (IsFrozen() || !WarningZone) Return;
+		//Disable the warning zone if crushing is disabled or the tank isn't moving in the first place.
+		WarningZone.bDormant = (bNoCrushing || IsInState (Self,"Spawn"));
 	}
 	
 	Override Void UserVariableDefaults ()
@@ -86,11 +94,38 @@ Class MVP_MBT : MVP_BaseVehicle
 	//Don't use the threat assessment of MVP vehicles, which considers players and marines on turrets as huge deal. Since they do little against the tank.
 	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
 	{
+		//TODO: Make the player not be considered that much of a threat if they only have God or Buddha 1, and the hull has the standard turret.
 		Return KAI_BaseVehicle.AssessThreatLevel(Other, CheckPlayers);
+	}
+	
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!Super.SpawnDamageSmoke()) Return False;
+		Vector3 SpawnPos = Vec3Angle (96,GetNearestCardinalAngle(True));
+		SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-16,16),FRandom(-16,16),48));
+		SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
+		Let FX = (WoundHealth/2 >= Health) ? "MVP_BrightFireParticle" : "MVP_DamageSmoke";
+		For (Int I; I < 2; I++)
+		{
+			Actor Smoke = Spawn (FX,SpawnPos);
+			Smoke.Roll = FRandom(-180,180);
+			Smoke.A_SetScale (FRandom(0.7,1.2));
+			Smoke.Vel.Z = FRandom (1,4);
+		}
+		Return True;
+	}
+	
+	Override Void SpawnHeadlights ()
+	{
+		Headlights.Push (SpawnVehicleHeadlight (Self,(64,48,32),VHSF_SPRITEROT|VHSF_CARDINALS|VHSF_16ANGLES,lightcolor:(255,195,165),512,spotlightangles:(25,50)));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(64,-48,32),VHSF_SPRITEROT|VHSF_CARDINALS|VHSF_16ANGLES,lightcolor:(255,195,165),512,spotlightangles:(25,50)));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(128,56,32),VHSF_SPRITEROT|VHSF_BACKLIGHT|VHSF_CARDINALS|VHSF_16ANGLES,lightcolor:(255,150,0),64,spotlightangles:(45,90)));
+		Headlights.Push (SpawnVehicleHeadlight (Self,(128,-56,32),VHSF_SPRITEROT|VHSF_BACKLIGHT|VHSF_CARDINALS|VHSF_16ANGLES,lightcolor:(255,150,0),64,spotlightangles:(45,90)));
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
+		If (WarningZone) WarningZone.Destroy();
 		If (Retreating)
 		{
 			A_SetSpriteRotation (0);
@@ -99,6 +134,12 @@ Class MVP_MBT : MVP_BaseVehicle
 			RetreatLoops = 0;
 		}
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+	}
+	
+	Override Void OnDestroy()
+	{
+		Super.OnDestroy();
+		If (WarningZone) WarningZone.Destroy();
 	}
 	
 	//Produce crushing related obituaries for players.
@@ -151,6 +192,7 @@ Class MVP_MBT : MVP_BaseVehicle
 			Target = Turret.Target;
 			Return;
 		}
+		If (Health < 1000) Return;
 		Actor Mobj;
 		Array <Actor> Candidates;
 		Let Roadkills = BlockThingsIterator.Create (Self,Range);
@@ -177,8 +219,7 @@ Class MVP_MBT : MVP_BaseVehicle
 			}
 			
 			//If it's not a really weak enemy and they have some kind of range attack, avoid them. If they are weak, ignore that they have a range attack.
-			//If you are down to 1000 health however, just stop running enemies over.
-			If ((Health < 1000 || Level >= THREAT_NORMAL) && Mobj.MissileState) {a_log ("ranged");Continue;}
+			If (Level >= THREAT_NORMAL && Mobj.MissileState) {a_log ("ranged");Continue;}
 			
 			//And at last, the distance and sight checks.
 			If (Distance3DSquared (Mobj) > Range*Range || !CheckSight (Mobj)) {a_log ("distance and sight");Continue;}
@@ -231,6 +272,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	Const TankCrushRange = 640;
 	Bool Retreating;
 	Int RetreatLoops;
+	Actor WarningZone;
 	
 	Bool User_Stationary; //The tank always stays in place, similar to the HECU M1 Abrams tanks from Half-Life 1.
 	
@@ -307,7 +349,7 @@ Class MVP_MBT : MVP_BaseVehicle
 				Params.RunRad = 384;
 				Int RealRange = RetreatRange;
 				//If moving to a target that is below the threat threshold, never retreat. In other words, don't retreat when trying to run over someone.
-				If (AssessThreatLevel (Target) < ThreatLevelThreshold && User_CrushMode == CRUSH_ACTIVE) RetreatRange = 0;
+				If (AssessThreatLevel (Target) < ThreatLevelThreshold && User_CrushMode == CRUSH_ACTIVE && Health >= 1000) RetreatRange = 0;
 				KAI_LandVehicleChase (flags:LVC_USERETREATSTATE|LVC_PLAYERSASTHREATS|LVC_MAKEFRIENDSIDLE,turnradius:TankAngleLimit,512);
 				RetreatRange = RealRange;
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();

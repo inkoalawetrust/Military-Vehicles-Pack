@@ -455,7 +455,7 @@ Mixin Class MVP_APC_Smoke
 	Override Bool SpawnDamageSmoke()
 	{
 		If (!Super.SpawnDamageSmoke()) Return False;
-		Console.Printf ("Where there's smoke, there's fire. - %s, 2023",GetClassName());
+		//Console.Printf ("Where there's smoke, there's fire. - %s, 2023",GetClassName());
 		Double CardAng = GetNearestCardinalAngle();
 		Vector3 OldPos = Pos;
 		Vector3 SpawnPos = Vec3Angle (-40,CardAng);

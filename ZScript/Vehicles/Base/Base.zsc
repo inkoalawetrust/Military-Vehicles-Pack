@@ -384,7 +384,7 @@ Class SmartMarineWarningZone : KAI_MixinActor
 		Name TheOtherMarine = "TurretMarine";
 		Name WarningToken = "SM_ImInDanger";
 		
-		If (IsFrozen()) Return;
+		If (IsFrozen() || bDormant) Return;
 		
 		//Can be used to attach the zone to an actor.
 		If (Master)
@@ -434,10 +434,10 @@ Class SmartMarineWarningZone : KAI_MixinActor
 		}
 	}
 	//DEBUG: Uncomment this to be able to see where the warning zones are at.
-	/*States
+	States
 	{
 		Spawn:
 			PLSS A 4 Bright;
 			Loop;
-	}*/
+	}
 }
