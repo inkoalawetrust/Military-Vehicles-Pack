@@ -171,7 +171,7 @@ $Limit Weapon/RadioCall 0
 	Vehicle/Tank/Idle "Sounds/Vehicles/MBT/TankIdle.ogg"
 	
 	Vehicle/Tank/TurretTurn "Sounds/Vehicles/MBT/TankTurn.ogg"
-	Vehicle/Tank/AltTurretTurn "Sounds/Vehicles/MBT/TankTurnOriginal.ogg"
+	Vehicle/Tank/TurretTurnOriginal "Sounds/Vehicles/MBT/TankTurnOriginal.ogg"
 	Vehicle/Tank/CannonFire1 "Sounds/Vehicles/MBT/TankFire1.ogg"
 	Vehicle/Tank/CannonFire2 "Sounds/Vehicles/MBT/TankFire2.ogg"
 	Vehicle/Tank/CannonFire3 "Sounds/Vehicles/MBT/TankFire3.ogg"
@@ -187,7 +187,7 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/Tank/Idle 0
 	
 	$Limit Vehicle/Tank/TurretTurn 0
-	$Limit Vehicle/Tank/AltTurretTurn 0
+	$Limit Vehicle/Tank/TurretTurnOriginal 0
 	$Limit Vehicle/Tank/CannonFire1 0
 	$Limit Vehicle/Tank/CannonFire2 0
 	$Limit Vehicle/Tank/CannonFire3 0

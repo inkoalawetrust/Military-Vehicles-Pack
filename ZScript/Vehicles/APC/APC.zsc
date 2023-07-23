@@ -120,7 +120,7 @@ Class MVP_APC : MVP_BaseVehicle
 		If (Health <= SpawnHealth()/4)
 			AggressionMultiplier *= 0.5;
 		UpdateThreatLevel();
-		If (KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
+		If (Target && KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (User_MarineAmount > 0)
 			{

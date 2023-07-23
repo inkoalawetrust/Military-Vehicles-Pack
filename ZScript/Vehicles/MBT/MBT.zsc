@@ -1,5 +1,6 @@
 //VARIANT IDEAS:
 //General
+//The different tank types should be handled with separate hull actors based on MVP_MBT, with different tags, speed, and health.
 //The SPAAG and artillery tanks should not try to intentionally run over enemies as an attack, and back off like normal vehicles instead.
 //Normal turret
 	//Make an alternate 3-barrel chaingun RWS for the tank. That fires MVP_RifleBullet instead of MVP_50CalBullet. Twice as fast, for painlocking enemies.
@@ -24,27 +25,32 @@
 	//The top radar should not be cosmetic, and when destroyed halve the accuracy and sight range of the SPAAG, and limit its' FOV.
 	//It will only target flying enemies, unless there's literally none of them in sight, in which case it'll start sounding at ground enemies too.
 
+//TODO
+//Add damage factors to the hull and turret.
+//Maybe make it so the tank hull doesn't try chasing enemies faster than it, particularly if that enemy is running away from them ?
+//Probably move the APCs' bullets and shells, and the tanks' ATGM, into a generic projectiles file for reused projectile types.
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
 	{
 		//$Title Main Battle Tank
 		//$Category Vehicles/Tanks
+		//$Sprite MMBT[1
 		Health 6000;
 		WoundHealth 1500;
 		Speed 10;
 		XScale 1;
 		YScale 0.833333; //1 / 1.2
 		Radius 96;
-		Height 88; //For now, this is the combined height of the hull and main turret.
+		Height 56;
 		MeleeRange 88;
 		MaxSlopeSteepness 0.65;
-		//TODO: Give the turrets roughly this range as well, except maybe the BMPT. The TOS-1 should have like double the range.
+		Mass 30000;
 		FriendlySeeBlocks 128;
 		MaxTargetRange 16384;
 		KAI_Actor.ThreatLevel THREAT_VERYDANGEROUS;
-		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
-		//KAI_BaseVehicle.VehicleTurret "MVP_MBTTurret"; //Normal tank turret.
+		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
+		KAI_BaseVehicle.VehicleTurret "MVP_MBTTurret"; //Normal tank turret.
 		KAI_BaseVehicle.MaxPushMass 25000;
 		KAI_BaseVehicle.MaxPushRadius 128;
 		KAI_BaseVehicle.MaxPushHeight 128;
@@ -53,18 +59,42 @@ Class MVP_MBT : MVP_BaseVehicle
 		KAI_BaseVehicle.MaxCrushHeight /*64*/ 192; //The height is kinda fucky, but it's for the tank to be able to drive over street lights in gz_bigcity.
 		KAI_BaseVehicle.MaxCorpseRadius 88;
 		KAI_BaseVehicle.MaxCorpseHeight 64;
-		Tag "M6V3-EX Main Battle Tank";
+		Tag "M6V3-EX Main Battle Tank"; //TODO: Change the tags for the different tank variants too.
 		ActiveSound "Vehicle/Tank/Move";
-		//TODO: Add tank specific flags like no morphing.
-		+LookAllAround;
+		//Armor, yes, good luck, lmao.
+		DamageFactor 0.6; //Generic damage factor.
+		DamageFactor "ExplosiveImpact", 0.5;
+		DamageFactor "Explosion", 0.5;
+		DamageFactor "Explosive", 0.5;
+		DamageFactor "Grenade", 0.4;
+		DamageFactor "HitScan", 0.55; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.3;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.5;
+		DamageFactor "MarineGrenade", 0.5;
+		DamageFactor "MarineRifle", 0.55;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.5;
+		DamageFactor "RifleBullet", 0.6;
+		+DontSquash;
+		+DontBlast;
 	}
 	
 	Override Void PostBeginPlay ()
 	{
+		TurretOffsets = (0,0,4.8);
 		Super.PostBeginPlay();
 		//Decide movement sound for this tank instance.
 		If (Random (False,True) == True) ActiveSound = "Vehicle/Tank/AltMove";
-		If (Random(0,255) < 8) ActiveSound = "Vehicle/Tank/MoveOriginal";
+		
+		/*I just overheard a secure access transmission...soldiers have arrived and they're coming to rescue us.
+		Of course, I have my doubts that we'll live long enough to greet them.*/
+		If (Random(0,255) < 16)
+		{
+			ActiveSound = "Vehicle/Tank/MoveOriginal";
+			Turret.TurnSound = "Vehicle/Tank/TurretTurnOriginal";
+			Turret.bTurnSoundNoStop = False;
+		}
 		WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,128,Self,(96,0,Height/2));
 		console.printf ("active sound is %s",activesound);
 	}
@@ -84,6 +114,18 @@ Class MVP_MBT : MVP_BaseVehicle
 		
 		//If (TankCrushRange > 0) User_RetreatDistance = -1; //If you are going to crush your enemies, don't run away from them.
 		If (User_CrushMode == CRUSH_NONE) bNoCrushing = True;
+	}
+	
+	Override Void SpawnVehicleTurret ()
+	{
+		If (VehicleTurret)
+		{
+			SpawnTurret (VehicleTurret);
+			If (User_RWS ~== "MG" || User_RWS ~== "MachineGun" || User_RWS ~== "Machine Gun")
+				Turret.VehicleTurret = "MVP_MBTRWS";
+			Else If (User_RWS ~== "Minigun" || User_RWS ~== "Gatling")
+				Turret.VehicleTurret = "MVP_MBTRWSMinigun";
+		}
 	}
 	
 	Override Bool CanAttack()
@@ -237,10 +279,10 @@ Class MVP_MBT : MVP_BaseVehicle
 	Void A_MBTLook ()
 	{
 		If (User_CrushMode != CRUSH_PASSIVE)
-			MBT_RunShitOver (360,TankCrushRange); //Find something to run over.
+			MBT_RunShitOver (220,TankCrushRange); //Find something to run over.
 		If (!Target) //Nothing found, just look for actors normally.
-			KAI_Look (User_Stationary ? LOF_NOJUMP : 0,maxseedist:MaxTargetRange,8192,360);
-		If (Turret && Turret.Target) //Still no target, so get your turrets' target instead.
+			KAI_Look (User_Stationary ? LOF_NOJUMP : 0,maxseedist:MaxTargetRange,8192,220);
+		If (Turret && Turret.Target && !IsDead(Turret.Target)) //Still no target, so get your turrets' target instead.
 		{
 			Target = Turret.Target;
 			If (!User_Stationary) SetStateLabel ("See");
@@ -274,8 +316,10 @@ Class MVP_MBT : MVP_BaseVehicle
 	Int RetreatLoops;
 	Actor WarningZone;
 	
-	Bool User_Stationary; //The tank always stays in place, similar to the HECU M1 Abrams tanks from Half-Life 1.
+	Bool HasAltHull;
 	
+	Bool User_FocusFire; //Should the tanks' remote weapon station, if any, not always try to not have the same target as the turret ?
+	Bool User_Stationary; //The tank always stays in place, similar to the HECU M1 Abrams tanks from Half-Life 1.
 	//Original code donut stael.
 	//Main difference is that this control both corpse AND live enemy crushing.
 	Int User_CrushMode;
@@ -285,10 +329,14 @@ Class MVP_MBT : MVP_BaseVehicle
 		CRUSH_ACTIVE = 0, //Actively seek corpses and enemies.
 		CRUSH_PASSIVE = 1 //Crush enemies and corpses, but only by happenstance.
 	};
+	String User_RWS; //What remote weapon station should the tank use ? The two types are MG and Minigun.
 	States
 	{
+		Sprites:
+			AMBT ABCDEF 0;
 		Spawn:
-			MMBT A 1
+			MMBT A 0 NoDelay {Sprite = !HasAltHull ? GetSpriteIndex ("MMBT") : GetSpriteIndex ("AMBT");}
+			#### A 1
 			{
 				A_StopSound (CHAN_MOVING);
 				A_StartSound("Vehicle/Tank/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
@@ -297,9 +345,9 @@ Class MVP_MBT : MVP_BaseVehicle
 			Loop;
 		//High quality code rips.
 		Idle:
-			MMBT ABCDEF 2
+			#### ABCDEF 2
 			{
-				A_QuakeEx (1,1,1,2,0,384,flags:QF_GROUNDONLY);
+				A_QuakeEx (1,1,1,2,0,512,flags:QF_GROUNDONLY);
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
@@ -326,13 +374,15 @@ Class MVP_MBT : MVP_BaseVehicle
 				Else
 					KAI_Wander(48,1024,128,0.5,TankAngleLimit);
 				
+				FollowPlayerControl (512);
+				
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
 			Loop;
 		See:
-			MMBT ABCDEF 2
+			#### ABCDEF 2
 			{
-				A_QuakeEx (1,1,1,2,0,384,flags:QF_GROUNDONLY);
+				A_QuakeEx (1,1,1,2,0,512,flags:QF_GROUNDONLY);
 				If (User_Stationary) //Shouldn't be here.
 					Return State (SpawnState);
 				//Console.Printf ("Sprite angle offset %d",SpriteRotation);
@@ -340,9 +390,9 @@ Class MVP_MBT : MVP_BaseVehicle
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
 				//Try to find someone else to run over before the stock retargeting code runs.
 				If (User_CrushMode == CRUSH_ACTIVE)
-					If (!Target || Target && Distance3DSquared (Target) > TankCrushRange*TankCrushRange)
+					If (!Target || Distance3DSquared (Target) > TankCrushRange*TankCrushRange || IsFlying(Target))
 						MBT_RunShitOver (360,TankCrushRange);
-				MoveToParams Params;console.printf ("retreat dist %d",retreatrange);
+				MoveToParams Params;//console.printf ("retreat dist %d",retreatrange);
 				Params.DetourFactor = 0.25;
 				Params.Attempts = 32;
 				Params.StepThreshold = 32;
@@ -358,7 +408,7 @@ Class MVP_MBT : MVP_BaseVehicle
 			Loop;
 		//Retreat by "reversing", AKA calling KAI_VehicleRetreat, but using SpriteRotation and an inverted move animation to appear as facing the target.
 		Retreat:
-			TNT1 A 0
+			#### A 0
 			{
 				If (User_Stationary) //Shouldn't be here.
 					Return State (SpawnState);
@@ -368,16 +418,16 @@ Class MVP_MBT : MVP_BaseVehicle
 				Return State (Null);
 			}
 		Retreat.Move:
-			MMBT FEDCBA 2
+			#### FEDCBA 2
 			{
-				A_QuakeEx (1,1,1,2,0,384,flags:QF_GROUNDONLY);
+				A_QuakeEx (1,1,1,2,0,512,flags:QF_GROUNDONLY);
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
 				KAI_VehicleRetreat (Target,96,512,32,0.25,TankAngleLimit);
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
 		Retreat.End:
-			TNT1 A 0
+			#### A 0
 			{
 				//Target no longer in sight, keep retreating for a bit before moving forward again.
 				If (!RetreatLoops && RetreatLoops != -1)
@@ -391,7 +441,7 @@ Class MVP_MBT : MVP_BaseVehicle
 					
 					RetreatLoops = Random (12,24);
 				}
-					console.printf ("loops %d",retreatloops);
+					//console.printf ("loops %d",retreatloops);
 				If (RetreatLoops > 0 && Target && !IsDead (Target))
 				{
 					RetreatLoops--;
@@ -410,11 +460,80 @@ Class MVP_MBT : MVP_BaseVehicle
 	}
 }
 
+//Normal tank turret. Can attack with its' attached RWS (If any), it's 130mm cannon with 3 shell types, and its' 7.62mm coaxial machine gun.
 Class MVP_MBTTurret : MVP_BaseTurret
 {
 	Default
 	{
+		XScale 1;
+		YScale 0.833333; //1 / 1.2
+		Health 2500;
+		Height 32;
+		Radius 72;
+		FriendlySeeBlocks 128;
+		MaxTargetRange 16384;
+		Mass 30000;
+		Tag "M6V3-EX Turret";
+		KAI_BaseTurret.MaximumPitch -50;
+		KAI_BaseTurret.MinimumPitch 15;
+		KAI_BaseTurret.TurnSoundRadius 0.5;
+		//TODO: These attack speed for the target prediction will dynamically change based on the ammo type. For example APFSDS will be faster than HEAT.
+		//While the ATGM will be the slowest of the bunch, but will lock unto enemies.
+		KAI_BaseTurret.AttackSpeed 300;
+		KAI_BaseTurret.FastAttackSpeed 350;
+		KAI_BaseTurret.CombatAngleTurnRate 40;
+		KAI_BaseTurret.CombatPitchTurnRate 30;
+		KAI_BaseTurret.TurnSound "Vehicle/Tank/TurretTurn";
+		KAI_Actor.ThreatLevel THREAT_VERYDANGEROUS;
+		+KAI_BaseTurret.TransferDamage;
+		+KAI_BaseTurret.TurnSoundNoStop;
 		
+		//"Armor"
+		DamageFactor 0.6; //Generic damage factor.
+		DamageFactor "ExplosiveImpact", 0.5;
+		DamageFactor "Explosion", 0.5;
+		DamageFactor "Explosive", 0.5;
+		DamageFactor "Grenade", 0.4;
+		DamageFactor "HitScan", 0.55; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.3;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.5;
+		DamageFactor "MarineGrenade", 0.5;
+		DamageFactor "MarineRifle", 0.55;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.5;
+		DamageFactor "RifleBullet", 0.6;
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Vector3 Original = TurretOffsets;
+		/*NOTE: The RWS can never look perfect due to the tank being made out of sprites. A Z offset of 0 looks like the station is sunken into its' platform
+		from the front, but from the side makes it look actually attached. While a Z of 3 looks normal from the front, but makes the RWS float on the side.*/
+		TurretOffsets = (-6,7.5,3);
+		Super.PostBeginPlay();
+		TurretOffsets = Original;
+		
+		MissileState = FindState ("Fire");
+		AttackStates.Push (FindState("Fire",True));
+	}
+	
+	Override Void Tick()
+	{
+		If (IsFrozen()) Return;
+		
+		//Reverse the direction of the turret when retreating, calling this before Super.Tick() makes the transition seamless.
+		If (!IsDead (Self) && Master && Master Is "MVP_MBT")
+			TurretRotationOffset = MVP_MBT(Master).Retreating ? -180 : 0;
+		
+		Super.Tick();
+	}
+	
+	States
+	{
+		Spawn:
+			MMBT G 1 RotateToVehicle(RTVF_ADDANGLE|RTVF_NOTARGETCHECK);
+			Loop;
 	}
 }
 
@@ -422,6 +541,411 @@ Class MVP_MBTRWS : MVP_BaseTurret
 {
 	Default
 	{
+		Health 200;
+		Radius 16;
+		Height 16;
+		DeathHeight 16;
+		XScale 0.5; //The remote weapon stations are rendered at double the resolution of the rest of the tank hull and turret, for extra detail.
+		YScale 0.416666;
+		Mass 50;
+		FriendlySeeBlocks 64;
+		MaxTargetRange 8192;
+		KAI_BaseTurret.MaximumPitch -50;
+		KAI_BaseTurret.MinimumPitch 15;
+		KAI_BaseTurret.TurnSoundRadius 1.5;
+		KAI_BaseTurret.AttackSpeed 230;
+		KAI_BaseTurret.FastAttackSpeed 250;
+		KAI_BaseTurret.CombatAngleTurnRate 50;
+		KAI_BaseTurret.CombatPitchTurnRate 37;
+		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
+		AttackSound "Vehicle/APC/MGFire";
+		Tag "M20 Remote Weapon Station";
+		Obituary "%o was gunned down by a tanks' remote weapon station";
+		DamageFactor "Autocannon", 0.95;
+		DamageFactor "Melee", 0.4;
+		DamageFactor "Electric", 0.4;
+		DamageFactor "ExplosiveImpact", 0.825;
+		DamageFactor "Explosion", 0.825;
+		DamageFactor "HitScan", 0.9;
+		+MissileMore;
+		+MissileEvenMore;
+	}
+	
+	Bool FocusFire; //Makes the MG not actively avoid sharing the same target as the turret, even if the shared target isn't a powerful enemy.
+	//ULTRA HIGH DEFINITION QUALITY DOLBY ATMOS RIPS.
+	Const RWSAttackHeight = 12;
+	Array <Actor> HitActors;
+	
+	Override Bool ShouldAttack (Bool NoStateJump)
+	{
+		If (!KAI_BaseTurret.ShouldAttack()) Return False;
+		If (Target && !CheckFOV (Target,90/2)) Return False; //KLUDGE: We need to do the null check here, because as of GZDoom 4.10, it's not done internally. Crashing the game.
+		If (IsOverPitchLimits (Target,RWSAttackHeight,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && RWSLOFCheck())
+		{
+			If (!NoStateJump) SetStateLabel ("Fire");
+			Return True;
+		}
+		
+		Return False;
+	}
+	
+	MVP_APCMachineGunLOFCheck MarineWarner; //A permanent pointer to a MG LOF check tracer. So that it can be fired when the turret is firing to warn marines.
+	Bool RWSLOFCheck()
+	{
+		Let Check = New ("MVP_APCMachineGunLOFCheck");
+		TurretAimPos = UpdateTurretAimPos();
+		Vector3 Direction;
+		//If you have a target, fire the LOF check straight at the actor for the LOF check.
+		If (Target)
+		{
+			Double PitchTo = PitchTo (Target,14,GetTurretAimPosOffset());
+			Direction = (AngleToVector(AngleTo(Target), Cos(PitchTo)), -Sin(PitchTo));
+		}
+		//If no target, fire it at the actual aiming direction. This is how it used to be done, but because turrets now (12/5/2023) actually rotate ahead
+		//of their target, that would lead to issues with the LOF returning false.
+		Else
+			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		
+		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
+		Check.Shooter = Self;
+		Check.Other = Target;
+		Check.Trace ((Pos.X,Pos.Y,Pos.Z+RWSAttackHeight),CurSector,Direction,Distance,0);
+		
+		If (Check.BadLOF)
+		{
+			bDontStayAround = True;
+			Check.Destroy();
+			Return False;
+		}
+		bDontStayAround = False;
+		Check.Destroy();
+		Return True;
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		//When shooting, fire a ray that alerts any marines that would be caught in the line of fire.
+		If (IsInAttackState() && GetAge() % 2 == 0) //KLUDGE: This second check prevents infinite recursion when the turret stops firing.
+		{
+			Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+			
+			Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
+			MarineWarner.Shooter = Self;
+			MarineWarner.Other = Target;
+			MarineWarner.OnlyFindActors = True;
+			MarineWarner.Trace ((Pos.X,Pos.Y,Pos.Z+RWSAttackHeight),CurSector,Direction,Distance,0);
+			HitActors.Move(MarineWarner.Mobjs);
+			//Check all the actors the trace hit.
+			Name TheMarine = "SmartMarine";
+			ForEach (Mobj : HitActors)
+				If (Mobj && !IsDead (Mobj) && Mobj Is TheMarine && IsHostile(Mobj))
+					WarnSpecificMarine(Mobj); //Then warn them.
+			HitActors.Clear();
+		}
+	}
+	
+	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
+	{
+		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		If (MarineWarner) MarineWarner.Destroy();
+		If (Master) Master.SetTag (Master.Default.GetTag());
+	}
+	
+	Override Void OnDestroy()
+	{
+		If (Master) Master.SetTag (Master.Default.GetTag());
+		If (MarineWarner) MarineWarner.Destroy();
+		Super.OnDestroy();
+	}
+	//====================================================
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		
+		MissileState = FindState ("Fire");
+		AttackStates.Push (FindState("Fire",True));
+		MarineWarner = New ("MVP_APCMachineGunLOFCheck"); //Create the warning trace for marines.
+	}
+	
+	States
+	{
+		Spawn:
+			MMBT S 0;
+			MMBT # 1
+			{
+				RotateToVehicle();
+				KAI_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:KAIL_CHASETARGET);
+				Frame = UpdateTurretElevation (24,18,20,22); //Y, S, U, W
+			}
+			Wait;
+		See:
+			MMBT # 1;
+			MMBT # 1
+			{
+				DoCombatTraverse();
+				RotateToVehicle();
+				MoveToParams Params;
+				Params.RunRad = 256;
+				Params.DetourFactor = 1.0;
+				Params.Attempts = 32;
+				Params.StepThreshold = 32;
+				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE,moveparams:params);
+				UpdateTurretSnapTimer();
+				Frame = UpdateTurretElevation (24,18,20,22); //Y, S, U, W
+			}
+			Loop;
+		Fire:
+			MMBT ## 1 {Frame = UpdateTurretElevation (24,18,20,22); /*Y, S, U, W*/}
+			MMBT # 3 Light ("50CalFiringLight") Bright
+			{
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				AddProjectileSpread (Proj,(0.8,-0.8),(1.0,-1.0));
+				A_SpawnItemEx ("MVP_BulletCasing",-32,32,8,FRandom(2,-2),FRandom(8,14),FRandom(6,12));
+				Frame = UpdateTurretElevation (25,19,21,23); //Z, T, V, X
+			}
+			MMBT # 1
+			{
+				//If you have no target, or it's dead.
+				If (!Target || IsDead (Target))
+				{
+					A_ClearTarget();
+					LookForPlayers (True); //Look for a new target.
+				}
+				
+				//If you share a target with the turret, then try finding a different one.
+				//Unless the shared target is stronger than the turret, in which case don't force yourself to attack a different target.
+				If (!FocusFire && Target && Master && Target == Master.Target && AssessThreatLevel (Master.Target, False) <= KAI_Actor(Master).ThreatLevel)
+				{
+					Actor NewTarget = PickDifferentTarget (Master.Target,Master.Target,2048,512);
+					If (NewTarget)
+						Target = NewTarget;
+				}
+				
+				If (Random2[pr_monsterrefire]() < 48 &&
+				//If the target is too high or low to shoot.
+				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
+				!RWSLOFCheck()))
+				{
+					A_ClearTarget();
+					Return ResolveState ("See");
+				}
+				
+				HandleChaseTimer();
+				
+				Frame = UpdateTurretElevation (24,18,20,22); //Y, S, U, W
+				Return State (Null);
+			}
+			MMBT # 0 KAI_TurretRefire (48,"See",True,fov:90/2);
+			Goto Fire+2;
+		Death:
+			MBTD Q 1
+			{
+				If (Master)
+				{
+					Angle = Master.Angle;
+					TurretRotationOffset = 0;
+				}
+				RotateToVehicle (RTVF_NOTARGETCHECK);
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 0.6;
+				Boom.SetDamage (32);
+				Boom.MaxTargetRange = 96;
+				Boom.MeleeRange = 12;
+				Boom.bNoGravity = True;
+			}
+			MBTD Q 1 RotateToVehicle (RTVF_NOTARGETCHECK);
+			Wait;
+		XDeath:
+			TNT1 A 0
+			{
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 0.9;
+				Boom.SetDamage (56);
+				Boom.MaxTargetRange = 128;
+				Boom.MeleeRange = 48;
+				Boom.bNoGravity = True;
+				
+				SmokeCounter = 48;
+				Bool b; Actor Debris;
+				For (Int I; I <= SmokeCounter; I++)
+				{
+					[B, Debris] = A_SpawnItemEx ("MVP_DiCokkaDebris",FRandom (Radius,-Radius),FRandom(Radius,-Radius),FRandom (0,Height),FRandom (-12,12),FRandom (-12,12),FRandom (6,16));
+					If (Debris)
+					{
+						Debris.Scale *= FRandom (0.1,0.3);
+						Debris.bXFlip = Random (False,True);
+					}
+				}
+			}
+			Stop;
+		GenericFreezeDeath:
+			MMBT # 0 {Frame = UpdateTurretElevation (24,18,20,22); /*Y, S, U, W*/}
+			Goto Super::GenericFreezeDeath;
+	}
+}
+
+Class MVP_MBTRWSMinigun : MVP_MBTRWS
+{
+	Default
+	{
+		FriendlySeeBlocks 48;
+		MaxTargetRange 6144;
+		KAI_BaseTurret.AttackSpeed 200;
+		KAI_BaseTurret.FastAttackSpeed 220;
+		Obituary "%o drowned in lead";
+		Tag "M20 Minigun Remote Weapon Station";
+	}
+	
+	Mixin MVP_AutocannonWarningZoneHandling; //Listen, the minigun works basically the same way as this. It just fires normal non-ripping bullet projectiles.
+	
+	Int ShotsFired;
+	
+	Override Bool ShouldAttack (Bool NoStateJump)
+	{
+		If (!KAI_BaseTurret.ShouldAttack()) Return False;
+		If (Target && !CheckFOV (Target,90/2)) Return False;
+		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
+		
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,150,0,(0,0,8)))
+		{
+			If (!NoStateJump)
+			{
+				SetStateLabel ("Fire");
+				WarningZone = WarnMarines (0,48); //Create a warning zone to warn marines of wherever the machine gun is aiming.
+				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
+			}
+			Return True;
+		}
+		
+		Return False;
+	}
+	
+	States
+	{
+		Spawn:
+			AMBT G 0;
+			AMBT # 1
+			{
+				RotateToVehicle();
+				KAI_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:KAIL_CHASETARGET);
+				Frame = UpdateTurretElevation (12,6,8,10); //M, G, I, K
+			}
+			Loop;
+		See:
+			AMBT # 1
+			{
+				If (ShotsFired > 0) ShotsFired--;
+				If (ShotsFired > 40) ThreatLevel = THREAT_DANGEROUS;
+				Else ThreatLevel = Default.ThreatLevel;
+				If (WarningZone) WarningZone.Destroy();
+				DoCombatTraverse();
+				RotateToVehicle();
+				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE);
+				UpdateTurretSnapTimer();
+				Frame = UpdateTurretElevation (12,6,8,10); //M, G, I, K
+			}
+			Loop;
+		Fire:
+			AMBT ######## 1 {Frame = UpdateTurretElevation (12,6,8,10); /*M, G, I, K*/}
+			AMBT # 4 Light ("RifleFiringLight") Bright
+			{
+				//The minigun also becomes more dangerous when it reaches max fire rate.
+				If (ShotsFired > 200)
+				{
+					ThreatLevel = THREAT_DANGEROUS;
+					A_SetTics (1);
+				}
+				Else If (ShotsFired > 40) A_SetTics (2);
+				Else If (ShotsFired > 10) A_SetTics (3);
+				If (ShotsFired <= 40) ThreatLevel = Default.ThreatLevel;
+				//console.printf ("tics are %d",tics);
+				Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",8,flags:CMF_AIMDIRECTION,Pitch);
+				AddProjectileSpread (Proj,(0.8,-0.8),(1.0,-1.0));
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.4);
+				Actor Casing; Bool B;
+				[B, Casing] = A_SpawnItemEx ("MVP_BulletCasing",-16,-3,8,FRandom(1,-1),FRandom(-6,-10),FRandom(6,10));
+				Casing.Scale.X = 0.125; Casing.Scale.Y = 0.104166;
+				Frame = UpdateTurretElevation (13,7,9,11); //N, H, J, L
+				ShotsFired++;
+			}
+			AMBT # 1
+			{
+				//If you have no target, or it's dead.
+				If (!Target || IsDead (Target))
+				{
+					Actor Prev = Target;
+					A_ClearTarget();
+					LookForPlayers (True); //Look for a new target.
+					If (!Target) //If the sight check didn't return something like it tends to do sometimes, try finding a target right around the old one.
+						Target = PickDifferentTarget (Prev,Prev,512);
+				}
+				
+				//If you share a target with the autocannon, then try finding a different one.
+				//Unless the shared target is stronger than the turret you are on, in which case don't force yourself to attack a different target.
+				If (!FocusFire && Target && Master && Target == Master.Target && AssessThreatLevel (Master.Target, False) <= KAI_Actor(Master).ThreatLevel)
+				{
+					Actor NewTarget = PickDifferentTarget (Master.Target,Master.Target,2048,512);
+					If (NewTarget)
+						Target = NewTarget;
+				}
+				
+				If (Random2[pr_monsterrefire]() < 128 &&
+				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) || Target && Distance3DSquared (Target) > MaxTargetRange*MaxTargetRange||
+				!KAI_TurretCheckLOF (Target,150,0,(0,0,8))))
+				{
+					Actor Prev = Target;
+					A_ClearTarget();
+					LookForPlayers (True); //Look for a new target.
+					If (!Target || IsOverPitchLimits (Prev,12,Prev.Height/2))
+						Target = PickDifferentTarget (Prev,Prev,512);
+					Return ResolveState ("See");
+				}
+				
+				HandleChaseTimer();
+				
+				Frame = UpdateTurretElevation (12,6,8,10); //M, G, I, K
+				Return State (Null);
+			}
+			AMBT # 0 KAI_TurretRefire (24,"See",True,fov:90/2);
+			Goto Fire+8;
+		Death:
+			MBTD R 1
+			{
+				If (Master)
+				{
+					Angle = Master.Angle;
+					TurretRotationOffset = 0;
+				}
+				RotateToVehicle (RTVF_NOTARGETCHECK);
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 0.6;
+				Boom.SetDamage (32);
+				Boom.MaxTargetRange = 96;
+				Boom.MeleeRange = 12;
+				Boom.bNoGravity = True;
+			}
+			MBTD R 1 RotateToVehicle (RTVF_NOTARGETCHECK);
+			Wait;
+		XDeath:
+			TNT1 A 0
+			{
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 0.9;
+				Boom.SetDamage (56);
+				Boom.MaxTargetRange = 128;
+				Boom.MeleeRange = 48;
+				Boom.bNoGravity = True;
+			}
+			Stop;
+		GenericFreezeDeath:
+			MMBT # 0 {Frame = UpdateTurretElevation (12,6,8,10); /*M, G, I, K*/}
+			Goto Super::GenericFreezeDeath;
 	}
 }

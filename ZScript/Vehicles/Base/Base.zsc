@@ -1,6 +1,3 @@
-//TODO:
-//Move the MVP documentation to a Github wiki instead of the document I currently use.
-
 //FIXME:
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
 The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
