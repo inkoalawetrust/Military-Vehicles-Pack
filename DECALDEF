@@ -73,3 +73,13 @@ decal 30mmScorch
 	RandomFlipX
 	RandomFlipY
 }
+
+decal HEATScorch
+{
+	Pic SCORCH1
+	Shade "00 00 00"
+	X-Scale 2.5
+	Y-Scale 2.5
+	RandomFlipX
+	RandomFlipY
+}

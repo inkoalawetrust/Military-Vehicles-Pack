@@ -41,6 +41,7 @@ Generic fire sound (Fire.ogg) is from the GDC 2018 sound library, "Gregor Quende
 Metal impact sound (MetalImpact.ogg) is from the GDC 2020 sound library, "Bluezone - Cinematic Metal Impacts"
 Wheel impact sound (WheelImpact.ogg) is from the GDC 2020 sound library, "Shapeforms - Hit & Punch"
 The liquid explosion sound was mixed from two sounds from the GDC Audio Library 2018 and 2020.
+Alternate liquid explosion sound (AltWaterBoom.ogg) is from Call of Duty United Offensive.
 Small liquid splash sounds are from Call Of Duty 2.
 Bullet ricochet sounds are from Call of Duty United Offensive.
 Bullet flying by sound (Whizzby.ogg) is from the GDC 2020 sound library, "PMSFX - Bullet Bys &Impacts"
@@ -74,7 +75,9 @@ Alt tank movement sound (TankMove2.ogg): https://quicksounds.com/sound/21082/tan
 Tank idle sound (TankIdle.ogg): https://quicksounds.com/sound/21118/bulldozer-start-idle
 Tank small machine gun firing sound (TankSmallMG.ogg) is from Call of Duty 2.
 Tank cannon firing sounds (TankFire1-3.ogg) are from Call of Duty 2.
+Tank cannon loading sound (TankLoad.ogg) is from Call of Duty United Offensive.
 Tank turret turn sound (TankTurn.ogg): https://quicksounds.com/sound/21001/tank-heavy-turret-motor
+APFSDS round shatter sound (APFSDSBreak.ogg) is from the 2019 GDC Audio Library.
 Rocket artillery firing sounds:
 	TankRocketFire1.ogg: https://quicksounds.com/sound/18282/rocket-launcher-shot-50
 	TankRocketFire2.ogg: https://quicksounds.com/sound/18281/rocket-launcher-shot-49

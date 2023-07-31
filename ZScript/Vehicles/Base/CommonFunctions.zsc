@@ -346,38 +346,66 @@ Mixin Class MVP_SharedFunctions
 	//Range: The range around which to check for enemies.
 	//AvoidAllies: Deduct points from the score for any allies in the AOE.
 	//IDEA: Make the chance increment by the actors' threat level instead ?
-	Int AttackByQuantity (Double Range = 256, Bool AvoidAllies = False)
+	Int AttackByQuantity (Actor Origin, Double Range = 256, Bool AvoidAllies = False)
 	{
+		If (!Origin) Return 0;
 		Actor Mobj;
 		Int Chance;
 		Bool IsHostile, IsVisible; //Caching
 		
-		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Self,Range);
+		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Origin,Range);
 		
 		While (FindEnemies.Next())
 		{
 			Mobj = FindEnemies.Thing;
 			
-			If (IsDead (Mobj) || IsInanimateObject (Mobj) && Mobj == Self) Continue;
+			If (!Mobj || IsDead (Mobj) || IsInanimateObject (Mobj) || Mobj == Self || Mobj == Origin) Continue;
 			
-			IsHostile = IsHostile (Mobj); IsVisible = IsVisible (Mobj,False);
+			IsHostile = IsActorHostile (Mobj); IsVisible = IsVisible (Mobj,False);
 			If (AvoidAllies && !IsHostile && IsVisible)
 			{
-				If (Mobj.bIsMonster) Chance -= 5;
-				If (Mobj.Player) Chance -= 25;
+				If (Mobj.bIsMonster) Chance -= 10;
+				If (Mobj.Player) Chance -= 40;
 				Continue;
 			}
 			
-			If (Mobj != Target && Mobj.Distance3DSquared (Target) <= Range*Range && IsHostile && IsVisible)
+			If (IsHostile && IsVisible && Mobj.Distance3DSquared (Origin) <= Range*Range)
 			{
-				If (Mobj.Health >= 10)
-					Chance += 5;
-				Else
-					Chance += 1;
-				
-				//If the mobj is very dangerous, significantly raise the count.
-				If (AssessThreatLevel (Mobj) >= THREAT_DANGEROUS)
-					Chance += 25;
+				Switch (AssessThreatLevel (Mobj))
+				{
+					Case THREAT_UNSTOPPABLE:
+						Chance += 500;
+						Break;
+					Case THREAT_SUPERDANGER:
+						Chance += 200;
+						Break;
+					Case THREAT_VERYDANGEROUS:
+						Chance += 80;
+						Break;
+					Case THREAT_DANGEROUS:
+						Chance += 40;
+						Break;
+					Case THREAT_ABOVENORMAL:
+						Chance += 20;
+						Break;
+					Case THREAT_NORMAL:
+						Chance += 10;
+						Break;
+					Case THREAT_MILD:
+						Chance += 8;
+						Break;
+					Case THREAT_LOW:
+						Chance += 5;
+						Break;
+					Case THREAT_VERYLOW:
+						Chance += 1;
+						Break;
+					Case THREAT_NONE:
+						Break;
+					Default:
+						Chance += 1;
+						Break;
+				}
 			}
 		}
 		

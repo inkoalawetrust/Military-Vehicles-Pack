@@ -68,11 +68,13 @@ Class MVP_PainRay : MVP_BaseTurret
 				If (Target && !Target.bNoPain)
 				{
 					//If the army car has no target anymore, then set the pain rays' current target as such.
-					If (Master && !Master.Target && !KAI_BaseVehicle(Master).IsPatrolling(Self))
+					If (Master && !Master.Target && !IsPatrolling(Self))
 						Master.Target = Target;
 					
-					Int AttackChance = Random (0,256);
-					If (CheckMissileRange() && AttackByQuantity (384)+AttackChance < 224)
+					//The higher this random addition is, the more likely the ray is to fire.
+					//Even if there's only like, 3 Zombiemen to stun.
+					Int AttackChance = Random (0,48);
+					If (CheckMissileRange() && AttackByQuantity (Target,512)+AttackChance < 64)
 					{
 						Patience = 0; //Reset timer.
 						bJustAttacked = bInCombat = True;
@@ -86,7 +88,7 @@ Class MVP_PainRay : MVP_BaseTurret
 				Else If (Target && Target.bNoPain)
 				{
 					//But do alert the car of their presense.
-					If (Master && !Master.Target && !KAI_BaseVehicle(Master).IsPatrolling(Master))
+					If (Master && !Master.Target && !IsPatrolling(Master))
 						Master.Target = Target;
 					A_ClearTarget();
 				}

@@ -34,6 +34,7 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		DamageFactor "Explosive", 0.75;
 		DamageFactor "Grenade", 0.7;
 		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.6;
 		DamageFactor "Fire", 0.8;
 		DamageFactor "Crush", 1.5;
 		DamageFactor "Disintegrate", 1.5;
@@ -132,6 +133,7 @@ Class MVP_BaseProp : KAI_BaseProp
 		DamageFactor "Explosive", 0.75;
 		DamageFactor "Grenade", 0.7;
 		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.6;
 		DamageFactor "Fire", 0.8;
 		DamageFactor "Crush", 1.5;
 		DamageFactor "Disintegrate", 1.5;

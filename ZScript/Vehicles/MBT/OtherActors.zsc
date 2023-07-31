@@ -1,0 +1,407 @@
+Class MVP_MBTFireEffect : KAI_MixinActor
+{
+	Default
+	{
+		RenderStyle "Add";
+		DamageType "Explosive";
+		MaxTargetRange 224; //The maximum range of the explosion.
+		MeleeRange 96; //The range around the explosion in which actors take it's full damage.
+		Damage 500; //The damage of the explosion, this property can only be changed with the SetDamage() function.
+		+NeverTarget;
+		+NotAutoaimed;
+		+Bright;
+		+NoGravity;
+	}
+	DynamicLight Light;
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay
+			{
+				A_QuakeEx (2,2,2,16,0,1024,"world/quake",QF_SCALEDOWN|QF_GROUNDONLY,falloff:128,rollintensity:2);
+				Light = DynamicLight(Spawn("DynamicLight",Pos));
+				If (Light)
+				{
+					Light.Args[3] = 128;
+					Light.Args[0] = 231; //RGB
+					Light.Args[1] = 207;
+					Light.Args[2] = 13;
+				}
+			}
+			MBTF A 1
+			{
+				Light.Args[3] += 16;
+				MakeAlliesImmuneToExplosion (Target, MaxTargetRange);
+				A_Explode (Damage,MaxTargetRange,0,True,MeleeRange);
+				RemoveAllyExplosionImmunity();
+			}
+			MBTF BCD 1 {Light.Args[3] += 16;}
+			MBTF EF 2 {Light.Args[3] += 16;}
+			MBTF G 2 {Light.Args[3] = 88;}
+			TNT1 A 0 {If (Light) Light.Destroy();} //Fire over, get rid of the light.
+			MBTF HI 2;
+			Stop;
+	}
+}
+
+Class MVP_HEATShell : MVP_BaseProjectile
+{
+	Default
+	{
+		Radius 16;
+		Height 22;
+		Speed 300;
+		FastSpeed 350;
+		XScale 0.5;
+		YScale 0.416666; //0.5 / 1.2
+		DamageFunction (Random(600,1000));
+		ProjectileKickback 512;
+		Obituary "%o was sent straight to god by a HEAT shell";
+		Decal "HEATScorch";
+		DamageType "Shell";
+		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.InitialTrailsSkipped 24;
+		KAI_BaseProjectile.MaxTrails 256;
+	}
+	Void DoSplash (Int LiquidType, Bool UpsideDown = False)
+	{
+		If (LiquidType == LIQUID_NONE) Return;
+		HitLiquid = True;
+		Actor Splash = SpawnLiquidSplash (LiquidType,"SFX/AltLiquidExplosion",attenuation:0.25,1000,384,128,'Explosive', True);
+		
+		Splash.A_QuakeEx (1,1,1,24,0,1024,"",QF_SCALEDOWN|QF_GROUNDONLY,rollintensity:1);
+		Double Size = FRandom (4,6);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.Scale.X *= UpsideDown ? FRandom (-1.2,-2.5) : FRandom (1.2,2.5);
+		Splash.bXFlip = Random (False,True);
+	}
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (IsFrozen()) Return;
+		If (bMissile) PlayFlybySound ("SFX/BulletFlyby",CHAN_VOICE,CHANF_NOSTOP,1,2.0,distance:600);
+	}
+	Bool HitLiquid;
+	DynamicLight Light;
+	States
+	{
+		Spawn:
+			MBTP A 0 NoDelay
+			{
+				A_SpawnItemEx ("MVP_HEATShellPetal",yvel:FRandom(2,4));
+				A_SpawnItemEx ("MVP_HEATShellPetal",yvel:FRandom(-2,-4));
+			}
+			MBTP # 1
+			{
+				A_FaceMovementDirection ();
+				Frame = UpdateProjectileElevation (2,2,0,1,1); //C, C, A, B, B
+			}
+			Wait;
+		Death:
+			TNT1 A 1
+			{
+				//The floor was hit.
+				If (Pos.Z <= FloorZ)
+					DoSplash(CheckLiquid(FloorPic));
+				//The ceiling was hit.
+				Else If (Pos.Z + Height >= CeilingZ)
+					DoSplash(CheckLiquid(CeilingPic),True);
+				
+				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+			}
+			TNT1 A 0
+			{
+				A_SetScale (1,1);
+				A_SetRenderStyle (1.0,Style_Add);
+				If (Pos.Z + Height >= CeilingZ) Scale.Y = -1; //If a ceiling was hit, invert the explosion.
+				Else If (Pos.Z >= FloorZ+88) Return ResolveState ("Death.Air"); //If the explosion happened above 24 map units from the ground, trigger the air explosion.
+				Return State (Null);
+			}
+			TNT1 A 0
+			{
+				SetZ (FloorZ); //Stick to the ground to explode properly.
+				Light = DynamicLight(Spawn("DynamicLight",Pos));
+				If (Light)
+				{
+					Light.Args[3] = 128;
+					Light.Args[0] = 231; //RGB
+					Light.Args[1] = 207;
+					Light.Args[2] = 13;
+				}
+				A_QuakeEx (3,3,3,GameTicRate*2,0,2048,"",QF_SCALEDOWN|QF_GROUNDONLY,falloff:128,rollintensity:3);
+				A_StartSound ("SFX/BigExplosion",flags:CHANF_OVERLAP,attenuation:0.2);
+				MakeAlliesImmuneToExplosion (Target, 512);
+				A_Explode (1200,512,XF_EXPLICITDAMAGETYPE,True,256,damagetype:"Explosive");
+				RemoveAllyExplosionImmunity();
+			}
+			MBTF JKL 1 {Light.Args[3] += 48;}
+			MBTF MNO 4 {Light.Args[3] += 48;}
+			MBTF P 6 {Light.Args[3] += 48;}
+			MBTF Q 16 {If (Light) Light.Destroy();}
+			Stop;
+		Death.Air:
+			TNT1 A 0
+			{
+				A_StartSound ("SFX/BigExplosion",attenuation:0.1);
+				Actor Boom = Spawn ("MVP_MBTFireEffect",Pos);
+				Boom.Target = Target;
+				Boom.MaxTargetRange = 512;
+				Boom.MeleeRange = 256;
+				Boom.SetDamage(1500);
+			}
+			Stop;
+	}
+}
+
+Class MVP_APFSDSShell : MVP_BaseProjectile
+{
+	Default
+	{
+		Radius 16;
+		Height 22;
+		Speed 400;
+		FastSpeed 500;
+		XScale 0.5;
+		YScale 0.416666; //0.5 / 1.2
+		DamageFunction (2500);
+		ProjectileKickback 512;
+		KAI_BaseProjectile.RipDepth 32;
+				KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.InitialTrailsSkipped 24;
+		KAI_BaseProjectile.MaxTrails 256;
+
+		Obituary "%o was penetrated by a depleted uranium rod";
+		Decal "50CalChip";
+		DamageType "APShell";
+		+HitTracer; //Store the actor that killed the round as the tracer, used by the god mode code.
+		+ExtremeDeath;
+		+FoilInvul;
+		+FoilBuddha;
+		+CausePain;
+		+Ripper;
+		+KAI_BaseProjectile.RipOnce;
+	}
+	
+	//P_RipperBlood() is not exposed to ZScriot, like most useful functions apparently. So I had to copy it here for the DU dart.
+	//It does ignore the cl_bloodtype checks however, since P_DrawSplash2 isn't exposed either.
+	Void ShitOutBlood (Actor AnnihilatedRemains)
+	{
+		Let Blud = AnnihilatedRemains.GetBloodType(0);
+		
+		Double XO = Random2 [pr_ripperblood](255) / 8.;
+		Double YO = Random2 [pr_ripperblood](255) / 8.;
+		Double ZO = Random2 [pr_ripperblood](255) / 8.;
+		Vector3 BloodPos = Vec3Offset (XO,YO,ZO);
+		
+		If (Blud)
+		{
+			Actor Mo = Spawn (Blud,BloodPos);
+			If (AnnihilatedRemains.bPuffGetsOwner) Mo.Target = AnnihilatedRemains;
+			If (GameInfo.GameType == GAME_HERETIC) Mo.bNoGravity;
+			Mo.Vel.X = Vel.X / 4; //Natively it's divided by two. But that's too fast for the APFSDS shell.
+			Mo.Vel.Y = Vel.Y / 4;
+			Mo.Tics = Random2 [pr_ripperblood](255) & 3;
+			
+			If (!Mo.bDontTranslate)
+				Mo.Translation = AnnihilatedRemains.BloodTranslation;
+		}
+	}
+	
+	Override Int SpecialMissileHit (Actor Victim)
+	{
+		Int Num = Super.SpecialMissileHit(Victim);
+		
+		If (!Victim) Return 1; //Ignore apparently nonexistent victim.
+		
+		//Godkilling handling.
+		bNoExtremeDeath = False;
+		ProjectileKickback = Default.ProjectileKickback;
+		If (Victim.Player) KilledCheater = False;
+		
+		If (Num == -1 && !Victim.bNoBlood && !Victim.bReflective && !bBloodlessImpact && !Victim.bInvulnerable && !Victim.bDormant)
+		{a_log ("My blood ! He-he punched out ALL my blood !");
+			For (Int I = 128; I >= 0; I--)
+				ShitOutBlood (Victim);
+		}
+		
+		//Skill issue.
+		If (Victim.Player && (Victim.Player.Cheats & (CF_GODMODE|CF_BUDDHA) || Victim.bBuddha || Victim.bInvulnerable))
+		{
+			//Nice try Graf.
+			Let FuckYou = Victim.GiveInventoryType ("MVP_APFSDS_CheatBypass");
+			If (Victim.Player.Cheats & CF_GODMODE) FuckYou.bFoilInvul = True;
+			If (Victim.Player.Cheats & CF_BUDDHA) FuckYou.bFoilBuddha = True;
+			FuckYou.bBuddha = Victim.bBuddha;
+			FuckYou.bInvulnerable = bInvulnerable;
+			
+			//Lol, lmfao even.
+			Victim.Player.Cheats &= ~(CF_GODMODE|CF_BUDDHA);
+			Victim.bInvulnerable = Victim.bInvulnerable = False;
+			KilledCheater = bNoExtremeDeath = True;
+		}
+		
+		If (Victim.Player && Victim.Player.Cheats & CF_GODMODE2 || Victim.bNoDamage)
+		{A_LOG ("I AM A GOD");
+			ProjectileKickBack *= 2; //Weee
+			ExplodeMissile(Null,Victim);
+		}
+		
+		Return Num;
+	}
+	
+	Void DoAPFSDSSplash (Int LiquidType, Bool UpsideDown = False)
+	{
+		If (LiquidType == LIQUID_NONE) Return;
+		HitLiquid = True;
+		Actor Splash = SpawnLiquidSplash (LiquidType,volume:0.4,0.8);
+		
+		Double Size = FRandom (0.8,1.2);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.Scale.Y *= UpsideDown ? FRandom (-1.2,-2.5) : FRandom (1.2,2.5);
+		Splash.bXFlip = Random (False,True);
+	}
+	Bool HitLiquid;
+	Bool KilledCheater;
+	States
+	{
+		Spawn:
+			MBTP H 0 NoDelay
+			{
+				A_SpawnItemEx ("MVP_APFSDSShellPetal",yvel:FRandom(2,4));
+				A_SpawnItemEx ("MVP_APFSDSShellPetal",yvel:FRandom(-2,-4));
+			}
+			MBTP # 1
+			{
+				A_FaceMovementDirection ();
+				Frame = UpdateProjectileElevation (9,9,7,8,8); //J, J, H, I, I
+			}
+			Wait;
+		Death: //Bullet hit level geometry.
+			TNT1 A 1
+			{
+				A_StopSound (CHAN_BODY);
+				//The floor was hit.
+				If (Pos.Z <= FloorZ)
+					DoAPFSDSSplash(CheckLiquid(FloorPic));
+				//The ceiling was hit.
+				Else If (Pos.Z + Height >= CeilingZ)
+					DoAPFSDSSplash(CheckLiquid(CeilingPic),True);
+				
+				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+				Else A_StartSound ("Vehicle/APC/MGImpact",CHAN_WEAPON);
+				A_QuakeEx (1,1,1,GameTicRate,0,256,falloff:32,rollintensity:1);
+			}
+			Stop;
+		XDeath: //Bullet hit a bleeding actor.
+			TNT1 A 1; //Don't play the impact sound on bleeding actors.
+			tnt1 a 0 {console.printf ("i hit %s",Tracer.getclassname());}
+			TNT1 A 0 A_JumpIf ((Tracer.Player && Tracer.Player.Cheats & CF_GODMODE2 || Tracer.bNoDamage),"XDeath.God"); //Go to non-bleeding state for super indestructible actors.
+			Stop;
+		XDeath.God:
+			tnt1 a 0 a_log("WHABAM");
+			TNT1 A 1
+			{
+				A_StartSound ("Vehicle/Tank/APFSDSShatter",CHAN_WEAPON);
+				For (Int I = 0; I <= 8; I++)
+					A_SpawnItemEx ("MVP_APFSDSShard",yvel:FRandom(6,-6),FRandom(6,-6),FRandom(6,-6));
+			}
+			TNT1 A 17 A_QuakeEx (1,1,1,GameTicRate,0,256,falloff:32,rollintensity:1);
+			Stop;
+		Crash: //Bullet hit a non bleeding actor.
+			TNT1 A 1 A_StartSound ("Vehicle/APC/MGImpact",CHAN_WEAPON);
+			TNT1 A 17 A_QuakeEx (1,1,1,GameTicRate,0,256,falloff:32,rollintensity:1);
+			Stop;
+	}
+}
+
+//Once the APFSDS shell disables the basic god modes, this function turns them back one 1 tick after the impact.
+//FoilInvul: Give the owner CF_GODMODE.
+//FoilBuddha: Give the owner CF_BUDDHA.
+//Invulnerable: Give the player bInvulnerable.
+//Buddha: Give the player bBuddha.
+Class MVP_APFSDS_CheatBypass : Inventory
+{
+	Override Void DoEffect ()
+	{
+		If (GetAge() >= 1 && Owner.Player)
+		{
+			If (bFoilInvul) Owner.Player.Cheats |= CF_GODMODE;
+			If (bFoilBuddha) Owner.Player.Cheats |= CF_BUDDHA;
+			Owner.bInvulnerable = bInvulnerable;
+			Owner.bBuddha = bBuddha;
+			GoAwayAndDie();
+		}
+	}
+}
+
+Class MVP_APFSDSShard : Actor
+{
+	Default
+	{
+		Scale 0.2;
+		Radius 4;
+		Height 8;
+		+ThruActors;
+	}
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (Pos.Z <= FloorZ || BlockingLine)
+		{
+			If (Frame >= 7 && Random (0,256) < 48) A_StartSound ("Vehicle/Di-Cokka/MetalHit",volume:FRandom (0.3,0.8),ATTN_STATIC);
+			Destroy();
+		}
+	}
+	States
+	{
+		Spawn:
+			MSDB QRSTUVWX 1;
+			Loop;
+	}
+}
+
+Class MVP_HEATShellPetal : Actor
+{
+	Default
+	{
+		XScale 0.5;
+		YScale 0.416666; //0.5 / 1.2
+		+NoBlockmap;
+	}
+	Double RotAng;
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		RotAng = Random (1,6);
+		RotAng *= Random (1,-1);
+	}
+	
+	Override Void Tick ()
+	{
+		Super.Tick();
+		If (!IsFrozen() && !InStateSequence (CurState,FindState("Death"))) Angle += RotAng;
+	}
+	
+	States
+	{
+		Spawn:
+			MBTP DDDDEEEEFFFF 1 A_CheckFloor ("Death");
+			Loop;
+		Death:
+			MBTP G -1;
+			Stop;
+	}
+}
+
+Class MVP_APFSDSShellPetal : MVP_HEATShellPetal
+{
+	States
+	{
+		Spawn:
+			MBTP KKKKLLLLMMMM 1 A_CheckFloor ("Death");
+			Loop;
+		Death:
+			MBTP N -1;
+			Stop;
+	}
+}

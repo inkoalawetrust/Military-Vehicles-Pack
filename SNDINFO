@@ -5,6 +5,7 @@ SFX/MSExplosion2 "Sounds/Vehicles/Di-Cokka/MSExplosion2.ogg"
 SFX/BigExplosion "Sounds/SFX/BigExplosion.ogg"
 SFX/Explosion "Sounds/SFX/Explosion.ogg" //Maybe get more explosion sounds, and turn SFX/Explosion into a random sound ?
 SFX/LiquidExplosion "Sounds/SFX/WaterBoom.ogg"
+SFX/LiquidExplosion2 "Sounds/SFX/AltWaterBoom.ogg"
 SFX/WaterImpact1 "Sounds/SFX/MGImpactWater1.ogg"
 SFX/WaterImpact2 "Sounds/SFX/MGImpactWater2.ogg"
 SFX/WaterImpact3 "Sounds/SFX/MGImpactWater3.ogg"
@@ -64,6 +65,7 @@ $Limit SFX/Fire 1
 $Limit SFX/MetalHit 0
 $Limit SFX/WheelHit 0
 $Limit SFX/LiquidExplosion 0
+$Limit SFX/LiquidExplosion2 0
 $Limit SFX/WaterImpact1 0
 $Limit SFX/WaterImpact2 0
 $Limit SFX/WaterImpact3 0
@@ -142,6 +144,8 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/APC/Idle 0
 	$Limit Vehicle/APC/Moving 0
 	$Limit Vehicle/APC/MGFire 0
+	$Limit Vehicle/APC/SmallMGFire1 0
+	$Limit Vehicle/APC/SmallMGFire2 0
 	$Limit Vehicle/APC/MGImpact 0
 	$Limit Vehicle/APC/SmallMGImpact 0
 	$Limit Vehicle/APC/TurretTurn 1 256
@@ -172,14 +176,30 @@ $Limit Weapon/RadioCall 0
 	
 	Vehicle/Tank/TurretTurn "Sounds/Vehicles/MBT/TankTurn.ogg"
 	Vehicle/Tank/TurretTurnOriginal "Sounds/Vehicles/MBT/TankTurnOriginal.ogg"
+	Vehicle/Tank/Reload "Sounds/Vehicles/MBT/TankLoad.ogg"
+	Vehicle/Tank/APFSDSShatter "Sounds/Vehicles/MBT/APFSDSBreak.ogg"
 	Vehicle/Tank/CannonFire1 "Sounds/Vehicles/MBT/TankFire1.ogg"
 	Vehicle/Tank/CannonFire2 "Sounds/Vehicles/MBT/TankFire2.ogg"
 	Vehicle/Tank/CannonFire3 "Sounds/Vehicles/MBT/TankFire3.ogg"
 	Vehicle/Tank/CoaxialFire "Sounds/Vehicles/MBT/TankSmallMG.ogg"
 	
+	$Random Vehicle/Tank/CannonFire
+	{
+		Vehicle/Tank/CannonFire1
+		Vehicle/Tank/CannonFire2
+		Vehicle/Tank/CannonFire3
+	}
+	
 	Vehicle/Tank/Artillery1 "Sounds/Vehicles/MBT/TankRocketFire1.ogg"
 	Vehicle/Tank/Artillery2 "Sounds/Vehicles/MBT/TankRocketFire2.ogg"
 	Vehicle/Tank/Artillery3 "Sounds/Vehicles/MBT/TankRocketFire3.ogg"
+	
+	$Random Vehicle/Tank/Artillery
+	{
+		Vehicle/Tank/Artillery1
+		Vehicle/Tank/Artillery2
+		Vehicle/Tank/Artillery3
+	}
 	
 	$Limit Vehicle/Tank/Move 0
 	$Limit Vehicle/Tank/AltMove 0
@@ -188,6 +208,8 @@ $Limit Weapon/RadioCall 0
 	
 	$Limit Vehicle/Tank/TurretTurn 0
 	$Limit Vehicle/Tank/TurretTurnOriginal 0
+	$Limit Vehicle/Tank/Reload 0
+	$Limit Vehicle/Tank/APFSDSSHatter 0
 	$Limit Vehicle/Tank/CannonFire1 0
 	$Limit Vehicle/Tank/CannonFire2 0
 	$Limit Vehicle/Tank/CannonFire3 0

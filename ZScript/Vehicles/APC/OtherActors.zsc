@@ -21,6 +21,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
 		DamageFactor "Autocannon", 0.8;
+		DamageFactor "Shrapnel", 0.5;
 		AttackSound "Vehicle/APC/MGFire";
 		KAI_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
 		+MissileMore;
@@ -629,7 +630,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				}
 				
 				If (Random2[pr_monsterrefire]() < 128 &&
-				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
+				((Target && IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) ||
 				!KAI_TurretCheckLOF (Target,150,0,(0,0,8))))
 				{
 					A_ClearTarget();
@@ -691,7 +692,8 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		FastSpeed 250;
 		XScale 0.2;
 		YScale 0.166667; //0.2 / 1.2
-		DamageFunction (Random (60,80)/10); //A ripper damages an actor with a total radius of 64 MU, 10 times, hence dividing the random damage output by 10.
+		//DamageFunction (Random (40,60));
+		damagefunction(1);
 		ProjectileKickback 32;
 		RipperLevel 3;
 		Obituary "%o was gunned down by a machine gun";
@@ -701,10 +703,10 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		KAI_BaseProjectile.TrailActor "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 4;
 		KAI_BaseProjectile.MaxTrails 128;
+		//KAI_BaseProjectile.RipDepth 4;
 		+Ripper;
+		+KAI_BaseProjectile.RipOnce;
 	}
-	Int RipAmount;
-	Const Rips = 5; //Roughly how many actors it'll rip.
 	Bool HitLiquid;
 	
 	Override Int SpecialMissileHit (Actor Victim)
@@ -722,15 +724,13 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		If (Victim.SpawnHealth() <= 200) bExtremeDeath = True; //Obliterate any weak enemy.
 		Else bExtremeDeath = False;
 		
-		//Stop penetrating if the target has a lot of health, or you ripped for long enough.
-		If (Victim.SpawnHealth() >= 500 || RipAmount > Rips*10) bRipper = False;
+		//Stop penetrating if the target has a lot of health.
+		If (Victim.SpawnHealth() >= 500) bRipper = False;
 		
 		//Stop ripping if you went through a large enough ally.
 		//If (Target && Target.bIsMonster && !(Target.IsHostile(Victim)) && Victim.Radius >= 40 && Victim.Height >= 64) A_Die();
 		
-		RipAmount++;
-		
-		If (!Victim.Player && Victim.PainChance <= 80 && Random (0,256) >= 128+48) bPainLess = True; //So monsters aren't frozen in pain from the amount of bullets hitting them.
+		//If (!Victim.Player && Victim.PainChance <= 80 && Random (0,256) >= 128+48) bPainLess = True; //So monsters aren't frozen in pain from the amount of bullets hitting them.
 		Return -1;
 	}
 	

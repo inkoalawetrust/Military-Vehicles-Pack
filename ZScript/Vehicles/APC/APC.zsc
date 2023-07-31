@@ -31,6 +31,7 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "Explosive", 0.65;
 		DamageFactor "Grenade", 0.6;
 		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.4;
 		DamageFactor "Fire", 0.7;
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.80;
