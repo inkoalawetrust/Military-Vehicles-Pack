@@ -274,7 +274,7 @@ Class MVP_FireLens : Actor
 	States
 	{
 		Spawn:
-			SPKY ABCDEF 5 Bright;
+			SPKY ABCDEF 5 Bright Fast;
 			Loop;
 	}
 }
@@ -311,16 +311,16 @@ Class MVP_BrightFireParticle : MVP_FireParticle
 //IDEA: Maybe this would be better as a textured particle with a sizestep ? Would be a lot more optimized.
 //An expanding white ring, used by certain explosions.
 //Speed: How fast the ring expands in size every tick.
-//FastSpeed: How fast the ring fades every tick.
+//FloatSpeed: How fast the ring fades every tick.
 //Threshold: How long before the ring begins fading.
 //ReactionTime: How long the ring will last before vanishing.
-Class MVP_ShockWaveRing : Actor
+Class MVP_ShockwaveRing : Actor
 {
 	Default
 	{
 		Scale 0;
 		Speed 0.25;
-		FastSpeed 0.25;
+		FloatSpeed 0.25;
 		Threshold 3;
 		RenderStyle "Add";
 		Alpha 0.5;
@@ -332,7 +332,7 @@ Class MVP_ShockWaveRing : Actor
 		If (IsFrozen()) Return;
 		
 		A_SetScale (Scale.X+Speed);
-		If (Threshold && Timer >= Threshold) A_FadeOut (FastSpeed);
+		If (Threshold && Timer >= Threshold) A_FadeOut (FloatSpeed);
 		Timer++;
 		If (Timer >= ReactionTime)
 			Destroy();

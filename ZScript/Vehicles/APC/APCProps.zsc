@@ -31,6 +31,7 @@ Class MVP_APCProp : MVP_BaseProp
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.7;
 		DamageFactor "RifleBullet", 0.75;
+		DamageFactor "Missile", 0.8;
 	}
 	
 	Override Void PostBeginPlay ()

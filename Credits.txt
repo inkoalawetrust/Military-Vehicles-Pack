@@ -25,6 +25,7 @@ Liquid explosion sprites are from Metal Slug.
 Shockwave ring (SHOKA0) made by inkoalawetrust.
 Tank cannon firing and explosion sprites made by inkoalawetrust
 Di-Cokka firing, projectile, and debris sprites are from Metal Slug.
+Smoke sprites (Sprites/SFX/Smoke) are from unknown source, ripped from Project Brutality.
 
 =====<Other>=====
 Radio/Walkie-talkie sprites (RADI*) made by Doom Nukem. World sprite (RADIZ0) by mark#8218.
@@ -82,6 +83,8 @@ Rocket artillery firing sounds:
 	TankRocketFire1.ogg: https://quicksounds.com/sound/18282/rocket-launcher-shot-50
 	TankRocketFire2.ogg: https://quicksounds.com/sound/18281/rocket-launcher-shot-49
 	TankRocketFire3.ogg: https://quicksounds.com/sound/18280/rocket-launcher-shot-48
+
+Missile flying sound (MissileFly.ogg) is from Battlefield 1942.
 Original tank movement and turret turning sounds (TankMoveOriginal.ogg & TankTurnOriginal.ogg) are from Half Life 1.
 
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.

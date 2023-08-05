@@ -47,7 +47,19 @@ Class SM_MarineChecker : EventHandler
 			}
 		}
 	}
-	
+	//DEBUG DEBUG
+	Override Void WorldThingDamaged (WorldEvent E)
+	{
+		//If (e.inflictor && e.inflictor.getclassname() == "mvp_heatshell" && e.thing.getclassname() == "mvp_mbt")
+		//{
+		//	console.printf ("damage send %d",e.damage);
+		//}
+		//else If (e.inflictor && e.inflictor.getclassname() == "mvp_APFSDSshell" && e.thing.getclassname() == "mvp_mbt")
+		//{
+			//console.printf ("apfsds damage sent %d, damage type %s",e.damage,e.damagetype);
+		//}
+
+	}
 	//Replaces the Smart Marines' own bullets with their better MVP equivalents.
 	Override Void CheckReplacement (ReplaceEvent E)
 	{

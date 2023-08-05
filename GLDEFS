@@ -205,11 +205,11 @@ PointLight RifleFiringLight
 	Attenuate 1
 }
 
-PointLight RifleFiringLight
+PointLight CoaxialFiringLight
 {
 	Color 1.00 0.30 0.00
 	Size 96
-	Offset -8 8 0
+	Offset -10 20 0
 	Attenuate 1
 }
 
