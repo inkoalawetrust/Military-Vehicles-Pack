@@ -105,7 +105,7 @@ Class MVP_BaseTurret : KAI_BaseTurret
 		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
 	}
-	
+	Mixin MVP_DamageSmokeHandling;
 	Override Void UserVariableDefaults ()
 	{
 		User_RetreatDistance = -1; //Turrets can't move or be scared anyway.
@@ -191,6 +191,7 @@ Class MVP_BaseTurretProp : KAI_BaseTurretProp
 		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
 	}
+	Mixin MVP_DamageSmokeHandling;
 }
 
 Class MVP_BaseProjectile : KAI_BaseProjectile
@@ -283,6 +284,11 @@ Class MVP_LOFDebugGun : Pistol
 		
 		Double Distance = PLAYERMISSILERANGE; //8192 map units
 		Check.Shooter = Self;
+		
+		Check.ProjInfo = New ('LOFProjInfo'); //Assign struct.
+		Check.ProjInfo.Projectile = "MVP_50CalBullet"; //Pass projectile class to struct.
+		Check.ProjInfo.InitializeProjectileInfo(); //Let it infer the rest.
+		
 		Check.Trace (ShotPos,CurSector,Direction,Distance,0);
 		
 		Vector3 HitPos = Check.Results.HitPos;
@@ -292,12 +298,12 @@ Class MVP_LOFDebugGun : Pistol
 		
 		If (Check.BadLOF)
 		{
-			A_Log ("KAI_LOFDebugGun: The line of fire check returned a bad LOF.");
+			A_Log ("MVP_LOFDebugGun: The line of fire check returned a bad LOF.");
 			Check.Destroy();
 			Return;
 		}
 		
-		A_Log ("KAI_LOFDebugGun: The line of fire check returned a good LOF.");
+		A_Log ("MVP_LOFDebugGun: The line of fire check returned a good LOF.");
 		Check.Destroy();
 		Return;
 	}

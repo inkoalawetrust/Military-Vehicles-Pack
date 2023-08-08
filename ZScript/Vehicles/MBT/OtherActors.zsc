@@ -1,3 +1,72 @@
+//Token given to marines when they "jump" out of the tank, to tell them to begin running away once they land.
+//God willing I don't have to do this kinda shit ever again after the rewrite.
+Class MVP_MarineLandWarning : Inventory
+{
+	Int Timer;
+	Int Warnings;
+	Actor GROSSHACK;
+	Const MarineRuns = 4;
+	Const RunInterval = 16;
+	Override Void AttachToOwner (Actor Other)
+	{
+		Super.AttachToOwner(Other);
+		If (Other)
+		{
+			GROSSHACK = Spawn ("MVP_StupidFuckingFakeMarineHack",Other.Pos);
+			GROSSHACK.Master = Other; //Stick to marine.
+			Other.bInvisible = True;
+		}
+	}
+	Override Void DoEffect ()
+	{
+		Super.DoEffect();
+		
+		If (!Master || Warnings >= MarineRuns) GoAwayAndDie();
+		
+		If (Owner.FloorZ >= Owner.Pos.Z) //Landed on the ground.
+		{
+			If (GROSSHACK) GROSSHACK.Destroy();
+			Owner.bInvisible = False;
+			If (Timer % RunInterval == 0)
+			{
+				If (Master Is "MVP_BaseVehicle")
+					MVP_BaseVehicle(Master).WarnSpecificMarine (Owner);
+				Else If (Master Is "MVP_BaseTurret")
+					MVP_BaseTurret(Master).WarnSpecificMarine (Owner);
+				Warnings++;
+			}
+			Timer++;
+		}
+	}
+}
+
+Class MVP_StupidFuckingFakeMarineHack : Actor
+{
+	Default {+NOBLOCKMAP;+NOCLIP;+THRUACTORS;}
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
+		
+		If (!MarineCheck.NoCustomMarines)
+			Sprite = GetSpriteIndex ("MARJ"); //Make sure nothing stupid happens if no marines are available.
+	}
+	Override Void Tick()
+	{
+		If (Master)
+		{
+			SetOrigin (Master.Pos,True);
+			Angle = Master.Angle;
+		}
+	}
+	States
+	{
+		Spawn:
+			#### A -1;
+			Stop;
+	}
+}
+
 Class MVP_MBTFireEffect : KAI_MixinActor
 {
 	Default
@@ -95,6 +164,8 @@ Class MVP_GroundDustSpawner : Actor
 			
 			Dust.Scale *= FRandom (0.6,1.25);
 			Dust.Speed *= FRandom (0.75,1.25); //Set roll speed, doesn't work for MVP_GroundDust3 though, which doesn't use it.
+			If (Random (0,255) < 255/2-16 && !(Dust Is "MVP_GroundDust3")) Dust.Vel.Z = FRandom(0.5,2);
+			If (Random (0,255) < 64) Dust.A_SetRenderStyle (1,STYLE_ADD);
 		}
 		Destroy();
 	}
@@ -106,7 +177,7 @@ Class MVP_GroundDust : Actor
 	Default
 	{
 		Speed 2;
-		RenderStyle "Add";
+		//RenderStyle "Add";
 		+NoBlockmap;
 		+NoInteraction;
 		+NoGravity;
@@ -116,7 +187,7 @@ Class MVP_GroundDust : Actor
 	Override Void PostBeginPlay ()
 	{
 		Super.PostBeginPlay();
-		If (!bSynchronized) Tics = 1 + (Random(0,255) % Tics); //Randomize the dust a bit.
+		If (!bSynchronized) Tics = Random(0,8); //Randomize the dust a bit.
 	}
 	
 	States
@@ -128,7 +199,7 @@ Class MVP_GroundDust : Actor
 }
 
 //Dark circular cloud.
-Class MVP_GroundDust2 : Actor
+Class MVP_GroundDust2 : MVP_GroundDust
 {
 	States
 	{
@@ -139,7 +210,7 @@ Class MVP_GroundDust2 : Actor
 }
 
 //Light gray dust puff.
-Class MVP_GroundDust3 : Actor
+Class MVP_GroundDust3 : MVP_GroundDust
 {
 	States
 	{
@@ -186,6 +257,19 @@ Class MVP_HEATShell : MVP_BaseProjectile
 		If (IsFrozen()) Return;
 		If (bMissile) PlayFlybySound ("SFX/BulletFlyby",CHAN_VOICE,CHANF_NOSTOP,1,2.0,distance:600);
 	}
+	
+	Override Int SpecialMissileHit (Actor Victim)
+	{
+		Int Result = Super.SpecialMissileHit(Victim);
+		
+		If (Result == -1)
+		{
+			If (Pos.Z >= FloorZ+88) bFalling = True; //This is going to be an air blast, so mark it as such for the tank turrets' obituaries.
+		}
+		
+		Return Result;
+	}
+	
 	Bool HitLiquid;
 	DynamicLight Light;
 	States
@@ -585,6 +669,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 		Splash.bXFlip = Random (False,True);
 	}
 	
+	Actor TrackPoint; //DEBUG: What position is the missile warping to.
 	Override Void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
@@ -592,6 +677,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 		WarnZone = WarnMarines (MWRN_ALLIESTOO,512,Self);
 		MarineWarner = New ("KAI_LOFActorFinder");
 		MarineWarner.Shooter = Self;
+		TrackPoint = Spawn ("KAI_DebugPoint",Pos);
 	}
 	
 	//Rocket trail.
@@ -607,11 +693,18 @@ Class MVP_ATGM : MVP_BaseProjectile
 		Trail.Vel.Z = FRandom (-0.5,3);
 	}
 	
-	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
+	Override Int SpecialMissileHit (Actor Victim)
 	{
-		If (WarnZone) WarnZone.Destroy();
-		If (Flare) Flare.Destroy();
-		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
+		Int Result = Super.SpecialMissileHit(Victim);
+		
+		If (Result == -1)
+		{
+			If (WarnZone) WarnZone.Destroy();
+			If (Flare) Flare.Destroy();
+			If (Pos.Z >= FloorZ+88) bFalling = True; //This is going to be an air blast, so mark it as such for the tank turrets' obituaries.
+		}
+		
+		Return Result;
 	}
 	
 	Override Void OnDestroy()
@@ -650,7 +743,8 @@ Class MVP_ATGM : MVP_BaseProjectile
 		OldAngle = Angle;
 		Super.Tick();
 		If (IsFrozen()) Return;
-		console.printf ("angle difference %f",DeltaAngle (Angle,OldAngle));
+		If (TrackPoint) TrackPoint.SetOrigin(GetFutureTrajectory((8,8,8)),False);
+		//console.printf ("angle difference %f",DeltaAngle (Angle,OldAngle));
 		If (DeltaAngle (Angle,OldAngle) < -0.1)
 			{a_log ("steering right");SteerDir = STEER_RIGHT;}
 		Else If (DeltaAngle (Angle,OldAngle) > 0.1)
@@ -710,16 +804,17 @@ Class MVP_ATGM : MVP_BaseProjectile
 		Fly:
 			MBTP # 1 Bright
 			{
-				A_SeekerMissile (0,1,SMF_PRECISE);
+				KAI_SeekerMissile (0.125,0.2,SMF_SMART,(8,8,8),384);
+				//A_SeekerMissile (0,1,SMF_PRECISE);
 				Frame = UpdateATGMSprites();
-				A_FaceMovementDirection();
 				If (Vel.Length() < 100) //Accelerate over time to 100, when FastMonsters is off of course.
-					A_ScaleVelocity (1.01);
+					A_ScaleVelocity (1.02);
 			}
 			Wait;
 		//Like the HEAT shell, the missile produces a large explosion, however it's explosion is smaller.
 		Death:
-			TNT1 A 1
+			#### # 1;
+			TNT1 A 0
 			{
 				If (Flare) Flare.Destroy();
 				A_StopSound (CHAN_BODY);

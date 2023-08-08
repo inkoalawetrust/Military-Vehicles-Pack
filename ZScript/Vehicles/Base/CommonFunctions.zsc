@@ -299,12 +299,12 @@ Mixin Class MVP_SharedFunctions
 		FSP_VEHICLEDEATH = 1 << 1 //Mark the warning zone as needing to vanish once all of the flames have evaporated.
 	}
 	
-	//FIXME: Fix the bug that for some reason spawns flames halfway merged to the floor. Despite the spawnpos coordinates being fine.
 	//Creates multiple flames within the bounding box of the vehicle. Used to create flaming wrecks when vehicles are gibbed.
 	//Flags: The flags that control the spawning behavior, look at KAIFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
 	//Amount: The random amount of flames that will be created, the X component is the minimum amount of flames, and Y is the maximum.
 	//Lifespan: The random lifespan each flame has in tics, the default is 35*30 (30 seconds). The X component is the minimum lifespan a flame can have, and Y is the maximum.
-	Void SpawnDeathFlames (Int Flags = FSP_WARNMARINES|FSP_VEHICLEDEATH, Vector2 Amount = (5,12), Vector2 Lifespan = (24*TICRATE,105*TICRATE))
+	//RadMul: How much should the random flame position be multiplied by the vehicles' radius.
+	Void SpawnDeathFlames (Int Flags = FSP_WARNMARINES|FSP_VEHICLEDEATH, Vector2 Amount = (5,12), Vector2 Lifespan = (24*TICRATE,105*TICRATE), Double RadMul = 1.75)
 	{
 		Int RandomFlames = Random (Int(Amount.X),Int(Amount.Y));
 		Actor Flame;
@@ -313,12 +313,9 @@ Mixin Class MVP_SharedFunctions
 		//Spawn a random amount of flames around the APC wreck.
 		For (Int I = 0; I < RandomFlames; I++)
 		{
-			SpawnPos.XY = Vec2Offset(FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius));
-			Sector Sec = Level.PointInSector(SpawnPos.XY);
-			SpawnPos.Z = Sec.NextLowestFloorAt(SpawnPos.X,SpawnPos.Y,0) + FRandom (8,Height);
-			//SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8,Height);
+			SpawnPos.XY = Vec2Offset(FRandom (-Radius*RadMul,Radius*RadMul),FRandom (-Radius,Radius));
+			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8,Height);
 			
-			//SpawnPos += (0, 0, SpawnPos.Z);
 			//console.printf ("%d",GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8, Height - 8));
 			console.printf ("pos1: %d %d %d",spawnpos.x,spawnpos.y,spawnpos.z);
 			//If the random position relative to the vehicle is valid.
@@ -329,7 +326,7 @@ Mixin Class MVP_SharedFunctions
 			If (Flame)
 			{
 				Flame.Master = Self; //So the flame knows what actor to warp to.
-				MVP_Flame(Flame).Offsets = Level.Vec3Diff (SpawnPos,Pos);
+				MVP_Flame(Flame).Offsets = Level.Vec3Diff (Pos,SpawnPos);
 				Flame.ReactionTime = Int(FRandom (Lifespan.X,LifeSpan.Y));
 				DeathFlames.Push (Flame); //Add the valid flame to the list.
 			}
@@ -421,7 +418,6 @@ Mixin Class MVP_MarineFunctions
 		Name CustomMarine = 'SmartMarine';
 		Class<Actor> WhatToSpawn;
 		Actor Spawnee;
-		Bool b;
 		
 		If (CustomMarinesAvailable())
 			WhatToSpawn = CustomMarine;
@@ -435,7 +431,8 @@ Mixin Class MVP_MarineFunctions
 		Else
 			Spawnee.CopyFriendliness (Self,False);
 		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
-		Spawnee.Angle = Self.Angle;
+		console.printf ("marine angle %d, vehicle angle %d",spawnee.angle,angle);
+		Spawnee.Angle = Self.Angle;console.printf ("new marine angle %d",spawnee.angle);
 		If (SetMaster)
 			Spawnee.Master = Self;
 		//At least try to make the default ZDoom marines a bit smarter.
@@ -444,7 +441,7 @@ Mixin Class MVP_MarineFunctions
 			Spawnee.Speed = 16;
 			Spawnee.bSeeFriendlyMonsters = True;
 			Spawnee.FriendlySeeBlocks = 16;
-			Spawnee.bAvoidMelee = True;
+			Spawnee.bAvoidMelee = Spawnee.bAvoidHazards = True;
 		}
 		
 		Return Spawnee;

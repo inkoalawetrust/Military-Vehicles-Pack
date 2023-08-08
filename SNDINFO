@@ -12,6 +12,7 @@ SFX/WaterImpact3 "Sounds/SFX/MGImpactWater3.ogg"
 SFX/WaterImpact4 "Sounds/SFX/MGImpactWater4.ogg"
 SFX/Fire "Sounds/SFX/Fire.ogg"
 SFX/MetalHit "Sounds/SFX/MetalImpact.ogg"
+SFX/MetalCrash "Sounds/SFX/MetalCrash.ogg"
 SFX/WheelHit "Sounds/SFX/WheelImpact.ogg"
 SFX/BulletRicochet1 "Sounds/SFX/BulletRicochet1.ogg"
 SFX/BulletRicochet2 "Sounds/SFX/BulletRicochet2.ogg"
@@ -61,8 +62,9 @@ $Random SFX/CasingImpact
 
 $Limit SFX/BigExplosion 0
 $Limit SFX/Explosion 0
-$Limit SFX/Fire 1
+$Limit SFX/Fire 4
 $Limit SFX/MetalHit 0
+$Limit SFX/MetalCrash 0
 $Limit SFX/WheelHit 0
 $Limit SFX/LiquidExplosion 0
 $Limit SFX/LiquidExplosion2 0
