@@ -29,7 +29,6 @@
 //If the tank hull is immediately spawned in a situation where it begins reversing, the turret will start facing the wrong way.
 //TODO
 //Probably move the APCs' bullets and shells, and the tanks' ATGM, into a generic projectiles file for reused projectile types.
-//Add a T-72 mode variable to the tank, that makes it reverse really slowly, and maybe not even at all, and makes the turret go flying when it dies.
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
@@ -39,6 +38,7 @@ Class MVP_MBT : MVP_BaseVehicle
 		//$Sprite MMBT[1
 		Health 6000;
 		WoundHealth 1500;
+		GibHealth 2000;
 		Speed 10;
 		FastSpeed 16;
 		XScale 1;
@@ -144,7 +144,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	
 	Override Bool CanAttack()
 	{
-		Return True; //The tank always has a turret on it to attack with. Plus it might also be able to crush enemies on its; own.
+		Return True; //The tank always has a turret on it to attack with. Plus it might also be able to crush enemies on its' own.
 	}
 	
 	//Don't use the threat assessment of MVP vehicles, which considers players and marines on turrets as huge deal. Since they do little against the tank.
@@ -163,43 +163,7 @@ Class MVP_MBT : MVP_BaseVehicle
 		Return ThreatLvl;
 	}
 	
-	Override Bool SpawnDamageSmoke()
-	{
-		Bool Dead = IsInState (Self,"Death"); //Tank died normally, spawn extra flames at the hole the engine was in.
-		If (!Super.SpawnDamageSmoke() && !Dead) Return False;
-		Vector3 SpawnPos = Vec3Angle (96,GetNearestCardinalAngle(True));
-		
-		//Spawn extra wide fire once dead.
-		If (!Dead)
-			SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-16,16),FRandom(-16,16),48));
-		Else
-			SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-32,32),FRandom(-32,32),48));
-		
-		SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
-		Let FX = (WoundHealth/2 >= Health) ? "MVP_BrightFireParticle" : "MVP_DamageSmoke";
-		For (Int I; I < 2; I++)
-		{
-			Actor Smoke = Spawn (FX,SpawnPos);
-			Smoke.Roll = FRandom(-180,180);
-			Smoke.A_SetScale (FRandom(0.7,1.2));
-			Smoke.Vel.Z = !Dead ? FRandom (1,4) : FRandom (4,8);
-		}
-		
-		//Spawn flames around the turret ring.
-		If (Dead && User_T72Mode)
-		{
-			For (Int I; I < 4; I++)
-			{
-				SpawnPos = Vec3Offset (FRandom(Radius/2,-Radius/2),FRandom(Radius/2,-Radius/2),Height-12);
-				SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
-				Actor Smoke = Spawn (FX,SpawnPos);
-				Smoke.Roll = FRandom(-180,180);
-				Smoke.A_SetScale (FRandom(0.7,1.2));
-				Smoke.Vel.Z = !Dead ? FRandom (1,4) : FRandom (4,8);
-			}
-		}
-		Return True;
-	}
+	Mixin MVP_MBT_SmokeHandling;
 	
 	Override Void SpawnHeadlights ()
 	{
@@ -848,11 +812,23 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	{
 		Let Check = New ("MVP_GenericWarnMarineCheck");
 		
-		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
-		
-		Check.Shooter = Self;
-		Check.Other = Target;
-		Check.Trace ( Level.Vec3Offset (Pos,(0,0,14)), CurSector, Direction, MaxTargetRange, 0 );
+		Vector3 Direction;
+		If (!InFlight)
+			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
+		Else
+			Direction = (0,0,-1); //Aim warning straight down.
+		Vector3 StartPos;
+		If (!InFlight)
+			StartPos = Level.Vec3Offset (Pos,(0,0,14));
+		Else
+			StartPos = Pos;
+		if (InFlight) a_log ("flying tank");
+		If (!InFlight) Check.Shooter = Self;
+		If (!InFlight) Check.Other = Target;
+		Check.Trace (StartPos , CurSector, Direction, MaxTargetRange, 0 );
+		FSpawnParticleParams PP; PP.Color1 = "Red"; PP.Style = STYLE_None; PP.Lifetime = 1; PP.Size = 6; PP.StartAlpha = 1; PP.FadeStep = -1; PP.Flags = SPF_FULLBRIGHT;
+		//Vector3 FacingPos = Level.Vec3Offset(Pos,KAI_Math.AngleToVector3D(Angle, -Pitch, MaxTargetRange));
+		KAI_LOFRaycast.VisualizeTracePath(StartPos,Check.Results.HitPos,MaxTargetRange,8,pp);
 		
 		Return Check.Results.HitPos;
 	}
@@ -866,7 +842,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			TurretRotationOffset = MVP_MBT(Master).Retreating ? -180 : 0;
 		
 		Super.Tick();
-		
+		console.printf ("vertical velocity %d",vel.z);
 		If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True); //Track warn zone to aim direction.
 		
 		//Decide an attack type every half a second.
@@ -965,8 +941,8 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	
 	//Decide and return what ammunition type to use for the tank. And also change the target prediction speeds appropriately.
 	Int DecideAmmoType()
-	{reloadtime = int.max;CoaxialShots = Random (2,4)*10;return type_none; //DEBUG
-		If (!Target) Return ShellType;
+	{//reloadtime = int.max;CoaxialShots = Random (2,4)*10;return type_none; //DEBUG
+		return type_atgm;If (!Target) Return ShellType;
 		Int Threat = AssessThreatLevel (Target);
 		
 		//High chance that if your target is strong or a strong enemy is near it, the tank will fire the APFSDS shell.
@@ -1280,10 +1256,11 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			MBTD E 1 SpawnFleeingCrew ((0,-24,34),-2,8,FRandom (4,6)); //Driver escapes, yes out of the turret because I'm not going to make any more hull sprites for the drivers' hatch opening.
 			MBTD E 1 RotateToVehicle (RTVF_NOTARGETCHECK);
 			Wait;
-		//TODO: Add a warning zone that warps straight down with GetZAt, warning marines that the turret is about to fall on them.
 		FlyingDeath: //Soviet engineering
 			#### # 1
 			{
+				InFlight = True;
+				WarningZone = WarnMarines (MWRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
 				Actor Boom = Spawn ("MVP_Explosion",Pos);
 				Boom.Scale *= 1.5;
 				Boom.SetDamage (384);
@@ -1296,7 +1273,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				SetOrigin (Pos.PlusZ(Height+8),True);
 				bFallOnDeath = True;
 				Vel.Z = TossVelocity = FRandom (32,56);
-				Double XVel = FRandom (-2,-8); Double YVel = FRandom (8,16);
+				Double XVel = FRandom (-2,8); Double YVel = FRandom (8,16);
 				Vel.X = XVel * Cos (Angle) + YVel * Sin (Angle);
 				Vel.Y = XVel * Sin (Angle) - YVel * Cos (Angle);
 			}
@@ -1305,10 +1282,13 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			Wait;
 			MBTD T 1 A_JumpIf ((Vel.Z <= TossVelocity/2),1);
 			Wait;
+		FlyingDeath.Landing:
 			MBTD U 1 A_JumpIf ((bOnMobj || (FloorZ >= Pos.Z) || (CeilingZ <= Pos.Z+Height)),1); //Hit the floor, ceiling, or an actor.
 			Wait;
 			MBTD V 1
 			{
+				InFlight = False;
+				If (WarningZone) WarningZone.Destroy();
 				A_StartSound ("SFX/MetalCrash",attenuation:0.4);
 				A_Explode (800,Radius*1.5,XF_EXPLICITDAMAGETYPE|XF_NOTMISSILE,True,Radius*1.5,damagetype:'Crush');
 				A_QuakeEx (1,1,1,GameTicRate*2,0,768,"",QF_SCALEDOWN|QF_GROUNDONLY,falloff:64,rollintensity:0.5);
@@ -1317,8 +1297,15 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				Dusty.ReactionTime = 128;
 				Dusty.Threshold = 256;
 			}
-			MBTD V -1;
-			Stop;
+			MBTD V 2 A_JumpIf (Abs(Vel.Z) >= 24,"FlyingDeath.Restart"); //We are in vertical motion again.
+			Wait;
+		FlyingDeath.Restart:
+			TNT1 A 0
+			{a_log ("ah shit, here we go again");
+				InFlight = True;
+				WarningZone = WarnMarines (MWRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
+			}
+			Goto FlyingDeath.Landing;
 		//Whole turret vanishes if the tank was hit by something strong enough to gib it.
 		XDeath:
 			TNT1 A 1 A_JumpIf ((MetalCoffin || Random(0,255) < 72),"FlyingDeath");
@@ -1326,43 +1313,9 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	}
 	
 	Double TossVelocity;
+	Bool InFlight;
 	
-	//Funky function positioning.
-	Override Bool SpawnDamageSmoke()
-	{
-		If (!IsDead (Self) || SmokeCounter >= 255) Return False;
-		Vector3 SpawnPos;
-		Bool T72 = IsInState (Self,"FlyingDeath");
-		Int Flames = !T72 ? 2 : 4;
-		For (Int I; I < Flames; I++)
-		{
-		
-			If (!T72)
-			{
-				SpawnPos = Vec3Angle (48,GetNearestCardinalAngle(True));
-				SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-24,24),FRandom(-32,32),8));
-			}
-			Else
-			{
-				//Going up.
-				If (Vel.Z > 0)
-					SpawnPos = Pos;
-				//Famous Doom mapset made by online animator Cyriak Harris.
-				Else
-					SpawnPos = Pos.PlusZ(Height);
-				
-				SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-Radius,Radius),FRandom(-Radius,Radius),0));
-			}
-			
-			SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
-			Actor Smoke = Spawn ("MVP_BrightFireParticle",SpawnPos);
-			Smoke.Roll = FRandom(-180,180);
-			Smoke.A_SetScale (FRandom(0.7,1.2));
-			Smoke.Vel.Z = FRandom (4,8);
-		}
-		SmokeCounter++;
-		Return True;
-	}
+	Mixin MVP_MBTTurret_SmokeHandling;
 	
 	//FIXME: For some reason when marines are spawned by the turret, they always face at 0, ignoring the SpawnMarine angle change, or any angle change.
 	Void SpawnFleeingCrew (Vector3 PosOfs = (0,0,0), Double XVel = 0, Double YVel = 0, Double ZVel = 0)
@@ -1784,5 +1737,88 @@ Class MVP_MBTRWSMinigun : MVP_MBTRWS
 		GenericFreezeDeath:
 			MMBT # 0 {Frame = UpdateRWSElevation (12,6,8,10); /*M, G, I, K*/}
 			Goto Super::GenericFreezeDeath;
+	}
+}
+
+Mixin Class MVP_MBT_SmokeHandling
+{
+	Bool FlamingWreck; //Called from the wrecked version of the hull.
+	Override Bool SpawnDamageSmoke()
+	{
+		Bool Dead = IsInState (Self,"Death"); //Tank died normally, spawn extra flames at the hole the engine was in.
+		If (FlamingWreck) Dead = FlamingWreck;
+		If (!Super.SpawnDamageSmoke() && !Dead) Return False;
+		Vector3 SpawnPos = Vec3Angle (96,GetNearestCardinalAngle(True));
+		
+		//Spawn extra wide fire once dead.
+		If (!Dead)
+			SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-16,16),FRandom(-16,16),48));
+		Else
+			SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-32,32),FRandom(-32,32),48));
+		
+		SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
+		Let FX = (WoundHealth/2 >= Health || FlamingWreck) ? "MVP_BrightFireParticle" : "MVP_DamageSmoke";
+		For (Int I; I < 2; I++)
+		{
+			Actor Smoke = Spawn (FX,SpawnPos);
+			Smoke.Roll = FRandom(-180,180);
+			Smoke.A_SetScale (FRandom(0.7,1.2));
+			Smoke.Vel.Z = !Dead ? FRandom (1,4) : FRandom (4,8);
+		}
+		
+		//Spawn flames around the turret ring.
+		If (Dead && User_T72Mode)
+		{
+			For (Int I; I < 4; I++)
+			{
+				SpawnPos = Vec3Offset (FRandom(Radius/2,-Radius/2),FRandom(Radius/2,-Radius/2),Height-12);
+				SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
+				Actor Smoke = Spawn (FX,SpawnPos);
+				Smoke.Roll = FRandom(-180,180);
+				Smoke.A_SetScale (FRandom(0.7,1.2));
+				Smoke.Vel.Z = !Dead ? FRandom (1,4) : FRandom (4,8);
+			}
+		}
+		Return True;
+	}
+}
+
+Mixin Class MVP_MBTTurret_SmokeHandling
+{
+	//Funky function positioning.
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!IsDead (Self) || SmokeCounter >= 255) Return False;
+		Vector3 SpawnPos;
+		Bool T72 = IsInState (Self,"FlyingDeath");
+		Int Flames = !T72 ? 2 : 4;
+		For (Int I; I < Flames; I++)
+		{
+		
+			If (!T72)
+			{
+				SpawnPos = Vec3Angle (48,GetNearestCardinalAngle(True));
+				SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-24,24),FRandom(-32,32),8));
+			}
+			Else
+			{
+				//Going up.
+				If (Vel.Z > 0)
+					SpawnPos = Pos;
+				//Famous Doom mapset made by online animator Cyriak Harris.
+				Else
+					SpawnPos = Pos.PlusZ(Height);
+				
+				SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-Radius,Radius),FRandom(-Radius,Radius),0));
+			}
+			
+			SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
+			Actor Smoke = Spawn ("MVP_BrightFireParticle",SpawnPos);
+			Smoke.Roll = FRandom(-180,180);
+			Smoke.A_SetScale (FRandom(0.7,1.2));
+			Smoke.Vel.Z = FRandom (4,8);
+		}
+		SmokeCounter++;
+		Return True;
 	}
 }

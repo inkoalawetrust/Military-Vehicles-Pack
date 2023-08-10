@@ -463,6 +463,10 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 			bBloodlessImpact = True;
 			ExplodeMissile(Null,Victim);
 		}
+		If (Victim Is "MVP_MBT" || Victim Is "MVP_MBTProp")
+			bExtremeDeath = (Random(0,255) < 64); //Don't always gib tanks.
+		Else If (Victim.Health >= 10000)
+			bExtremeDeath = False; //Don't gib mega strong enemies.
 		
 		Return Num;
 	}
@@ -629,7 +633,6 @@ Class MVP_ATGM : MVP_BaseProjectile
 	{
 		XScale 0.5;
 		YScale 0.416666; //0.5 / 1.2
-		//PLACEHOLDER
 		Radius 16;
 		Height 16;
 		Speed 80;
@@ -667,6 +670,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
 		Splash.Scale.X *= UpsideDown ? FRandom (-1.2,-2.5) : FRandom (1.2,2.5);
 		Splash.bXFlip = Random (False,True);
+		Splash.Target = Target; //HACK: If I don't do this, then liquid explosions from the ATGM in particular will be able to hurt allies.
 	}
 	
 	Actor TrackPoint; //DEBUG: What position is the missile warping to.
@@ -678,6 +682,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 		MarineWarner = New ("KAI_LOFActorFinder");
 		MarineWarner.Shooter = Self;
 		TrackPoint = Spawn ("KAI_DebugPoint",Pos);
+		SmokeCounter = GameTicRate*5; //Used to add a limited burntime to the missile.
 	}
 	
 	//Rocket trail.
@@ -804,11 +809,30 @@ Class MVP_ATGM : MVP_BaseProjectile
 		Fly:
 			MBTP # 1 Bright
 			{
-				KAI_SeekerMissile (0.125,0.2,SMF_SMART,(8,8,8),384);
+				KAI_SeekerMissile (1,0.125,SMF_SMART|SMF_LOOK,(8,8,8),16,255);
 				//A_SeekerMissile (0,1,SMF_PRECISE);
 				Frame = UpdateATGMSprites();
 				If (Vel.Length() < 100) //Accelerate over time to 100, when FastMonsters is off of course.
 					A_ScaleVelocity (1.02);
+				console.printf ("fuel: %d",smokecounter);
+				If (--SmokeCounter <= 0) //Decrement fuel until zero, then just glide with no more guidance.
+				{
+					A_RemoveLight ('ATGMLight');
+					TrailDelay = INT.MAX;
+					If (Flare) Flare.Destroy();
+					A_StopSound (CHAN_BODY);
+					a_log ("no more fuel");
+					Return FindState ("Glide");
+				}
+				
+				Return State (Null);
+			}
+			Wait;
+		Glide: //Glide until impact.
+			MBTP # 1
+			{
+				KAI_SeekerMissile (0,0.25,SMF_LOOK,(24,24,24),16,255); //Can still glide towards the tracer, very slowly.
+				Frame = UpdateProjectileElevation (19,19,18,19,19,True); //T, T, S, T, T
 			}
 			Wait;
 		//Like the HEAT shell, the missile produces a large explosion, however it's explosion is smaller.
