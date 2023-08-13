@@ -156,7 +156,7 @@ Mixin Class MVP_SharedFunctions
 	
 	Override Bool IsActorHostile (Actor Other)
 	{
-		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
+		Return (Other && (IsHostile (Other) || IsTargetingAllies (Self, Other)));
 	}
 	
 	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
@@ -224,7 +224,6 @@ Mixin Class MVP_SharedFunctions
 	//TODO: Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
 	//Range: The range around which to check for enemies.
 	//AvoidAllies: Deduct points from the score for any allies in the AOE.
-	//IDEA: Make the chance increment by the actors' threat level instead ?
 	Int AttackByQuantity (Actor Origin, Double Range = 256, Bool AvoidAllies = False)
 	{
 		If (!Origin) Return 0;
@@ -508,7 +507,7 @@ Class MVP_GenericWarnMarineCheck : KAI_LOFRaycast
 		Actor Mobj = Results.HitActor;
 		
 		//Standard KAI projectiles go through allies.
-		If (Mobj && (IsInanimateObject (Mobj) || Shooter && IsHostile (Shooter,Mobj)))
+		If (Mobj && (IsInanimateObject (Mobj) || Shooter && IsHostile (Shooter,Mobj)) && Mobj.bSolid)
 			Return Trace_Stop;
 		
 		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.

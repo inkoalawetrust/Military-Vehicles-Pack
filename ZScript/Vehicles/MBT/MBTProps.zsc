@@ -93,6 +93,19 @@ Class MVP_MBTProp : MVP_BaseProp
 	{
 		TurretOffsets = (0.1,0,-0.2);
 		Super.PostBeginPlay();
+		IdleSound = "Vehicle/Tank/Idle";
+		//Decide movement sound for this tank instance.
+		If (Random (False,True) == True) ActiveSound = "Vehicle/Tank/AltMove";
+		
+		/*I just overheard a secure access transmission...soldiers have arrived and they're coming to rescue us.
+		Of course, I have my doubts that we'll live long enough to greet them.*/
+		If (Random(0,255) < 16) //Since the tank prop is always stationary (Duh), it has the same original sound chance as a moving NPC tank.
+		{
+			IdleSound = "Vehicle/Tank/IdleOriginal";
+			ActiveSound = "Vehicle/Tank/MoveOriginal";
+			Turret.TurnSound = "Vehicle/Tank/TurretTurnOriginal";
+			Turret.bTurnSoundNoStop = False;
+		}
 	}
 	
 	Override Void SpawnVehicleTurret ()
@@ -137,6 +150,7 @@ Class MVP_MBTProp : MVP_BaseProp
 	Mixin MVP_MBT_SmokeHandling;
 	Bool HasAltHull; //Skirtless hull.
 	DynamicLight DeathLight;
+	Sound IdleSound;
 	
 	States
 	{
@@ -147,7 +161,7 @@ Class MVP_MBTProp : MVP_BaseProp
 			#### A 1
 			{
 				If (User_IdleSound)
-					A_StartSound("Vehicle/Tank/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
+					A_StartSound(IdleSound,CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
 				Else
 					A_StopSound (CHAN_IDLING);
 			}
@@ -558,9 +572,6 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 		Vector3 Direction = (0,0,-1); //Aim warning straight down.
 		Vector3 StartPos = Pos.PlusZ(-1); //So the warn trace isn't blocked by the turret, which IS a prop
 		Check.Trace (StartPos , CurSector, Direction, MaxTargetRange, 0 );
-		FSpawnParticleParams PP; PP.Color1 = "Red"; PP.Style = STYLE_None; PP.Lifetime = 1; PP.Size = 6; PP.StartAlpha = 1; PP.FadeStep = -1; PP.Flags = SPF_FULLBRIGHT;
-		//Vector3 FacingPos = Level.Vec3Offset(Pos,KAI_Math.AngleToVector3D(Angle, -Pitch, MaxTargetRange));
-		KAI_LOFRaycast.VisualizeTracePath(StartPos,Check.Results.HitPos,MaxTargetRange,8,pp);
 		Return Check.Results.HitPos;
 	}
 	

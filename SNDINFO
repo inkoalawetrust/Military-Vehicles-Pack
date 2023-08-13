@@ -175,6 +175,10 @@ $Limit Weapon/RadioCall 0
 	Vehicle/Tank/AltMove "Sounds/Vehicles/MBT/TankMove2.ogg"
 	Vehicle/Tank/MoveOriginal "Sounds/Vehicles/MBT/TankMoveOriginal.ogg"
 	Vehicle/Tank/Idle "Sounds/Vehicles/MBT/TankIdle.ogg"
+	Vehicle/Tank/IdleOriginal "Sounds/Vehicles/MBT/TankIdleOriginal.ogg"
+	Vehicle/Tank/APSRun "Sounds/Vehicles/MBT/APSActivate.ogg"
+	$Alias Vehicle/Tank/AltAPSRun Vehicle/ArmyCar/PainRay/On
+	Vehicle/Tank/Smokescreen "Sounds/Vehicles/MBT/SmokeDeploy.ogg"
 	
 	Vehicle/Tank/TurretTurn "Sounds/Vehicles/MBT/TankTurn.ogg"
 	Vehicle/Tank/TurretTurnOriginal "Sounds/Vehicles/MBT/TankTurnOriginal.ogg"
@@ -208,6 +212,9 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/Tank/AltMove 0
 	$Limit Vehicle/Tank/MoveOriginal 0
 	$Limit Vehicle/Tank/Idle 0
+	$Limit Vehicle/Tank/IdleOriginal 0
+	$Limit Vehicle/Tank/APSRun 0
+	$Limit Vehicle/Tank/Smokescreen 0
 	
 	$Limit Vehicle/Tank/TurretTurn 0
 	$Limit Vehicle/Tank/TurretTurnOriginal 0

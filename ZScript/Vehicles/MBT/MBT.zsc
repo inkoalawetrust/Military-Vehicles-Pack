@@ -1,6 +1,7 @@
 //VARIANT IDEAS:
 //General
 //The different tank types should be handled with separate hull actors based on MVP_MBT, with different tags, speed, and health.
+//Addendum on the above, seems like both the health AND StartHealth can be modified, so that's probably not needed.
 //The SPAAG and artillery tanks should not try to intentionally run over enemies as an attack, and back off like normal vehicles instead.
 //Normal turret
 	//Make an alternate 3-barrel chaingun RWS for the tank. That fires MVP_RifleBullet instead of MVP_50CalBullet. Twice as fast, for painlocking enemies.
@@ -29,6 +30,7 @@
 //If the tank hull is immediately spawned in a situation where it begins reversing, the turret will start facing the wrong way.
 //TODO
 //Probably move the APCs' bullets and shells, and the tanks' ATGM, into a generic projectiles file for reused projectile types.
+//Make the tank able to dynamically enter a hull down position an stay still with the existing vehicle virtual.
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
@@ -94,13 +96,16 @@ Class MVP_MBT : MVP_BaseVehicle
 	{
 		TurretOffsets = (0.1,0,-0.2);
 		Super.PostBeginPlay();
+		//StayStillDelay = Random(2,4)*GameTicRate; //Don't immediately drop smoke upon spawning.
+		IdleSound = "Vehicle/Tank/Idle";
 		//Decide movement sound for this tank instance.
 		If (Random (False,True) == True) ActiveSound = "Vehicle/Tank/AltMove";
 		
 		/*I just overheard a secure access transmission...soldiers have arrived and they're coming to rescue us.
 		Of course, I have my doubts that we'll live long enough to greet them.*/
-		If (Random(0,255) < 16)
+		If (Random(0,255) < (!User_Stationary ? 16 : 48))
 		{
+			IdleSound = "Vehicle/Tank/IdleOriginal";
 			ActiveSound = "Vehicle/Tank/MoveOriginal";
 			Turret.TurnSound = "Vehicle/Tank/TurretTurnOriginal";
 			Turret.bTurnSoundNoStop = False;
@@ -124,8 +129,11 @@ Class MVP_MBT : MVP_BaseVehicle
 		
 		//If (TankCrushRange > 0) User_RetreatDistance = -1; //If you are going to crush your enemies, don't run away from them.
 		If (User_CrushMode == CRUSH_NONE) bNoCrushing = True;
+		If (User_APSDelay == 0) User_APSDelay = INT.MAX; //Don't shoot projectiles down practically ever.
+		If (User_AltAPSDelay == 0) User_AltAPSDelay = INT.MAX; //Don't dazzle projectiles practically ever.
 	}
 	
+	//TODO: Add future checks for different turret types, unless I decide to use separate hulls for them, which I probably will for the NPC variants.
 	Override Void SpawnVehicleTurret ()
 	{
 		If (VehicleTurret)
@@ -139,6 +147,9 @@ Class MVP_MBT : MVP_BaseVehicle
 				Turret.VehicleTurret = Random (True,False) ? "MVP_MBTRWS" : "MVP_MBTRWSMinigun";
 			If (Turret Is "MVP_MBTTurret")
 				MVP_MBTTurret(Turret).MetalCoffin = User_T72Mode;
+			
+			MVP_MBTTurret(Turret).APSDelay/* = MVP_MBTTurret(Turret).APSCooldown*/ = User_APSDelay;
+			MVP_MBTTurret(Turret).AltAPSDelay/* = MVP_MBTTurret(Turret).AltAPSCooldown*/ = User_AltAPSDelay;
 		}
 	}
 	
@@ -159,7 +170,7 @@ Class MVP_MBT : MVP_BaseVehicle
 			//Downgrade the threat if it doesn't have god or buddha 2, or NODAMAGE. And also if it doesn't have an esoteric flag combo that makes it untouchable.
 			If (Other.Player && !(Other.Player.Cheats & (CF_GODMODE2|CF_BUDDHA2)) && !Other.bNoDamage && !(Other.bNonShootable && Other.bNoBlockmap && Other.bNoRadiusDmg))
 				Return THREAT_SUPERDANGER; //It's not unstoppable, merely insanely dangerous.
-		}console.printf ("%s is %d",other.getclassname(),threatlvl);
+		}
 		Return ThreatLvl;
 	}
 	
@@ -177,13 +188,6 @@ Class MVP_MBT : MVP_BaseVehicle
 	{
 		If (WarningZone) WarningZone.Destroy();
 		If (DeathLight) DeathLight.Destroy();
-		If (Retreating)
-		{
-			A_SetSpriteRotation (0);
-			A_SetAngle (Angle+180);
-			Retreating = False;
-			RetreatLoops = 0;
-		}
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 	}
 	
@@ -224,6 +228,92 @@ Class MVP_MBT : MVP_BaseVehicle
 			Return "%o got blown up along with a tank";
 		
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+	
+	//The tank stays still to either deploy smokescreens (To stay in them to not be hit by enemies), or if it finds level geometry to fire behind.
+	Override Bool StayStillAndShoot (Actor CheckSightFrom)
+	{
+		If (StayStillDelay) Return False; //Too soon
+		If (Turret && Turret.bDontStayAround) Return False; //Turret told you to not stop.
+		//If (Turret && Turret.ElevationState != Turret.ELEVATION_INBOUNDS) Return False; //The turrets' target is too high up or low down to shoot.
+		//If (IsPatrolling (Self) && bChaseGoal) Return False; //Don't stop if patrolling and "Don't Chase Goal" is on.
+		if (enterhulldownposition (Height-8)) a_log ("the hull can hide here");
+		if (enterhulldownposition (Height+16+(GetDefaultByType("MVP_HEATShell").Height/2))) a_log ("the turret can hide here, which is BAD");
+		//Let's see if we should do some smoke. Only if the delay is 0 though.
+		If (!User_NoSmokeScreen && GetAge () > 3*GameTicRate && ShouldDeploySmoke() > 250) //The age check prevents the tank from immediately dropping smoke once spawned.
+		{a_log ("weed tank");
+			If (!CheckSight (Target,SF_IGNOREWATERBOUNDARY))
+			{
+				StayStillDelay = Random (4,16); //Check again in a few tics, to not run sight checks every tick.
+				Return False;
+			}
+			EndRetreat();
+			SetStateLabel ("StickAround.SmokeScreen"); //Stay still and deploy a smoke screen.
+			Return True;
+		}
+		//Let's see if we can take a hull down position, regardless of the stand delay. But only if not patrolling with bChaseGoal.
+		Else If (!User_NoHullDown && !IsInState (Self, "StickAround") && !(IsPatrolling (Self) && bChaseGoal) && !User_Stationary
+		&& EnterHullDownPosition (Height-8) && !EnterHullDownPosition (Height+16,True))
+		{
+			If (!Turret.CheckSight (Target,SF_IGNOREWATERBOUNDARY)) //Since this returns true if the HULL is covered, duh.
+			{a_log ("epic sight fail");
+				StayStillDelay = Random (4,16); //Check again in a few tics, to not run sight checks every tick.
+				Return False;
+			}
+			EndRetreat();
+			SetStateLabel ("StickAround");
+			Return True;
+		}
+		
+		Return False;
+	}
+	
+	//Increase smokescreen chance based on quantity and power of enemies around the target or yourself, and your targets' threat level.
+	Int ShouldDeploySmoke()
+	{
+		Int Chance = Random (0,100);
+		Actor Origin = Target;
+		If (!Origin) Origin = Self; //Ternary operators don't work with pointers.
+		
+		Chance += AttackByQuantity (Origin,1024) >> 1;
+		
+		Switch (AssessThreatLevel (Target))
+		{
+			Case THREAT_UNSTOPPABLE:
+				Chance += 500;
+				Break;
+			Case THREAT_SUPERDANGER:
+				Chance += 100;
+				Break;
+			Case THREAT_VERYDANGEROUS:
+				Chance += 25;
+				Break;
+			Case THREAT_DANGEROUS:
+				Chance += 15;
+				Break;
+			Default:
+				Break;
+		}
+		Return Chance;
+	}
+	
+	//Can the tank enter the hull down position ?
+	Bool EnterHullDownPosition (Double HeightOfs, Bool FromTurret = False)
+	{
+		Actor Whomst = Target;
+		If (!Whomst)
+			Whomst = FindNearestEnemy (2048);
+		If (!Whomst)
+			Return False;
+		
+		Let Check = New ("MVP_MBTHullDownCheck");
+		Double AimPitch = PitchTo (Whomst,HeightOfs,Whomst.Height/2);
+		Vector3 CheckDir = ( AngleToVector(AngleTo(Whomst), Cos(AimPitch)) , -Sin(AimPitch));
+		
+		Check.Trace (Pos.PlusZ(HeightOfs),CurSector,CheckDir,!FromTurret ? Radius*4 : Radius*3.5,0);
+		FSpawnParticleParams P; P.Color1 = "pink"; P.Style = STYLE_None; P.Lifetime = 1; P.Size = 4; P.StartAlpha = 1; P.FadeStep = -1; P.Flags = SPF_FULLBRIGHT;
+		KAI_LOFRaycast.VisualizeTracePath(Pos.PlusZ(HeightOfs),check.results.hitpos,check.results.distance,8,p);
+		Return !(Check.BadLOF);
 	}
 	
 	//If too many ranged enemies are near the target, especially powerful ones, avoid crushing.
@@ -323,6 +413,16 @@ Class MVP_MBT : MVP_BaseVehicle
 		Target = GetClosestActor (Candidates,Self.Pos,Range);
 	}
 	
+	Void EndRetreat()
+	{
+		If (!Retreating) Return;
+		A_SetSpriteRotation (0);
+		A_SetAngle (Angle+180);
+		Speed = GetDefaultSpeed (GetClass()); //For the T-72 mode.
+		RetreatLoops = 0;
+		Retreating = False;
+	}
+	
 	Void A_MBTLook ()
 	{
 		If (User_CrushMode != CRUSH_PASSIVE)
@@ -352,6 +452,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	Int RetreatLoops;
 	Actor WarningZone;
 	DynamicLight DeathLight;
+	Sound IdleSound;
 	
 	Bool HasAltHull;
 	
@@ -368,6 +469,10 @@ Class MVP_MBT : MVP_BaseVehicle
 	};
 	String User_RWS; //What remote weapon station should the tank use ? The two types are MG and Minigun.
 	Bool User_T72Mode; //xd
+	Int User_APSDelay; //Trophy cooldown.
+	Int User_AltAPSDelay; //Shtora-1 cooldown.
+	Bool User_NoSmokescreen; //The tank will not deploy smokescreens.
+	Bool User_NoHullDown: //The tank will not attempt to enter hull down positions.
 	States
 	{
 		Sprites:
@@ -377,8 +482,9 @@ Class MVP_MBT : MVP_BaseVehicle
 			#### A 1
 			{
 				A_StopSound (CHAN_MOVING);
-				A_StartSound("Vehicle/Tank/Idle",CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
+				A_StartSound(IdleSound,CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
 				A_MBTLook();
+				If (User_Stationary && Target) StayStillAndShoot (Null); //Still run the smokescreen code even if stationary.
 			}
 			Loop;
 		//High quality code rips.
@@ -430,7 +536,7 @@ Class MVP_MBT : MVP_BaseVehicle
 				If (User_CrushMode == CRUSH_ACTIVE)
 					If (!Target || Distance3DSquared (Target) > TankCrushRange*TankCrushRange || IsFlying(Target))
 						MBT_RunShitOver (360,TankCrushRange);
-				
+				A_LOG ("I SEE ALL");
 				MoveToParams Params;//console.printf ("retreat dist %d",retreatrange);
 				Params.DetourFactor = 0.25;
 				Params.Attempts = 32;
@@ -450,11 +556,11 @@ Class MVP_MBT : MVP_BaseVehicle
 				//or you are going to fire an explosive shell and are too close.
 				//!(ShellType != MVP_MBTTurret(Turret).TYPE_APFSDS && ShellType != MVP_MBTTurret(Turret).TYPE_NONE && Turret.Target && Turret.Distance3DSquared (Turret.Target) <= 640*640))
 				{
-					If (TargetLevel < ThreatLevelThreshold && User_CrushMode == CRUSH_ACTIVE && Health > 1000) {a_log ("lets get crushing");RetreatRange = 0;}
-					Else {a_log ("ew i stepped on shit here");RetreatRange = RealRange;}
+					If (TargetLevel < ThreatLevelThreshold && User_CrushMode == CRUSH_ACTIVE && Health > 1000) RetreatRange = 0;
+					Else RetreatRange = RealRange;
 				}
 				Else
-					{a_log ("ew i stepped on shit");RetreatRange = RealRange;}
+					RetreatRange = RealRange;
 				
 				KAI_LandVehicleChase (flags:LVC_USERETREATSTATE|LVC_PLAYERSASTHREATS|LVC_MAKEFRIENDSIDLE|(DoZigZag ? LVC_ZIGZAGGING : 0),turnradius:TankAngleLimit,512);
 				RetreatRange = RealRange;
@@ -482,7 +588,6 @@ Class MVP_MBT : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
 				KAI_VehicleRetreat (Target,96,512,32,VRF_ZIGZAG,0.25,TankAngleLimit);
-				a_log ("bravely bravel run away");
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}
 		Retreat.End:
@@ -508,13 +613,79 @@ Class MVP_MBT : MVP_BaseVehicle
 						RetreatLoops--;
 					Return FindState ("Retreat.Move",True);
 				}
-					
-				A_SetSpriteRotation (0);
-				A_SetAngle (Angle+180);
-				Speed = GetDefaultSpeed (GetClass()); //For the T-72 mode.
-				RetreatLoops = 0;
-				Retreating = False;
+				
+				EndRetreat();
 				Return State (Null);
+			}
+			Goto See;
+		//Hull down position.
+		StickAround:
+			#### # 0
+			{a_log ("time to hide");
+				ChaseTimer = 0;
+				A_StopSound (CHAN_MOVING);
+				A_StartSound (IdleSound,CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
+				ChaseTimer = Random (5,10)*GameTicRate;
+			}
+			#### # 1
+			{
+				If (!Turret.Target || !Turret.CheckSight (Turret.Target,SF_IGNOREWATERBOUNDARY) || (!EnterHullDownPosition (Height-8) || EnterHullDownPosition (Height+16,True))) ChaseTimer--;
+				Else ChaseTimer = Random (5,10)*GameTicRate;
+				console.printf ("chasetimer %d",chasetimer);
+				//Get out if the turret can't aim, an overwhelming enough amount of enemies is nearby, the target has gotten way too close.
+				//Or the level changed, and the cover sucks now.
+				If (ChaseTimer < 0 || Turret.ElevationState != Turret.ELEVATION_INBOUNDS || AttackByQuantity (Self,512,True) > 120 || Target && Distance3DSquared (Target) <= 192*192)
+				{
+				a_log ("okay that's enough hiding");
+					StayStillDelay = Random (3,6)*GameTicRate;;
+					Return FindState ("See");
+				}
+				Return State (Null);
+			}
+			Wait;
+		//Deploying smokescreen.
+		StickAround.SmokeScreen:
+			#### # 0
+			{
+				A_StopSound (CHAN_MOVING);
+				A_StartSound (IdleSound,CHAN_IDLING,CHANF_LOOPING,attenuation:0.5);
+				A_StartSound ("Vehicle/Tank/Smokescreen",CHAN_WEAPON,attenuation:0.5);
+				
+				bShadow = True; //Give yourself MF_SHADOW too, although the smoke particles themselves do have SHADOWBLOCK too.
+				ShadowPenaltyFactor = 1.5;
+				Turret.bShadow = True; //Conceal the turret too.
+				Turret.ShadowPenaltyFactor = 1.5;
+				If (Turret.Turret) //And if it has a remote weapon station, protect that too.
+				{
+					Turret.Turret.bShadow = True;
+					Turret.Turret.ShadowPenaltyFactor = 1.5;
+				}
+				
+				StayStillDelay = Random (5,8)*GameTicRate; //Use the stay delay to also get OUT of the smoke screen delay.
+				//Spawn smokescreen.
+				Actor Cover = Spawn ("MVP_SmokeScreen",Pos);
+				Cover.Master = Self; //So the screen can follow the tank, even if it does stay in one place.
+				Cover.Speed = 8;
+				Cover.ReactionTime = 64;
+				Cover.Threshold = 256;
+				Cover.Stamina = Int(35*1.5);
+				Cover.Mass = StayStillDelay;
+			}
+			#### # 4 A_JumpIf ((--StayStillDelay < -16), 1);
+			Goto StickAround.SmokeScreen+1;
+			#### # 0
+			{
+				A_StopSound (CHAN_WEAPON);
+				bShadow = False;
+				ShadowPenaltyFactor = Default.ShadowPenaltyFactor;
+				Turret.bShadow = False; //Conceal the turret too.
+				Turret.ShadowPenaltyFactor = Turret.Default.ShadowPenaltyFactor;
+				If (Turret.Turret)
+				{
+					Turret.Turret.bShadow = False;
+					Turret.Turret.ShadowPenaltyFactor = Turret.Turret.Default.ShadowPenaltyFactor;
+				}
+				StayStillDelay = Random (5,20)*GameTicRate;
 			}
 			Goto See;
 		Death:
@@ -586,6 +757,82 @@ Class MVP_MBT : MVP_BaseVehicle
 			}
 			MBTD # -1;
 			Stop;
+	}
+}
+
+//Tank variant aliases.
+Class MVP_MBT_MG : Actor //Tank with 12.7mm RWS.
+{
+	Override Void PostBeginPlay()
+	{
+		Actor Tonk = Spawn ("MVP_MBT",Pos);
+		If (Tonk)
+		{
+			Tonk.CopyFriendliness (Self,False);
+			MVP_MBT(Tonk).User_RWS = "Machine Gun";
+		}
+		Destroy();
+	}
+}
+
+Class MVP_MBT_Minigun : Actor //Tank with 7.62mm minigun.
+{
+	Override Void PostBeginPlay()
+	{
+		Actor Tonk = Spawn ("MVP_MBT",Pos);
+		If (Tonk)
+		{
+			Tonk.CopyFriendliness (Self,False);
+			MVP_MBT(Tonk).User_RWS = "Minigun";
+		}
+		Destroy();
+	}
+}
+
+Class MVP_MBT_Full : Actor //Tank with active protection systems on.
+{
+	Override Void PostBeginPlay()
+	{
+		Actor Tonk = Spawn ("MVP_MBT",Pos);
+		If (Tonk)
+		{
+			Tonk.CopyFriendliness (Self,False);
+			MVP_MBT(Tonk).User_APSDelay = GameTicRate*2;
+			MVP_MBT(Tonk).User_AltAPSDelay = GameTicRate*2;
+		}
+		Destroy();
+	}
+}
+
+Class MVP_MBT_Full_MG : Actor //Ditto, but with 12.7mm RWS.
+{
+	Override Void PostBeginPlay()
+	{
+		Actor Tonk = Spawn ("MVP_MBT",Pos);
+		If (Tonk)
+		{
+			Tonk.CopyFriendliness (Self,False);
+			MVP_MBT(Tonk).User_RWS = "Machine Gun";
+			MVP_MBT(Tonk).User_APSDelay = GameTicRate*2;
+			MVP_MBT(Tonk).User_AltAPSDelay = GameTicRate*2;
+		}
+		Destroy();
+	}
+}
+
+Class MVP_MBT_Full_Minigun : Actor //Ditto, but with 7.62mm minigun.
+{
+	Override Void PostBeginPlay()
+	{
+		Actor Tonk = Spawn ("MVP_MBT",Pos);
+		If (Tonk)
+		{
+			Tonk.CopyFriendliness (Self,False);
+			MVP_MBT(Tonk).User_RWS = "Minigun";
+			MVP_MBT(Tonk).User_APSDelay = GameTicRate*2;
+			MVP_MBT(Tonk).User_AltAPSDelay = GameTicRate*2;
+		}
+		Destroy();
 	}
 }
 
@@ -750,6 +997,9 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Super.PostBeginPlay();
 		TurretOffsets = Original;
 		
+		If (APSDelay == INT.MAX) {APSCooldown = INT.MAX; a_log ("okay, no Trophy");}
+		If (AltAPSDelay == INT.MAX) {AltAPSCooldown = INT.MAX; a_log ("okay, no Shtora");}
+		
 		MissileState = FindState ("Fire",True);
 		AttackStates.Push (FindState("Fire",True));
 		AttackStates.Push (FindState("Fire.Coaxial",True));
@@ -826,9 +1076,6 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		If (!InFlight) Check.Shooter = Self;
 		If (!InFlight) Check.Other = Target;
 		Check.Trace (StartPos , CurSector, Direction, MaxTargetRange, 0 );
-		FSpawnParticleParams PP; PP.Color1 = "Red"; PP.Style = STYLE_None; PP.Lifetime = 1; PP.Size = 6; PP.StartAlpha = 1; PP.FadeStep = -1; PP.Flags = SPF_FULLBRIGHT;
-		//Vector3 FacingPos = Level.Vec3Offset(Pos,KAI_Math.AngleToVector3D(Angle, -Pitch, MaxTargetRange));
-		KAI_LOFRaycast.VisualizeTracePath(StartPos,Check.Results.HitPos,MaxTargetRange,8,pp);
 		
 		Return Check.Results.HitPos;
 	}
@@ -842,27 +1089,144 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			TurretRotationOffset = MVP_MBT(Master).Retreating ? -180 : 0;
 		
 		Super.Tick();
-		console.printf ("vertical velocity %d",vel.z);
+		
 		If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True); //Track warn zone to aim direction.
 		
-		//Decide an attack type every half a second.
-		If (ReadyToDecide && GetAge() % GameTicRate/2 == 0)
+		If (!IsDead (Self))
 		{
-			ShellType = DecideAmmoType();
-			//if (shelltype == type_heat)
-				//console.printf ("chose HEAT");
-			//else if (shelltype == type_apfsds)
-				//console.printf ("chose APFSDS");
-			//else if (shelltype == type_atgm)
-				//console.printf ("chose ATGM");
-			//else if (shelltype == type_none)
-				//console.printf ("chose none (coaxial)");
-		}
+			//Decide an attack type every half a second.
+			If (ReadyToDecide && GetAge() % GameTicRate/2 == 0)
+				ShellType = DecideAmmoType();
 		
-		If (ReloadTime)
-			ReloadTime--;
+			If (--APSCooldown <= 0 && APSDelay > 1 || APSDelay == 1)
+				RunTrophyAPS();
+			
+			If (--AltAPSCooldown <= 0 && AltAPSDelay > 1 || AltAPSDelay == 1)
+				RunShtoraAPS();
+			
+			If (ReloadTime)
+				ReloadTime--;
+		}
 			
 		//console.printf ("reload time %d",reloadtime);
+	}
+	
+	Const TrophyRange = 640;
+	Const ShtoraRange = 1024;
+	
+	//DOCUMENT: When I document the two APS systems. Don't forget to mention that the lower their cooldown is, the more performance intensive they become.
+	Void RunTrophyAPS()
+	{
+		Array <Actor> Incoming; //Detectable incoming projectiles found.
+		ForEach (Proj : KAIHandler.ProjectileList)
+		{
+			If (!Proj || Proj.Target == Self || !Proj.bMissile) //Null, one of our own, or not a missile anymore. (AKA it was blown up, but not out of the list yet)
+				Continue;
+			
+			//If the projectile is faster than the threshold. Then begin raising the chance of a failed shootdown for each bit of excess velocity.
+			//This also allows to smooth out the speed cap. Instead of shooting down a speed 200 missile all the time, and a speed 201 one none of the time.
+			If (Proj.Vel.Length() > 200)
+			{
+				Double ExcessVel = Proj.Vel.Length() - 200;
+				If (Random (0, 255) < ExcessVel*2)
+					Continue;
+			}
+			
+			If (!IsActorHostile(Proj.Target)) //Ignore friendly projectiles.
+				Continue;
+			
+			//If (Proj.bSeekerMissile && Proj.Tracer && Proj.Tracer Is "MVP_SeekerDecoy") //Homing projectile that was tricked by the IR dazzler.
+			//	Continue;
+			
+			If (Distance3DSquared(Proj) > TrophyRange*TrophyRange) //Too far
+				Continue;
+			
+			//Credit: RaveYard
+			//Is the projectile actually coming at the tank ?
+			Bool IncomingProjectile = (Vec3To(Proj).Unit() Dot Proj.Vel.Unit()) < -0.15;
+			Double SafeRadius = Sqrt(2 * ((Proj.Radius + Radius) ** 2.2));
+			If(!(IncomingProjectile && KAI_Math.Distance3DLine(Pos, Proj.Pos, Proj.Pos + Proj.Vel) < SafeRadius))
+				Continue;
+			
+			If (!CheckSight (Proj,SF_IGNOREWATERBOUNDARY)) //Out of sight, out of mind.
+				Continue;
+			
+			Incoming.Push(Proj);
+		}
+		
+		//Now, let's find the strongest projectile.
+		Int HighestDamage;
+		Actor StrongestProjectile;
+		ForEach (Proj : Incoming)
+		{
+			Double Dmg = Proj.GetMissileDamage(1, 7);
+			If (Dmg > HighestDamage)
+			{
+				HighestDamage = Dmg;
+				StrongestProjectile = Proj;
+			}
+		}
+		
+		APSPopMissile (StrongestProjectile);
+	}
+	
+	Void APSPopMissile (Actor Who)
+	{
+		If (!Who)
+			Return;
+		//The evil has been defeated.
+		If (Master Is "MVP_MBT") APSDelay = MVP_MBT(Master).User_APSDelay; //Update the delay, in case it changed on the MBT dynamically.
+		Actor Twinkle = Spawn ("MVP_Spark",Who.Pos);
+		Twinkle.A_StopAllSounds(); //Doesn't work lol.
+		Twinkle.A_SetScale (FRandom(0.3, 0.5));
+		If (Who Is "MVP_APFSDSShell") //If you happened to catch a dart, and also won the lottery probably. Then shatter it.
+			MVP_APFSDSShell(Who).Shatter = True;
+		Who.ExplodeMissile();
+		A_StartSound ("Vehicle/Tank/APSRun",CHAN_VOICE,CHANF_OVERLAP,attenuation:0.8);
+		APSCoolDown = APSDelay;console.printf ("shot %s down",who.getclassname());
+	}
+	
+	Void RunShtoraAPS()
+	{
+		Bool FoundSomething;
+		ForEach (Proj : KAIHandler.ProjectileList)
+		{
+			If (!Proj || Proj.Target == Self || !Proj.bMissile) //Null, one of our own, or not a missile anymore. (AKA it was blown up, but not out of the list yet)
+				Continue;
+			
+			If (!Proj.bSeekerMissile || Proj.Tracer && Proj.Tracer Is "MVP_SeekerDecoy") //Not a homing projectile. Or has already been duped.
+				{a_log ("already trolled");Continue;}
+			
+			If (!CheckFOV (Proj,45) || AbsAngle (PitchTo(Proj),Pitch) > 45) //Out of the field of view.
+				Continue;
+			
+			If (!IsActorHostile(Proj.Target)) //Ignore friendly projectiles.
+				Continue;
+			
+			If (Distance3DSquared(Proj) > ShtoraRange*ShtoraRange) //Too far
+				Continue;
+			
+			If (!CheckSight (Proj,SF_IGNOREWATERBOUNDARY)) //Out of sight, out of mind.
+				Continue;
+			console.printf ("duped %s",proj.getclassname());
+			Vector3 DecoyPos = Proj.Vec3Angle (256,Proj.Angle+RandomPick(45,-45));
+			DecoyPos = Level.Vec3Offset (DecoyPos,(FRandom(128,-128),FRandom(128,-128),FRandom(128,-128)));
+			Actor Decoy = Spawn ("MVP_SeekerDecoy",DecoyPos); //The fake track target for the seekers.
+			Decoy.Angle = Random (0,360);
+			Decoy.Pitch = Random (90,-90);
+			Decoy.Speed = Random (4,16);
+			Decoy.Master = Proj; //Parent decoy to projectile.
+			Actor Twinkle = Spawn ("MVP_Spark",Proj.Pos);
+			Twinkle.A_StopAllSounds();
+			Twinkle.A_SetScale (FRandom(0.2, 0.35));
+			Proj.Tracer = Decoy;
+			FoundSomething = True;
+		}
+		If (FoundSomething)
+		{
+			A_StartSound ("Vehicle/Tank/AltAPSRun",CHAN_VOICE,CHANF_OVERLAP,attenuation:0.7);
+			AltAPSCoolDown = AltAPSDelay;
+		}
 	}
 	
 	//Finds a strong enemy around the origin, and sets it as the turrets' target, so that the APFSDS round can destroy it.
@@ -941,13 +1305,13 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	
 	//Decide and return what ammunition type to use for the tank. And also change the target prediction speeds appropriately.
 	Int DecideAmmoType()
-	{//reloadtime = int.max;CoaxialShots = Random (2,4)*10;return type_none; //DEBUG
-		return type_atgm;If (!Target) Return ShellType;
+	{
+		If (!Target) Return ShellType;
 		Int Threat = AssessThreatLevel (Target);
 		
 		//High chance that if your target is strong or a strong enemy is near it, the tank will fire the APFSDS shell.
 		If (Random (0,255) < 200 && (Threat >= ThreatLevelThreshold || A_FindStrongEnemy (Target, Target, 1024)) && A_CheckAPFSDSLOF())
-		{a_log ("getting ready for APFSDS");
+		{
 			//Very small chance to fire a missile instead of a HEAT shell.
 			If (Random (0,255) < 4)
 			{
@@ -958,20 +1322,21 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			Return TYPE_APFSDS;
 		}
 		
+		Double LOFHeight = 16-(GetDefaultByType("MVP_HEATShell").Height);
 		//Fire a guided missile at crowds of enemies, or monsters that fit these conditions:
 		Bool FastBoi = (Target.Speed >= 50); //Too fast, and likely unpredictable, to hit with a shell.
 		Bool FastDistantBoi = (Target.Speed >= 25 && Distance3DSquared(Target) > 8192*8192); //Same, but for less fast enemies, that are still very far.
 		Bool Is3ZipcodesAway = (Distance3DSquared(Target) > 14000*14000); //Even the smallest movement would cause a shell to miss.
 		If ((Random (0,255) < 64 || FastBoi || FastDistantBoi || Is3ZipcodesAway) && (Threat > THREAT_MILD || AttackByQuantity (Target, 512) >= 200)
-		&& KAI_TurretCheckLOF (Target,0,512,(0,0,16)))
+		&& KAI_TurretCheckLOF (Target,0,512,(0,0,LOFHeight)))
 		{
 			TurretAttackSpeed = GetDefaultByType("MVP_ATGM").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_ATGM").FastSpeed;
 			Return TYPE_ATGM;
 		}
 		
 		//If your enemy isn't ridiculously weak, or there's enough enemies around it to justify it, then fire the HEAT shell.
-		If ((Threat > THREAT_NORMAL || AttackByQuantity (Target, 512) >= 250 || Random(0,255) < 6) && KAI_TurretCheckLOF (Target,0,512,(0,0,16),TLOF_OnlyAhead))
-		{console.printf ("getting ready for HEAT");
+		If ((Threat > THREAT_NORMAL || AttackByQuantity (Target, 512) >= 250 || Random(0,255) < 6) && KAI_TurretCheckLOF (Target,0,512,(0,0,LOFHeight),TLOF_OnlyAhead))
+		{
 			//Small chance to fire a missile instead of a HEAT shell.
 			If (Random (0,255) < 8)
 			{
@@ -986,9 +1351,8 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		{
 			MaxTargetRange = 8192; //Lower the range for the coaxial.
 			If (KAI_CheckMissileRange(Target,CMR_INVERTDIST) && KAI_TurretCheckLOF (Target,150,0,(0,-10,20)))
-			{a_log ("getting ready for coaxial");
+			{
 				TurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").FastSpeed;
-				a_log ("firing the coaxial");
 				CoaxialShots = Random (2,4)*10;
 				MaxTargetRange = Default.MaxTargetRange; //Reset the max range to normal.
 				Return TYPE_NONE;
@@ -1014,7 +1378,6 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Double Vol = (Type == TYPE_ATGM) ? 0.5 : 1.0; //Quiet the firing sound when firing guided missiles.
 		A_StartSound ("Vehicle/Tank/CannonFire",CHAN_WEAPON,CHANF_OVERLAP,Vol,0.1);
 		
-		
 		//Normal high explosive shell. The stock exploding projectiles tanks usually fire in media.
 		If (Type == TYPE_HEAT)
 			A_SpawnProjectile ("MVP_HEATShell",16,flags:CMF_AIMDIRECTION,Pitch);
@@ -1027,6 +1390,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			Actor Missile = A_SpawnProjectile ("MVP_ATGM",16,flags:CMF_AIMDIRECTION,Pitch);
 			Missile.Tracer = Target; //A_SpawnProjectile doesn't do this on its' own, even thought it SHOULD.
 		}
+		GunLoaded = False;
 		
 		Vector3 FXPos = (224,0,0);
 		Vector3 BorePos = (188,0,0);
@@ -1100,7 +1464,13 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	Bool ReadyToDecide; //Tells the turret to decide what shell to fire during the 2 second firing delay.
 	Int ReloadTime; //How long until the turret is ready to fire.
 	Int CoaxialShots; //How many shots to fire in the coaxial state before stopping.
-	Bool MetalCoffin;
+	Bool MetalCoffin; //T-72 mode
+	Bool GunLoaded; //Stop spamming the load sound.
+	
+	Int APSCooldown; //Cooldown on the Trophy-like system that actively shoots incoming projectiles down.
+	Int AltAPSCooldown; //Cooldown for the Shtora-1 system that throws off homing projectiles in front of it by making them follow wandering points.
+	Int APSDelay; //The tick delay to set to the APS before it can search and shoot down projectiles again.
+	Int AltAPSDelay; //Same, but for the alt APS.
 	
 	States
 	{
@@ -1131,7 +1501,11 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			//The calm before the storm.
 			MMBT # 0
 			{
-				A_StartSound ("Vehicle/Tank/Reload",CHAN_WEAPON,attenuation:0.7);
+				If (!GunLoaded)
+				{
+					A_StartSound ("Vehicle/Tank/Reload",CHAN_WEAPON,attenuation:0.7);
+					GunLoaded = True;
+				}
 				ReadyToDecide = True; //Start deciding what to shoot in the last 2 seconds before firing.
 				If (WarningZone) WarningZone.MaxTargetRange = 512; //Set the range of the marine warn zone to the HEAT shells' blast radius.
 				DecideAmmoType();
@@ -1180,6 +1554,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			Goto See;
 		//Firing the coaxial gun.
 		Fire.Coaxial:
+			//MMBT # 0 A_JumpIf (CoaxialDelay,"See");
 			MMBT # 2 Light ("CoaxialFiringLight") //Firing state.
 			{
 				Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",20,-10,flags:CMF_AIMDIRECTION,Pitch);
@@ -1205,7 +1580,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				//Recycled logic from the APCs' small autocannon MG, since the coaxial gun is the same thing, but part of the tank turret itself.
 				If (Random2[pr_monsterrefire]() < 128 &&
 				((Target && IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) ||
-				!KAI_TurretCheckLOF (Target,150,0,(0,-8,8))))
+				!KAI_TurretCheckLOF (Target,150,0,(0,-10,20))))
 				{
 					//A_ClearTarget();
 					Return ResolveState ("ExitCoaxial");
@@ -1371,16 +1746,15 @@ Class MVP_MBTRWS : MVP_BaseTurret
 	}
 	
 	Int UpdateRWSElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
-	{console.printf ("pitch is %d",pitch);
+	{
 		If (Pitch >= 8 && Pitch >= 0)
 			Return FaceDown;
 		Else If (Pitch < 8 && Pitch >= -17.5)
 			Return FaceStraight;
 		Else If (Pitch < -17.5 && Pitch >= -25)
-			{a_log ("facing up");Return FaceUp;}
+			Return FaceUp;
 		Else If (Pitch <= -25)
-		{a_log ("facing very up");
-			Return FaceUp2;}
+			Return FaceUp2;
 		
 		Return FaceStraight;
 	}

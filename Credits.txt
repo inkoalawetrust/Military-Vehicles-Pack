@@ -75,6 +75,8 @@ Autocannon firing sound (AutocannonFire.ogg) is from Call of Duty United Offensi
 Tank movement sound (TankMove.ogg): https://quicksounds.com/sound/21083/tank-treads-loop2
 Alt tank movement sound (TankMove2.ogg): https://quicksounds.com/sound/21082/tank-treads-loop1
 Tank idle sound (TankIdle.ogg): https://quicksounds.com/sound/21118/bulldozer-start-idle
+Tank APS activate sound (APSActivate.ogg) is from the 2019 GDC sound library, "BlueZone - Sci-Fi Interface Sound Effects"
+Tank smokescreen deploying sound (SmokeDeploy.ogg) is from Call Of Duty United Offensive.
 Tank small machine gun firing sound (TankSmallMG.ogg) is from Call of Duty 2.
 Tank cannon firing sounds (TankFire1-3.ogg) are from Call of Duty 2.
 Tank cannon loading sound (TankLoad.ogg) is from Call of Duty United Offensive.
