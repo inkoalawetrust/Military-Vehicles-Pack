@@ -17,6 +17,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		KAI_BaseTurret.FastAttackSpeed 250;
 		KAI_BaseTurret.CombatAngleTurnRate 55;
 		KAI_BaseTurret.CombatPitchTurnRate 30;
+		KAI_BaseTurret.Inaccuracy (4,4,4);
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
@@ -271,6 +272,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		KAI_BaseTurret.MinimumPitch 20;
 		KAI_BaseTurret.AttackSpeed 180;
 		KAI_BaseTurret.FastAttackSpeed 200;
+		KAI_BaseTurret.Inaccuracy (2,2,2);
 		//KAI_BaseTurret.TurnSoundRadius 4;
 		+MissileEvenMore;
 	}
@@ -352,11 +354,11 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				Actor Proj = A_SpawnProjectile ("MVP_AutocannonShell",16,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				AddProjectileSpread (Proj,(0.3,-0.3),(0.45,-0.45));
 				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then use the proximity fuze.
-				If (Target && IsFlying (Target) && !Target.bNoRadiusDmg)
-				{
-					Proj.Tracer = Target;
-					MVP_AutocannonShell(Proj).IsAirburst = True;
-				}
+				//If (Target && IsFlying (Target) && !Target.bNoRadiusDmg)
+				//{
+				//	Proj.Tracer = Target;
+				//	MVP_AutocannonShell(Proj).IsAirburst = True;
+				//}
 				A_SpawnItemEx ("MVP_AutocannonCasing",-6,-12,8,FRandom(1,-3),FRandom(-4,-10),FRandom(4,8));
 				Frame = UpdateTurretElevation (3,1,5,7); //D, B, F, H
 			}
@@ -983,6 +985,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				A_StopSound (CHAN_VOICE);
 				If (Airbursted) //The shell detonated mid air to hit a target that it missed.
 				{
+					SpawnHitscanShrapnel(128);
 					A_SetScale (1.5,1.5);
 					A_SetRenderStyle (1.0,Style_Add);
 					Return ResolveState ("AirBlast");
@@ -1020,7 +1023,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				}
 				A_StartSound ("Vehicle/APC/AutocannonHit",attenuation:0.3);
 				MakeAlliesImmuneToExplosion (Target, 128);
-				A_Explode (96,128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
+				A_Explode (Int(96*RadiusDamageFactor),128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}
 			GXPL CDEFGHIJKLMNO 4 Bright {If (Light) Light.Args[3]-= 9.84;}
@@ -1052,7 +1055,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 			{
 				If (Light) Light.Args[3]-= 32;
 				MakeAlliesImmuneToExplosion (Target, 128);
-				A_Explode (96,192,XF_EXPLICITDAMAGETYPE,True,48,damagetype:'Explosive');
+				A_Explode (Int(96*RadiusDamageFactor),192,XF_EXPLICITDAMAGETYPE,True,48,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}
 			GAXP C 4 {If (Light) Light.Args[3]-= 32;}

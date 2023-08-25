@@ -1,3 +1,4 @@
+//$GZDB_SKIP
 //Token given to marines when they "jump" out of the tank, to tell them to begin running away once they land.
 //God willing I don't have to do this kinda shit ever again after the rewrite.
 Class MVP_MarineLandWarning : Inventory
@@ -150,7 +151,7 @@ Class MVP_GroundDustSpawner : Actor
 		Super.PostBeginPlay();
 		Int SmokeFactor = (Pos.Z - FloorZ) * RadiusDamageFactor;
 		Int DustCount = ReactionTime - SmokeFactor; //Decrement the dust to spawn the further off the ground the blast is.
-		Console.Printf ("Ground height: %.2f, Dust count %d, SmokeFactor %d",(Pos.Z - FloorZ),DustCount,SmokeFactor);
+		//Console.Printf ("Ground height: %.2f, Dust count %d, SmokeFactor %d",(Pos.Z - FloorZ),DustCount,SmokeFactor);
 		Actor Dust;
 		Class<Actor> DustClasses[] = {"MVP_GroundDust","MVP_GroundDust2","MVP_GroundDust3"};
 		//Spawn random dust actors on the ground, the closer to the ground, the more dust spawned.
@@ -428,8 +429,8 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 		ProjectileKickback = Default.ProjectileKickback;
 		If (Victim.Player) KilledCheater = False;
 		
-		If (Num == -1 && !Victim.bNoBlood && !Victim.bReflective && !bBloodlessImpact && !Victim.bInvulnerable && !Victim.bDormant)
-		{a_log ("My blood ! He-he punched out ALL my blood !");
+		If (Num == -1 && !Victim.bNoBlood && !Victim.bReflective && !bBloodlessImpact && !Victim.bInvulnerable && !Victim.bDormant && !IsInanimateObject(Victim))
+		{
 			For (Int I = 128; I >= 0; I--)
 				ShitOutBlood (Victim);
 		}
@@ -452,8 +453,8 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 			KilledCheater = bNoExtremeDeath = True;
 		}
 		
-		If (Victim.Player && HostileVictim && Victim.Player.Cheats & CF_GODMODE2 || Victim.bNoDamage)
-		{A_LOG ("I AM A GOD");
+		If (Victim.Player && HostileVictim && (Victim.Player.Cheats & CF_GODMODE2 || Victim.bNoDamage))
+		{
 			ProjectileKickBack *= 2; //Weee
 			bBloodlessImpact = True;
 			ExplodeMissile(Null,Victim);
@@ -747,9 +748,9 @@ Class MVP_ATGM : MVP_BaseProjectile
 		If (TrackPoint) TrackPoint.SetOrigin(GetFutureTrajectory((8,8,8)),False);
 		//console.printf ("angle difference %f",DeltaAngle (Angle,OldAngle));
 		If (DeltaAngle (Angle,OldAngle) < -0.1)
-			{a_log ("steering right");SteerDir = STEER_RIGHT;}
+			SteerDir = STEER_RIGHT;
 		Else If (DeltaAngle (Angle,OldAngle) > 0.1)
-			{a_log ("steering left");SteerDir = STEER_LEFT;}
+			SteerDir = STEER_LEFT;
 		Else
 			SteerDir = STEER_NONE;
 		
@@ -810,7 +811,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 				Frame = UpdateATGMSprites();
 				If (Vel.Length() < 100) //Accelerate over time to 100, when FastMonsters is off of course.
 					A_ScaleVelocity (1.02);
-				console.printf ("fuel: %d",smokecounter);
+				
 				If (--SmokeCounter <= 0) //Decrement fuel until zero, then just glide with no more guidance.
 				{
 					A_RemoveLight ('ATGMLight');

@@ -37,21 +37,3 @@ PointLight CarDeath5
 	Offset 0 0 -12
 	//Attenuate 1
 }
-/*
-Object MVP_ArmyCar
-{
-	Frame MCR1H {Light CarDeath1}
-	Frame MCR1I {Light CarDeath2}
-	Frame MCR1J {Light CarDeath3}
-	Frame MCR1K {Light CarDeath4}
-	Frame MCR1L {Light CarDeath5}
-}
-
-Object MVP_ArmyCarProp
-{
-	Frame MCR1H {Light CarDeath1}
-	Frame MCR1I {Light CarDeath2}
-	Frame MCR1J {Light CarDeath3}
-	Frame MCR1K {Light CarDeath4}
-	Frame MCR1L {Light CarDeath5}
-}

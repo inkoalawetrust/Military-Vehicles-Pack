@@ -194,6 +194,32 @@ Class MVP_BaseTurretProp : KAI_BaseTurretProp
 	Mixin MVP_DamageSmokeHandling;
 }
 
+Class MVP_ShrapnelPuff : KAI_MixinActor
+{
+	Default
+	{
+		+NOBLOCKMAP
+		+NOGRAVITY
+		+ALLOWPARTICLES
+		+RANDOMIZE
+		+ZDOOMTRANS
+		+HITTRACER; //Store the actor the puff hit.
+		RenderStyle "Translucent";
+		Alpha 0.5;
+		VSpeed 1;
+		Mass 5;
+	}
+	States
+	{
+		Spawn:
+			PUFF A 4 Bright;
+			PUFF B 4;
+		Melee:
+			PUFF CD 4;
+			Stop;
+	}
+}
+
 Class MVP_BaseProjectile : KAI_BaseProjectile
 {
 	Default
@@ -201,6 +227,14 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 		+KAI_BaseProjectile.NoFriendlyFire; //MVP projectiles do not hit allies by default.
 	}
 	Mixin MVP_UniversalFunctions;
+	
+	//Fire an omnidirectional blast of shrapnel.
+	Void SpawnHitscanShrapnel (Int Amount, Int Damage = 2, Double Range = 512, Class <Actor> Puff = "MVP_ShrapnelPuff")
+	{
+		For (Int I = Amount; 0 <= I; I--)
+			LineAttack (FRandom (0,360),Range*FRandom(0.5,1.5),FRandom (90,-90), Int(Damage*FRandom(0.75,1.25)) ,'Shrapnel',Puff, LAF_TARGETISSOURCE|LAF_OVERRIDEZ,offsetz:Height/2);
+	}
+	
 	//Allows to quickly set up a spawned liquid splash, and then returns a pointer the splash to allow for further modifications, like making it visually larger or calling A_QuakeEx from it.
 	Actor SpawnLiquidSplash (Int LiquidType = LIQUID_WATER, Sound SplashSound = "SFX/LiquidExplosion", Double Volume = 1.0, Double Attenuation = 0.5,
 	Int ExplosionDamage = 0, Double ExplosionRadius = 0, Double FullDamageRadius = 0, Name DamageType = "", Bool DontHarmSource = False)
@@ -437,10 +471,10 @@ Class SmartMarineWarningZone : KAI_MixinActor
 		}
 	}
 	//DEBUG: Uncomment this to be able to see where the warning zones are at.
-	States
+	/*States
 	{
 		Spawn:
 			PLSS A 4 Bright;
 			Loop;
-	}
+	}*/
 }

@@ -1,0 +1,457 @@
+//TODO:
+//I need editor sprites of the different tank variants.
+Class MVP_SPAAG : MVP_MBT
+{
+	Default
+	{
+		//$Title Self Propelled AA Gun
+		//$Category Vehicles/Tanks
+		//$Sprite MMBT[1
+		Health 2000;
+		WoundHealth 1000;
+		GibHealth 1000;
+
+		Speed 14;
+		FastSpeed 20;
+		Mass 25000;
+		FriendlySeeBlocks 128;
+		MaxTargetRange 16384;
+		RipLevelMin 8;
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
+		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
+		KAI_BaseVehicle.VehicleTurret "MVP_SPAAGTurret";
+		KAI_BaseVehicle.MaxPushMass 1500;
+		KAI_BaseVehicle.MaxPushRadius 128;
+		KAI_BaseVehicle.MaxPushHeight 128;
+		Tag "M6-SPAAG";
+	}
+	Override Void UserVariableDefaults ()
+	{
+		If (User_RetreatDistance == 0) User_RetreatDistance = 2048;
+		Super.UserVariableDefaults();
+		
+		If (User_CrushMode == CRUSH_ACTIVE) User_CrushMode = CRUSH_PASSIVE; //The SPAAG and MLRS hulls don't chase enemies.
+		If (User_CrushMode == CRUSH_NONE) bNoCrushing = True;
+		
+		User_APSDelay = INT.MAX; //Don't shoot projectiles down practically ever.
+		User_AltAPSDelay = INT.MAX; //Don't dazzle projectiles practically ever.
+		User_NoSmokescreen = True; //Only the MBT turret has smoke launchers. All variants can enter hull down positions though.
+		User_T72Mode = False; //No funny, this is a German-based vehicle anyway, not Russian. They don't do that.
+		HasAltHull = True;
+	}
+	
+	Override Void SpawnVehicleTurret ()
+	{
+		MVP_BaseVehicle.SpawnVehicleTurret();
+	}
+}
+
+//HACK: The definition for the AA shell causes UDB to freak out and refuse to load any custom actors loaded on your map.
+//$GZDB_SKIP
+
+Class MVP_SPAAGTurret : MVP_MBTTurret
+{
+	Default
+	{
+		Health 1000;
+		Tag "M6-SPAAG Turret";
+		Height 40;
+		DeathHeight 32;
+		Radius 72;
+		Mass 20000;
+		AttackSound "Vehicle/APC/AutocannonFire";
+		Obituary "%o got a North Korean execution";
+		KAI_BaseTurret.MaximumPitch -80;
+		KAI_BaseTurret.MinimumPitch 10;
+		KAI_BaseTurret.AttackSpeed 180;
+		KAI_BaseTurret.FastAttackSpeed 200;
+		KAI_BaseTurret.CombatAngleTurnRate 80;
+		KAI_BaseTurret.CombatPitchTurnRate 60;
+		KAI_BaseTurret.Inaccuracy (4,4,4);
+		KAI_BaseVehicle.VehicleTurret "MVP_SPAAGRadar";
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
+		+LookAllAround; //360 vision by default.
+	}
+	
+	Override Bool SpawnDamageSmoke(){Return False;}
+	
+	//When the radar is destroyed, the SPAAG becomes a lot worse at aiming and has a far lower engagement range.
+	Override Void OnTurretDeath (Actor DeadTurret, Bool Removed)
+	{
+		Super.OnTurretDeath (DeadTurret,Removed);
+		TurretInaccuracy = (96,96,96);
+		bLookAllAround = False;
+		MaxTargetRange /= 1.5;
+		FriendlySeeBlocks /= 2;
+		RadarUp = False;
+	}
+	
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		If (Inflictor Is "MVP_AAShell")
+		{
+			If (Random (0,255) < 32)
+				Return Obituary;
+			
+			If (!(MOD == "Explosive" || MOD == "Explosion" || MOD == "ExplosiveImpact"))
+				Return Inflictor.Obituary;
+			Else
+				Return "%o blew up like a firework";
+		}
+		If (Inflictor Is "MVP_ShrapnelPuff")
+			Return "%o caught some flak";
+		
+		Return MVP_BaseTurret.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Vector3 Original = TurretOffsets;
+		TurretOffsets = (-0.1,0,3);
+		MVP_BaseTurret.PostBeginPlay();
+		TurretOffsets = Original;
+		APSCooldown = INT.MAX;
+		AltAPSCooldown = INT.MAX;
+		
+		MissileState = FindState ("Fire",True);
+		AttackStates.Push (FindState("Fire",True));
+		WarningZone = WarnMarines (0,256,Self);
+		
+		If (Turret) //Spawn with the radar "lowered".
+			Turret.A_ChangeLinkFlags (1,1);
+	}
+	
+	Override Bool ShouldAttack (Bool NoStateJump)
+	{
+		If (!KAI_BaseTurret.ShouldAttack()) Return False;
+		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
+		If (!bLookAllAround && Target && !CheckFOV (Target,120/2)) Return False; //Out of sight.
+		If (Distance3DSquared (Target) >= MaxTargetRange*MaxTargetRange) 
+		
+		If (Target == Self || !KAI_CheckMissileRange(Target,CMR_INVERTDIST) || IsDead (Target) || !IsActorHostile (Target)) Return False;
+		
+		If (!IsFlying (Target)) //Try finding flying enemies.
+		{
+			Actor New = FindFlyingEnemy (Target);
+			If (New && New != Target)
+				Target = New;
+		}
+		
+		If (KAI_TurretCheckLOF (Target,400,128,(0,0,12)))
+		{
+			If (!NoStateJump)
+				SetStateLabel ("Fire");
+			Return True;
+		}
+		
+		Return False;
+	}
+	
+	Actor FindFlyingEnemy (Actor Origin, Double Range = 2048)
+	{
+		If (!Origin) Return Null;
+		BlockThingsIterator AirFinder = BlockThingsIterator.Create (Origin,Range);
+		
+		Range *= Range; //Do the multiplication for Distance3DSquared only once.
+		
+		While (AirFinder.Next())
+		{
+			Actor Mobj = AirFinder.Thing;
+			
+			If (!Mobj) Continue;
+			
+			If (Mobj.bDormant || IsInanimateObject (Mobj)) Continue; //Don't attack dormant or inanimate object actors.
+			
+			If (!IsFlying (Mobj)) Continue; //Is not a flying enemy.
+			
+			If (!CanBeTargeted(Self, Mobj) || IsDead (Mobj)) Continue; //Can't be targeted or died. (Duh)
+			
+			If (Origin.Distance3DSquared(Mobj) > Range) Continue; //Too out of reach.
+			
+			If (!IsActorHostile (Mobj)) Continue; //Actor isn't hostile.
+			
+			If (!CheckSight(Mobj)) Continue; //Actor is not visible.
+			
+			Return Mobj;
+		}
+		Return Null;
+	}
+	
+	Override Void Tick()
+	{
+		If (IsFrozen()) Return;
+		
+		//Reverse the direction of the turret when retreating, calling this before Super.Tick() makes the transition seamless.
+		If (!IsDead (Self) && Master && Master Is "MVP_SPAAG")
+			TurretRotationOffset = MVP_SPAAG(Master).Retreating ? -180 : 0;
+		
+		MVP_BaseTurret.Tick();
+		
+		If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True); //Track warn zone to aim direction.
+	}
+	
+	//The elevation works different on the SPAAG since it can nearly aim straight up.
+	Int UpdateSPAAGElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2, Int FaceUp3)
+	{
+		If (Pitch >= 10 && Pitch >= 5)
+			Return FaceDown;
+		Else If (Pitch < 10 && Pitch >= -10)
+			Return FaceStraight;
+		Else If (Pitch < -30 && Pitch >= -60)
+			Return FaceUp;
+		Else If (Pitch < -60 && Pitch >= -80)
+			Return FaceUp2;
+		Else If (Pitch <= -80)
+			Return FaceUp3;
+		
+		Return FaceStraight;
+	}
+	
+	Bool RadarUp;
+	
+	States
+	{
+		Spawn:
+			MBT2 G 0 A_JumpIf (RadarUp,"LowerRadar");
+			MBT2 A 1
+			{
+				RotateToVehicle(RTVF_ADDANGLE);
+				KAI_Look (maxseedist:MaxTargetRange,8196,bLookAllAround ? 360 : 120,extraflags:KAIL_CHASETARGET);
+				//Frame = UpdateSPAAGElevation (15,3,19,9,12); //P, D, G, J, M
+			}
+			Loop;
+		RaiseRadar:
+			MBT2 # 0 A_StartSound (TurnSound,CHAN_VOICE,0,1,0.8);
+			MBT2 AAAAAAAABBBBBBBBCCCCCCCC 1 RotateToVehicle();
+			MBT2 G 0
+			{
+				A_StopSound (CHAN_VOICE);
+				RadarUp = True;
+				If (Turret) //Reveal radar now.
+					Turret.A_ChangeLinkFlags (0,0);
+			}
+			Goto See;
+		LowerRadar:
+			MBT2 # 0
+			{
+				A_StartSound (TurnSound,CHAN_VOICE,0,1,0.8);
+				RadarUp = False;
+				If (Turret) //Hide radar.
+					Turret.A_ChangeLinkFlags (1,1);
+			}
+			MBT2 CCCCCCCCBBBBBBBBAAAAAAAA 1 RotateToVehicle();
+			MBT2 G 0 A_StopSound (CHAN_VOICE);
+			Goto Spawn;
+		See:
+			MBT2 # 0 A_JumpIf ((!RadarUp && Turret),"RaiseRadar");
+			MBT2 # 1
+			{
+				DoCombatTraverse();
+				RotateToVehicle();
+				KAI_LandVehicleChase (flags:LVC_MAKEFRIENDSIDLE,chaseflags:CHF_DONTMOVE);
+				UpdateTurretSnapTimer();
+
+				Frame = UpdateSPAAGElevation (15,3,19,9,12); //P, D, G, J, M
+			}
+			Loop;
+		Fire:
+			MBT2 ###### 1
+			{
+				If (bNoCombatTraverse) A_FaceTarget (0,0,flags:FAF_MIDDLE);
+				Frame = UpdateSPAAGElevation (15,3,19,9,12); //P, D, G, J, M
+			}
+			MBT2 # 5 Light ("AutocannonFlash") Bright //Left shot
+			{
+				If (bNoCombatTraverse) A_FaceTarget (0,0,flags:FAF_MIDDLE);
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
+				Actor Proj = A_SpawnProjectile ("MVP_AAShell",16,24,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				AddProjectileSpread (Proj,(0.3,-0.3),(0.45,-0.45));
+				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then use the proximity fuze.
+				If (Target && IsFlying (Target) && !Target.bNoRadiusDmg) //MAYDO: Enable airburst for all actors, since it avoids shooting ground targets anyway.
+				{
+					Proj.Tracer = Target;
+					MVP_AutocannonShell(Proj).IsAirburst = True;
+				}
+				A_SpawnItemEx ("MVP_AutocannonCasing",-6,32,24,FRandom(1,-3),FRandom(6,16),FRandom(4,10));
+				Frame = UpdateSPAAGElevation (17,5,8,11,14); //R, F, I, L, O
+			}
+			MBT2 # 5 Light ("AutocannonFlash") Bright //Right shot
+			{
+				If (bNoCombatTraverse) A_FaceTarget (0,0,flags:FAF_MIDDLE);
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.25);
+				Actor Proj = A_SpawnProjectile ("MVP_AAShell",16,-24,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				AddProjectileSpread (Proj,(0.3,-0.3),(0.45,-0.45));
+				//If the enemy the shell was fired at is a flying enemy. Then use the proximity fuze.
+				If (Target && IsFlying (Target))
+				{
+					Proj.Tracer = Target;
+					MVP_AutocannonShell(Proj).IsAirburst = True;
+				}
+				A_SpawnItemEx ("MVP_AutocannonCasing",-6,-32,24,FRandom(1,-3),FRandom(-6,-16),FRandom(4,10));
+				Frame = UpdateSPAAGElevation (16,4,7,10,13); //Q, E, H, K, N
+			}
+			MBT2 # 1
+			{
+				If (bNoCombatTraverse) A_FaceTarget(0,0,flags:FAF_MIDDLE);
+				
+				If (!IsFlying (Target)) //Try finding flying enemies.
+				{
+					Actor New = FindFlyingEnemy (Target);
+					If (New)
+						Target = New;
+				}
+				
+				//If you have no target, or it's dead.
+				If (!Target || IsDead (Target))
+				{
+					A_ClearTarget();
+					LookExParams Retarg;
+					Retarg.FOV = 120;
+					LookForPlayers (bLookAllAround,Retarg); //Look for a new target.
+				}
+				
+				If (Random2[pr_monsterrefire]() < 20 &&
+				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
+				!KAI_TurretCheckLOF (Target,400,128,(0,0,12))))
+				{
+					A_ClearTarget();
+					Return ResolveState ("See");
+				}
+				
+				HandleChaseTimer();
+				
+				Frame = UpdateSPAAGElevation (15,3,19,9,12); //P, D, G, J, M
+				Return State (Null);
+			}
+			MBT2 # 0 KAI_TurretRefire (10,"See",True);
+			Goto Fire+6;
+		Death:
+			MBTD H 1
+			{
+				Actor Boom = Spawn ("MVP_Explosion",Vec3Angle (96,GetNearestCardinalAngle(True)).PlusZ(Height/2));
+				Boom.Scale *= 2.5;
+				Boom.SetDamage (300);
+				Boom.MaxTargetRange = 384;
+				Boom.MeleeRange = 96;
+				Boom.bNoGravity = True;
+				Boom.bGetOwner = True; //So the dead tank is considered the source.
+				Boom.Target = Self;
+			}
+			MBTD H 1 RotateToVehicle (RTVF_NOTARGETCHECK);
+			Wait;
+	}
+}
+
+Class MVP_SPAAGRadar : KAI_BaseTurret
+{
+	Default
+	{
+		Health 100;
+		Radius 8; //Since the radar is so horizontally offset, it also uses an hitbox attached to it instead, placed at where the radar VISUALLY is.
+		Height 16;
+		DeathHeight 16;
+		XScale 1;
+		YScale 0.833333; //1.0 / 1.2
+		Mass 100;
+		Tag "Anti-aircraft radar";
+		KAI_Actor.ThreatLevel THREAT_NONE; //Nothing dangerous about the radar itself.
+	}
+	
+	Actor Hitbox;
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		Hitbox = Spawn("MVP_SPAAGRadarHitbox",Vec3Angle(-44,Angle));
+		Hitbox.Master = Self;
+	}
+	
+	States
+	{
+		Spawn:
+			RAD0 AABBCCDDEEFFGGHHIIJJKK 1 RotateToVehicle (RTVF_RELATIVEONLY);
+			Loop;
+		Death:
+			TNT1 A 0 A_SpawnItemEx ("MVP_SPAAGRadarDishChunk",-48,zofs:40,FRandom (-2,-4),FRandom (2,-2),FRandom (0,4));
+			TNT1 A 0 A_SpawnItemEx ("MVP_SPAAGRadarAntennaChunk",-42,zofs:40,FRandom (2,4),FRandom (2,-2),FRandom (0,4));
+			Stop;
+	}
+}
+
+Class MVP_SPAAGRadarHitbox : Actor
+{
+	Default
+	{
+		Health 100;
+		Radius 8;
+		Height 16;
+		+Solid;
+		+Shootable;
+		+NoBlood
+	}
+	
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		If (!Master) Destroy();
+		A_ChangeLinkFlags (0); //Solidify the hitbox.
+	}
+	
+	//Transfer damage to the turret.
+	Override Int DamageMobj (Actor Inflictor, Actor Source, Int Damage, Name MOD, Int Flags, Double Angle)
+	{
+		If (!Master || Master && !KAI_Actor(Master).IsActorHostile(Source)) //Don't transfer damage if there's nobody to send it to, or the source is friendly.
+			Return 0;
+		Return Master.DamageMobj (Inflictor, Source, Damage, MOD, Flags, Angle);
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		
+		If (Master)
+		{
+			Health = Master.Health; //Update health to match the radar.
+			SetOrigin (KAI_Math.Vec3OffsetRelative(Master,(-44,0,3),flags:KAI_Math.V3R_ANGLEONLY),True); //Stick to the radars' VISUAL.
+			A_Stop(); //Make sure it doesn't move on its' own.
+		}
+		Else
+			Destroy();
+	}
+}
+
+//Special smaller and less damaging autocannon shell used by the SPAAG.
+Class MVP_AAShell : MVP_AutocannonShell
+{
+	Default
+	{
+		Radius 10;
+		Height 12;
+		XScale 0.4;
+		YScale 0.333333; //0.4 / 1.2
+		DamageFunction (Random (30,50));
+		ProjectileKickback 72;
+		RadiusDamageFactor 0.4;
+		Obituary "%o was shot out of the sky by an anti-air gun";
+		DamageType "AntiAir";
+	}
+	
+	Override Int DoSpecialDamage (Actor Target, Int Damage, Name DamageType)
+	{
+		Int Dmg = Super.DoSpecialDamage (Target, Damage, DamageType);
+		
+		If (Target && IsFlying (Target))
+			Dmg *= 2; //Double damage towards flying enemies.
+		
+		Return Dmg;
+	}
+	
+	Override Void TrailSpawn (Actor Trail)
+	{
+		Super.TrailSpawn (Trail);
+		
+		Trail.Scale.X = Trail.Scale.Y = 0.9;
+	}
+}

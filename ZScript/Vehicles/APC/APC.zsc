@@ -41,6 +41,7 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "Autocannon", 0.7;
 		DamageFactor "RifleBullet", 0.75;
 		DamageFactor "Missile", 0.9;
+		DamageFactor "AntiAir", 0.6;
 		
 		+KAI_BaseVehicle.Transport;
 	}

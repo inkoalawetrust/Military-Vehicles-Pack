@@ -5,3 +5,5 @@ excludeactor, MVP_APCAutocannon
 excludeactor, MVP_APCMGTurret
 excludeactor, MVP_DiCokkaTurret
 excludeactor, MVP_MBTTurret
+excludeactor, MVP_SPAAGTurret
+excludeactor, MVP_SPAAGRadar

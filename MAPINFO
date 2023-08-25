@@ -32,4 +32,7 @@ DoomEdNums
 		17018 = MVP_MBTWreck
 		17019 = MVP_MBTRuin
 		17020 = MVP_MBTTossedTurret
+		17021 = MVP_SPAAG
+		//17022 = MVP_FSV //BMPT
+		//17023 = MVP_MLRS //TOS-1
 }
