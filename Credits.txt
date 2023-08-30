@@ -2,10 +2,7 @@ Mod made by Inkoalawetrust
 
 |==============|Code|==============|
 Any code not written by me (Inkoalawetrust) will be specified here.
-Custodian, for writing the base for the MVP_MoveTowards function, that I then extended.
 Help with coding by RaveYard.
-GetNearestCardinalAngle by Lewisk3.
-LinearMap function written by Agent_Ash.
 |==============|Code|==============|
 
 
@@ -17,6 +14,7 @@ LinearMap function written by Agent_Ash.
 All vehicle sprites are entirely made by me (Inkoalawetrust) unless otherwise specified.
 Di-Cokka sprites made by me, however the actual design is from Metal Slug.
 Original APC sprites by Gorman Freebmane: https://drive.google.com/file/d/1ETjHquh0woyRwo2sGBOOFPRHoIxC_xD5/view?usp=share_link
+Original MBT sprites by Gorman Freebmane: https://drive.google.com/file/d/1GOwTYmJYxzZl-Qc4WniN6v17toQ_yLOM/view?usp=drive_link
 
 =====<SFX>=====
 Fire sprites (F1RE) are from Duke Nukem 3D, ripped from Project Brutality.
@@ -24,7 +22,10 @@ Large explosion (MCR3A0-MCR3G0) made by Inkoalawetrust.
 Spark sprites (SPKYA-SPKYF) made by Tormentor667 and Solarsnowfall.
 Air Explosion 1 sprites by Gorman Freebmane.
 Liquid explosion sprites are from Metal Slug.
+Shockwave ring (SHOKA0) made by inkoalawetrust.
+Tank cannon firing and explosion sprites made by inkoalawetrust
 Di-Cokka firing, projectile, and debris sprites are from Metal Slug.
+Smoke sprites (Sprites/SFX/Smoke) are from unknown source, ripped from Project Brutality.
 
 =====<Other>=====
 Radio/Walkie-talkie sprites (RADI*) made by Doom Nukem. World sprite (RADIZ0) by mark#8218.
@@ -41,10 +42,12 @@ Generic fire sound (Fire.ogg) is from the GDC 2018 sound library, "Gregor Quende
 Metal impact sound (MetalImpact.ogg) is from the GDC 2020 sound library, "Bluezone - Cinematic Metal Impacts"
 Wheel impact sound (WheelImpact.ogg) is from the GDC 2020 sound library, "Shapeforms - Hit & Punch"
 The liquid explosion sound was mixed from two sounds from the GDC Audio Library 2018 and 2020.
+Alternate liquid explosion sound (AltWaterBoom.ogg) is from Call of Duty United Offensive.
 Small liquid splash sounds are from Call Of Duty 2.
 Bullet ricochet sounds are from Call of Duty United Offensive.
 Bullet flying by sound (Whizzby.ogg) is from the GDC 2020 sound library, "PMSFX - Bullet Bys &Impacts"
 Casing drop sounds (CaseFall1-5.ogg) is from the GDC 2018 sound library, "Watson Wu - Battle Rifles & Pistols"
+Metal crashing sound (MetalCrash.ogg) is from Half-Life 2.
 
 Vehicles:
 Army car idle sound (CarIdle.ogg) is from the 2018 GDC sound library, "Pole Position - M5 High Speed Tractor"
@@ -69,6 +72,24 @@ APC small machine gun fire sounds are from Half-Life 1, small machine gun impact
 Autocannon shell explosion sound (AutocannonHit.ogg) is from Call of Duty 2.
 Autocannon firing sound (AutocannonFire.ogg) is from Call of Duty United Offensive.
 
+Tank movement sound (TankMove.ogg): https://quicksounds.com/sound/21083/tank-treads-loop2
+Alt tank movement sound (TankMove2.ogg): https://quicksounds.com/sound/21082/tank-treads-loop1
+Tank idle sound (TankIdle.ogg): https://quicksounds.com/sound/21118/bulldozer-start-idle
+Tank APS activate sound (APSActivate.ogg) is from the 2019 GDC sound library, "BlueZone - Sci-Fi Interface Sound Effects"
+Tank smokescreen deploying sound (SmokeDeploy.ogg) is from Call Of Duty United Offensive.
+Tank small machine gun firing sound (TankSmallMG.ogg) is from Call of Duty 2.
+Tank cannon firing sounds (TankFire1-3.ogg) are from Call of Duty 2.
+Tank cannon loading sound (TankLoad.ogg) is from Call of Duty United Offensive.
+Tank turret turn sound (TankTurn.ogg): https://quicksounds.com/sound/21001/tank-heavy-turret-motor
+APFSDS round shatter sound (APFSDSBreak.ogg) is from the 2019 GDC Audio Library.
+Rocket artillery firing sounds:
+	TankRocketFire1.ogg: https://quicksounds.com/sound/18282/rocket-launcher-shot-50
+	TankRocketFire2.ogg: https://quicksounds.com/sound/18281/rocket-launcher-shot-49
+	TankRocketFire3.ogg: https://quicksounds.com/sound/18280/rocket-launcher-shot-48
+
+Missile flying sound (MissileFly.ogg) is from Battlefield 1942.
+Original tank movement and turret turning sounds (TankMoveOriginal.ogg & TankTurnOriginal.ogg) are from Half Life 1.
+
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|Sounds|==============|
 
@@ -78,8 +99,8 @@ Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|TOOLS USED|==============|
 A list of all the tools I have used to make my own assets for this mod, and what I used them for.
 
-Blender (https://www.blender.org/): Modelling, texturing, and animating the actual vehicles.
-Sprite Batch Render Ex (https://github.com/nashmuhandes/SpriteBatchRender): Blender addon, used to render the vehicles into sprites with proper sprite names, I use the Blender3.2.1 branch.
+Blender (https://www.blender.org/): Modelling, texturing, animating, and rendering the actual vehicles.
+Sprite Batch Render Ex (https://github.com/nashmuhandes/SpriteBatchRender/tree/Blender3.2.1): Blender addon, used to render the vehicles into sprites with proper sprite names.
 Batch Image Manipulation Program (https://alessandrofrancesconi.it/projects/bimp/): Used to autocrop, convert to 8-Bit PNGs, and compress my sprites en mass. Here is a link to set of image manipulations I use(May be outdated): https://drive.google.com/file/d/1Yyq1X-TClofjVrcsoOsGxSPzehcS-Ads/view?usp=sharing
 SLADE: Used to automatically offset the sprites, and then for me to also manually adjust the offsets to be more accurate.
 DeflOpt, PNGCrush, PNGout: Plugged into SLADE, and used to even further compress sprites. Here is a guide on how to do that and where to find these programs: https://imgur.com/a/DJ4x4hS

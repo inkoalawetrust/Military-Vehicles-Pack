@@ -1,6 +1,3 @@
-//TODO:
-//Move the MVP documentation to a Github wiki instead of the document I currently use.
-
 //FIXME:
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
 The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
@@ -37,6 +34,7 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		DamageFactor "Explosive", 0.75;
 		DamageFactor "Grenade", 0.7;
 		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.6;
 		DamageFactor "Fire", 0.8;
 		DamageFactor "Crush", 1.5;
 		DamageFactor "Disintegrate", 1.5;
@@ -49,6 +47,7 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.8;
 		DamageFactor "RifleBullet", 0.8;
+		+DoShadowBlock;
 	}
 	
 	Override Void UserVariableDefaults ()
@@ -106,8 +105,9 @@ Class MVP_BaseTurret : KAI_BaseTurret
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
+		+DoShadowBlock;
 	}
-	
+	Mixin MVP_DamageSmokeHandling;
 	Override Void UserVariableDefaults ()
 	{
 		User_RetreatDistance = -1; //Turrets can't move or be scared anyway.
@@ -123,6 +123,31 @@ Class MVP_BaseProp : KAI_BaseProp
 		YScale 0.541666; //0.65 / 1.2
 		Tag "Military Vehicle Prop Base (You really shouldn't be seeing this in-game)";
 		MVP_BaseProp.SmokeDelay 12;
+		//Damage factors that act as the vehicles "armor".
+		DamageFactor 0.9; //Generic damage factor for all damage.
+		DamageFactor "Drowning", 0.0;
+		DamageFactor "Poison", 0.0;
+		DamageFactor "PoisonCloud", 0.0;
+		DamageFactor "Melee", 0.2; //May change this to have melee damage do nothing to the vehicles, unless it exceeds a certain ammount.
+		DamageFactor "Electric", 0.2;
+		DamageFactor "ExplosiveImpact", 0.75;
+		DamageFactor "Explosion", 0.75;
+		DamageFactor "Explosive", 0.75;
+		DamageFactor "Grenade", 0.7;
+		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.6;
+		DamageFactor "Fire", 0.8;
+		DamageFactor "Crush", 1.5;
+		DamageFactor "Disintegrate", 1.5;
+		DamageFactor "Railgun", 2.0;
+		DamageFactor "Falling", 1.25;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.8;
+		DamageFactor "MarineGrenade", 0.7;
+		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "RifleBullet", 0.8;
 	}
 	Mixin MVP_DamageSmokeHandling;
 }
@@ -134,6 +159,66 @@ Class MVP_BaseTurretProp : KAI_BaseTurretProp
 		XScale 0.65;
 		YScale 0.541666; //0.65 / 1.2
 		Tag "Military Vehicle Turret Prop Base (You really shouldn't be seeing this in-game)";
+		//Damage factors that act as the vehicles "armor".
+		DamageFactor 0.9; //Generic damage factor for all damage.
+		DamageFactor "Drowning", 0.0;
+		DamageFactor "Poison", 0.0;
+		DamageFactor "PoisonCloud", 0.0;
+		DamageFactor "Melee", 0.2; //May change this to have melee damage do nothing to the vehicles, unless it exceeds a certain ammount.
+		DamageFactor "Electric", 0.2;
+		DamageFactor "ExplosiveImpact", 0.75;
+		DamageFactor "Explosion", 0.75;
+		DamageFactor "Explosive", 0.75;
+		DamageFactor "Grenade", 0.7;
+		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Fire", 0.8;
+		DamageFactor "Crush", 1.5;
+		DamageFactor "Disintegrate", 1.5;
+		DamageFactor "Railgun", 2.0;
+		DamageFactor "Falling", 1.25;
+		//Damage factors specific to the Smart Marines.
+		DamageFactor "MarineHMG", 0.8;
+		DamageFactor "MarineGrenade", 0.7;
+		DamageFactor "MarineRifle", 0.7;
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "RifleBullet", 0.8;
+		//=========================
+		RipLevelMin 2;
+		Mass 500;
+		KAI_BaseTurret.TurnAmount 0.15;
+		KAI_BaseTurret.TurnSoundRadius 2;
+		Tag "Military Vehicle Turret Base (You really shouldn't be seeing this in-game)";
+		DamageFactor "MarineGrenade", 0.9;
+		DamageFactor "Grenade", 0.9;
+		DamageFactor "MarineRifle", 0.75;
+	}
+	Mixin MVP_DamageSmokeHandling;
+}
+
+Class MVP_ShrapnelPuff : KAI_MixinActor
+{
+	Default
+	{
+		+NOBLOCKMAP
+		+NOGRAVITY
+		+ALLOWPARTICLES
+		+RANDOMIZE
+		+ZDOOMTRANS
+		+HITTRACER; //Store the actor the puff hit.
+		RenderStyle "Translucent";
+		Alpha 0.5;
+		VSpeed 1;
+		Mass 5;
+	}
+	States
+	{
+		Spawn:
+			PUFF A 4 Bright;
+			PUFF B 4;
+		Melee:
+			PUFF CD 4;
+			Stop;
 	}
 }
 
@@ -144,6 +229,14 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 		+KAI_BaseProjectile.NoFriendlyFire; //MVP projectiles do not hit allies by default.
 	}
 	Mixin MVP_UniversalFunctions;
+	
+	//Fire an omnidirectional blast of shrapnel.
+	Void SpawnHitscanShrapnel (Int Amount, Int Damage = 2, Double Range = 512, Class <Actor> Puff = "MVP_ShrapnelPuff")
+	{
+		For (Int I = Amount; 0 <= I; I--)
+			LineAttack (FRandom (0,360),Range*FRandom(0.5,1.5),FRandom (90,-90), Int(Damage*FRandom(0.75,1.25)) ,'Shrapnel',Puff, LAF_TARGETISSOURCE|LAF_OVERRIDEZ,offsetz:Height/2);
+	}
+	
 	//Allows to quickly set up a spawned liquid splash, and then returns a pointer the splash to allow for further modifications, like making it visually larger or calling A_QuakeEx from it.
 	Actor SpawnLiquidSplash (Int LiquidType = LIQUID_WATER, Sound SplashSound = "SFX/LiquidExplosion", Double Volume = 1.0, Double Attenuation = 0.5,
 	Int ExplosionDamage = 0, Double ExplosionRadius = 0, Double FullDamageRadius = 0, Name DamageType = "", Bool DontHarmSource = False)
@@ -227,6 +320,11 @@ Class MVP_LOFDebugGun : Pistol
 		
 		Double Distance = PLAYERMISSILERANGE; //8192 map units
 		Check.Shooter = Self;
+		
+		Check.ProjInfo = New ('LOFProjInfo'); //Assign struct.
+		Check.ProjInfo.Projectile = "MVP_50CalBullet"; //Pass projectile class to struct.
+		Check.ProjInfo.InitializeProjectileInfo(); //Let it infer the rest.
+		
 		Check.Trace (ShotPos,CurSector,Direction,Distance,0);
 		
 		Vector3 HitPos = Check.Results.HitPos;
@@ -236,12 +334,12 @@ Class MVP_LOFDebugGun : Pistol
 		
 		If (Check.BadLOF)
 		{
-			A_Log ("KAI_LOFDebugGun: The line of fire check returned a bad LOF.");
+			A_Log ("MVP_LOFDebugGun: The line of fire check returned a bad LOF.");
 			Check.Destroy();
 			Return;
 		}
 		
-		A_Log ("KAI_LOFDebugGun: The line of fire check returned a good LOF.");
+		A_Log ("MVP_LOFDebugGun: The line of fire check returned a good LOF.");
 		Check.Destroy();
 		Return;
 	}
@@ -327,12 +425,10 @@ Class SmartMarineWarningZone : KAI_MixinActor
 		Name TheOtherMarine = "TurretMarine";
 		Name WarningToken = "SM_ImInDanger";
 		
-		If (IsFrozen()) Return;
+		If (IsFrozen() || bDormant) Return;
 		
 		//Can be used to attach the zone to an actor.
 		If (Master)
-			//SetOrigin (Master.Pos,True);
-			//SetOrigin (Master.Vec3Offset (Offset.X * Cos(Angle) + Offset.Y * Sin (Angle),Offset.X * Sin (Angle) - Offset.Y * Cos (Angle),Offset.Z),True); //Copied from SpawnMarine().
 			SetOrigin (KAI_Math.Vec3OffsetRelative (Master,Offset),True);
 		
 		If ((Flags & MWRN_VEHICLEDEATH) && Master && Master Is "MVP_BaseVehicle") //If you are set to disappear when the vehicle has no death flames left. 

@@ -14,17 +14,18 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		KAI_BaseTurret.MinimumPitch 20;
 		KAI_BaseTurret.TurnSoundRadius 1.5;
 		KAI_BaseTurret.AttackSpeed 230;
-		KAI_BaseTurret.AttackSpeed 250;
+		KAI_BaseTurret.FastAttackSpeed 250;
 		KAI_BaseTurret.CombatAngleTurnRate 55;
 		KAI_BaseTurret.CombatPitchTurnRate 30;
+		KAI_BaseTurret.Inaccuracy (4,4,4);
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
 		DamageFactor "Autocannon", 0.8;
+		DamageFactor "Shrapnel", 0.5;
 		AttackSound "Vehicle/APC/MGFire";
 		KAI_BaseTurret.TurnSound "Vehicle/APC/TurretTurn";
 		+MissileMore;
-		//+KAI_BaseVehicle.ScareMarines;
 	}
 	
 	Const DualMGAttackHeight = 12;
@@ -32,46 +33,13 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	Array <Actor> HitActors;
 	MVP_APCMachineGunLOFCheck MarineWarner; //A permanent pointer to a dual MG LOF check tracer. So that it can be fired when the turret is firing to warn marines.
 	
-	Bool MGLOFCheck()
-	{
-		Let Check = New ("MVP_APCMachineGunLOFCheck");
-		TurretAimPos = UpdateTurretAimPos();
-		Vector3 Direction;
-		//If you have a target, fire the LOF check straight at the actor for the LOF check.
-		If (Target)
-		{
-			Double PitchTo = PitchTo (Target,14,GetTurretAimPosOffset());
-			Direction = (AngleToVector(AngleTo(Target), Cos(PitchTo)), -Sin(PitchTo));
-		}
-		//If no target, fire it at the actual aiming direction. This is how it used to be done, but because turrets now (12/5/2023) actually rotate ahead
-		//of their target, that would lead to issues with the LOF returning false.
-		Else
-			Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
-		
-		Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
-		Check.Shooter = Self;
-		Check.Other = Target;
-		Check.Trace ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),CurSector,Direction,Distance,0);
-		
-		If (Check.BadLOF)
-		{
-		a_log ("bad lof");
-			bDontStayAround = True;
-			Check.Destroy();
-			Return False;
-		}
-		bDontStayAround = False;
-		Check.Destroy();
-		Return True;
-	}
-	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!KAI_BaseTurret.ShouldAttack()) Return False;
 		If (Target && !CheckFOV (Target,90/2)) Return False; //KLUDGE: We need to do the null check here, because as of GZDoom 4.10, it's not done internally. Crashing the game.
 		If (IsOverPitchLimits (Target,DualMGAttackHeight,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target)&& MGLOFCheck())
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,0,0,(0,-8,12),0,"MVP_50CalBullet"))
 		{
 			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
@@ -109,9 +77,9 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		
 		If (IsFrozen()) Return;
 		//When shooting, fire a ray that alerts any marines that would be caught in the line of fire.
+		//TODO: This probably needs to be changed to a plain KAI_FindInLOF check.
 		If (IsInAttackState())
 		{
-			//MVP_FindInLOF (0,INT.MAX,0,(0,0,12),foundactors:HitActors);
 			Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 			
 			Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
@@ -188,7 +156,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 				If (Random2[pr_monsterrefire]() < 48 &&
 				//If the target is too high or low to shoot.
 				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
-				!MGLOFCheck()))
+				!KAI_TurretCheckLOF (Target,0,0,(0,-8,12),0,"MVP_50CalBullet")))
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");
@@ -237,7 +205,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 Class MVP_APCMachineGunLOFCheck : KAI_LOFRaycast
 {
 	Const FiftyCalRipLevel = 3; //This has to be changed if MVP_50CalBullets' ripper level is changed.
-	Const MaxRippedActors = 5; //Same as above, but this is the general count of how many actors a bulelt can go through before stopping.
+	Const MaxRippedActors = 5; //Same as above, but this is the general count of how many actors a bullet can go through before stopping.
 	Bool OnlyFindActors; //Used to make the dual MG warn marines it is firing at.
 	Override ETraceStatus TraceCallback()
 	{
@@ -304,6 +272,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		KAI_BaseTurret.MinimumPitch 20;
 		KAI_BaseTurret.AttackSpeed 180;
 		KAI_BaseTurret.FastAttackSpeed 200;
+		KAI_BaseTurret.Inaccuracy (2,2,2);
 		//KAI_BaseTurret.TurnSoundRadius 4;
 		+MissileEvenMore;
 	}
@@ -385,11 +354,11 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 				Actor Proj = A_SpawnProjectile ("MVP_AutocannonShell",16,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				AddProjectileSpread (Proj,(0.3,-0.3),(0.45,-0.45));
 				//If the enemy the shell was fired at is a flying enemy vulnerable to radius damage. Then use the proximity fuze.
-				If (Target && IsFlying (Target) && !Target.bNoRadiusDmg)
-				{
-					Proj.Tracer = Target;
-					MVP_AutocannonShell(Proj).IsAirburst = True;
-				}
+				//If (Target && IsFlying (Target) && !Target.bNoRadiusDmg)
+				//{
+				//	Proj.Tracer = Target;
+				//	MVP_AutocannonShell(Proj).IsAirburst = True;
+				//}
 				A_SpawnItemEx ("MVP_AutocannonCasing",-6,-12,8,FRandom(1,-3),FRandom(-4,-10),FRandom(4,8));
 				Frame = UpdateTurretElevation (3,1,5,7); //D, B, F, H
 			}
@@ -629,7 +598,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 				}
 				
 				If (Random2[pr_monsterrefire]() < 128 &&
-				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
+				((Target && IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) ||
 				!KAI_TurretCheckLOF (Target,150,0,(0,0,8))))
 				{
 					A_ClearTarget();
@@ -691,7 +660,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		FastSpeed 250;
 		XScale 0.2;
 		YScale 0.166667; //0.2 / 1.2
-		DamageFunction (Random (60,80)/10); //A ripper damages an actor with a total radius of 64 MU, 10 times, hence dividing the random damage output by 10.
+		DamageFunction (Random (25,40));
 		ProjectileKickback 32;
 		RipperLevel 3;
 		Obituary "%o was gunned down by a machine gun";
@@ -701,10 +670,10 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		KAI_BaseProjectile.TrailActor "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 4;
 		KAI_BaseProjectile.MaxTrails 128;
+		KAI_BaseProjectile.RipDepth 5;
 		+Ripper;
+		+KAI_BaseProjectile.RipOnce;
 	}
-	Int RipAmount;
-	Const Rips = 5; //Roughly how many actors it'll rip.
 	Bool HitLiquid;
 	
 	Override Int SpecialMissileHit (Actor Victim)
@@ -714,21 +683,15 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		
 		//Always bounce off players with god mode. Or player pawns and monsters with Invulnerable or NoDamage.
 		If ((HasGodMode(Victim) || IsIndestructible(Victim) && !IsInanimateObject(Victim)) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10),attenuation:0.75)) {bRipper = False; Return 1;}
+		//Super likely to bounce off tanks.
+		Else If (MVP_RifleBullet.DeflectOffTank(Victim) && DeflectProjectile (Victim,225,FRandom(0.6,0.8),FRandom (1.,0.7),(20,-20),(20,-20))) Return 1;
 		//Fairly likely to bounce off healthy enough actors that don't bleed (Which should suggest its' something inorganic like a robot or golem or something, where deflection would make sense).
 		Else If (Victim.bNoBlood && !IsIndestructible (Victim) && Victim.SpawnHealth() >= 2000 && DeflectProjectile (Victim,192,FRandom(0.5,0.7),FRandom (1.,0.85),(6,-6),(6,-6),attenuation:0.75)) {bRipper = False; Return 1;}
 		
-		If (Victim.SpawnHealth() <= 200) bExtremeDeath = True; //Obliterate any weak enemy.
-		Else bExtremeDeath = False;
+		bExtremeDeath = (Victim.SpawnHealth() <= 200); //Obliterate any weak enemy.
 		
-		//Stop penetrating if the target has a lot of health, or you ripped for long enough.
-		If (Victim.SpawnHealth() >= 500 || RipAmount > Rips*10) bRipper = False;
-		
-		//Stop ripping if you went through a large enough ally.
-		//If (Target && Target.bIsMonster && !(Target.IsHostile(Victim)) && Victim.Radius >= 40 && Victim.Height >= 64) A_Die();
-		
-		RipAmount++;
-		
-		If (!Victim.Player && Victim.PainChance <= 80 && Random (0,256) >= 128+48) bPainLess = True; //So monsters aren't frozen in pain from the amount of bullets hitting them.
+		//Stop penetrating if the target has a lot of health.
+		bRipper = (Victim.SpawnHealth() >= 500);
 		Return -1;
 	}
 	
@@ -856,11 +819,27 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		If ((HasGodMode(Victim) || IsIndestructible(Victim) && !IsInanimateObject(Victim)) && DeflectProjectile (Victim,0,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10))) Return 1;
 		//Be at least somewhat likely to bounce off if hitting an APC.
 		Else If ((Victim Is "MVP_APC" || Victim Is "MVP_APCProp") && DeflectProjectile (Victim,128,FRandom(0.4,0.6),FRandom (1.,0.7),(10,-10),(10,-10))) Return 1;
+		//Almost always bounce off the main battle tank.
+		Else If (DeflectOffTank(Victim) && DeflectProjectile (Victim,225,FRandom(0.5,0.8),FRandom (1.,0.7),(20,-20),(20,-20))) Return 1;
 		//Be very likely to bounce off a non-bleeding actor with a lot of health.
 		Else If (Victim.bNoBlood && !IsIndestructible (Victim) && Victim.SpawnHealth() >= 2000 && DeflectProjectile (Victim,64,FRandom(0.5,0.7),FRandom (1.,0.8),(6,-6),(6,-6),attenuation:0.75)) Return 1;
 		
 		
 		Return -1;
+	}
+	
+	Static Bool DeflectOffTank (Actor Other) //Static so the 50. cal can call it too.
+	{
+		//Bounce of MBT turrets.
+		If (Other Is "MVP_MBTTurret" || Other Is "MVP_MBTTurretProp"
+		/*|| Other Is "MVP_MBTMissileTurret"*/ || Other Is "MVP_MBTMissileTurretProp"
+		/*|| Other Is "MVP_MBTTerminatorTurret"*/ || Other Is "MVP_MBTTerminatorTurretProp"
+		/*|| Other Is "MVP_MBTSPAAGTurret"*/ || Other Is "MVP_MBTSPAAGTurretProp")
+			Return True;
+		//Deflect off the tank hulls too of course.
+		Else If (Other Is "MVP_MBT" || Other Is "MVP_MBTProp")
+			Return True;
+		Return False;
 	}
 	
 	//Mom, can we have MVP_50CalBullet ?
@@ -1006,6 +985,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				A_StopSound (CHAN_VOICE);
 				If (Airbursted) //The shell detonated mid air to hit a target that it missed.
 				{
+					SpawnHitscanShrapnel(128);
 					A_SetScale (1.5,1.5);
 					A_SetRenderStyle (1.0,Style_Add);
 					Return ResolveState ("AirBlast");
@@ -1043,7 +1023,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				}
 				A_StartSound ("Vehicle/APC/AutocannonHit",attenuation:0.3);
 				MakeAlliesImmuneToExplosion (Target, 128);
-				A_Explode (96,128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
+				A_Explode (Int(96*RadiusDamageFactor),128,XF_EXPLICITDAMAGETYPE,True,32,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}
 			GXPL CDEFGHIJKLMNO 4 Bright {If (Light) Light.Args[3]-= 9.84;}
@@ -1075,7 +1055,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 			{
 				If (Light) Light.Args[3]-= 32;
 				MakeAlliesImmuneToExplosion (Target, 128);
-				A_Explode (96,192,XF_EXPLICITDAMAGETYPE,True,48,damagetype:'Explosive');
+				A_Explode (Int(96*RadiusDamageFactor),192,XF_EXPLICITDAMAGETYPE,True,48,damagetype:'Explosive');
 				RemoveAllyExplosionImmunity();
 			}
 			GAXP C 4 {If (Light) Light.Args[3]-= 32;}

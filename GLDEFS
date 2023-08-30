@@ -147,30 +147,6 @@ PointLight AirExplosion3
 	Size 72
 }
 
-Object MVP_AutocannonShell
-{
-	//Airburst
-	//Frame GAXPA {Light AirExplosion1}
-	//Frame GAXPB {Light AirExplosion2}
-	//Frame GAXPC {Light AirExplosion3}
-	
-	//Ground explosion
-	/*Frame GXPLB {Light Explosion2}
-	Frame GXPLC {Light Explosion4}
-	Frame GXPLD {Light Explosion4}
-	Frame GXPLE {Light Explosion4}
-	Frame GXPLF {Light Explosion4}
-	Frame GXPLG {Light Explosion4}
-	Frame GXPLH {Light Explosion5}
-	Frame GXPLI {Light Explosion5}
-	Frame GXPLJ {Light Explosion5}
-	Frame GXPLK {Light Explosion5}
-	Frame GXPLL {Light Explosion5}
-	Frame GXPLM {Light Explosion2}
-	Frame GXPLN {Light Explosion1}
-	Frame GXPLO {Light Explosion1}*/
-}
-
 //50Cal round lighting
 PointLight 50CalTracerLight
 {
@@ -202,6 +178,14 @@ PointLight RifleFiringLight
 	Color 1.00 0.30 0.00
 	Size 96
 	Offset 0 8 0
+	Attenuate 1
+}
+
+PointLight CoaxialFiringLight
+{
+	Color 1.00 0.30 0.00
+	Size 96
+	Offset -10 20 0
 	Attenuate 1
 }
 

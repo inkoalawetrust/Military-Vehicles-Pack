@@ -1,21 +1,25 @@
 Extend Class MVP_BaseVehicle
 {
 	Mixin MVP_SharedFunctions;
+	Mixin MVP_MarineFunctions;
 }
 
 Extend Class MVP_BaseTurret
 {
 	Mixin MVP_SharedFunctions;
+	Mixin MVP_MarineFunctions;
 }
 
 Extend Class MVP_BaseProp
 {
 	Mixin MVP_SharedFunctions;
+	Mixin MVP_MarineFunctions;
 }
 
 Extend Class MVP_BaseTurretProp
 {
 	Mixin MVP_SharedFunctions;
+	Mixin MVP_MarineFunctions;
 }
 
 Mixin Class MVP_UniversalFunctions
@@ -152,19 +156,218 @@ Mixin Class MVP_SharedFunctions
 	
 	Override Bool IsActorHostile (Actor Other)
 	{
-		Return (IsHostile (Other) || IsTargetingAllies (Self, Other));
+		Return (Other && (IsHostile (Other) || IsTargetingAllies (Self, Other)));
 	}
 	
 	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
 	{
-		If (!Other || IsDead (Other)) Return THREAT_NONE;
-		
 		//Enemy players or marines on turrets are very dangerous.
 		If (MarineOrPlayerOnTurret (Other)) Return THREAT_VERYDANGEROUS;
 		
 		Return Super.AssessThreatLevel (Other, CheckPlayers);
 	}
 	
+	//=====|Other functions|=====\\
+	//Pass the vehicles' user variables as properties.
+	Void UpdateUserVariables()
+	{
+		RetreatRange = User_RetreatDistance;
+		SearchTime = User_ChaseTime;
+		bNoHeadlights = User_NoHeadlights;
+	}
+	
+	Enum FindCorpseFlags
+	{
+		FNCF_RAISABLEONLY	= 1 << 0, //Only look for corpses that can be resurrected.
+		FNCF_NOSIZECHECK	= 1 << 1, //Ignore the MaxCorpseRadius and MaxCorpseHeight properties.
+		FNCF_STOPFORVILES	= 1 << 2, //Abort the check if a friendly Archvile-type NPC is in the search radius. This is handled here to not have to run another iterator just for the Vile search.
+	}
+	
+	//Find the crushable corpse nearest to the vehicle. Used to get vehicles to crush corpses to deny enemy Archviles ando ther necormancer-type enemies.
+	Actor FindNearestCorpse (Int Flags = FNCF_RAISABLEONLY|FNCF_STOPFORVILES)
+	{
+		If (bNoCrushing) Return Null;
+		Array <Actor> NearbyCorpses;
+		Double NearestDistance = INT.MAX;
+		
+		BlockThingsIterator CorpseSearch = BlockThingsIterator.Create (Self,1024);
+		
+		While (CorpseSearch.Next())
+		{
+			Actor Mobj = CorpseSearch.Thing;
+			
+			//Skip this actor if it's invalid or yourself.
+			If (!Mobj || Mobj == Self) Continue;
+
+			//Don't crush anything if a friendly necromancer is nearby.
+			If (Flags & FNCF_STOPFORVILES && !IsDead(Mobj) && IsNecromancer(Mobj) && !IsActorHostile (Mobj) && CheckSight (Mobj)) Return Null;
+			
+			//Skip this actor if it's already your corpse target, is alive, is already crushed, is not a dead corpse, or cannot be targeted.
+			If (Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || Mobj.bDontCorpse || !CanBeTargeted (Self, Mobj)) Continue;
+			
+			If (!Mobj.bIsMonster && !Mobj.Player) Continue; //Ignore destroyed props.
+			
+			If (Flags & FNCF_RAISABLEONLY && !Mobj.CanRaise()) Continue; //Cannot even be resurrected.
+			
+			If (Mobj.Pos.Z > Mobj.FloorZ) Continue; //Corpse is off the ground. Like if it's falling.
+			
+			If (!(Flags & FNCF_NOSIZECHECK) && Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
+			
+			If (!CheckSight (Mobj)) Continue; //And at last, check if the corpse is even visible.
+			
+			NearbyCorpses.Push(Mobj); //Add it to the list.
+		}
+		Return GetClosestActor (NearbyCorpses,Self.Pos,1024);
+	}
+	
+	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
+	//TODO: Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
+	//Range: The range around which to check for enemies.
+	//AvoidAllies: Deduct points from the score for any allies in the AOE.
+	Int AttackByQuantity (Actor Origin, Double Range = 256, Bool AvoidAllies = False)
+	{
+		If (!Origin) Return 0;
+		Actor Mobj;
+		Int Chance;
+		Bool IsHostile, IsVisible; //Caching
+		
+		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Origin,Range);
+		
+		While (FindEnemies.Next())
+		{
+			Mobj = FindEnemies.Thing;
+			
+			If (!Mobj || IsDead (Mobj) || IsInanimateObject (Mobj) || Mobj == Self || Mobj == Origin) Continue;
+			
+			IsHostile = IsActorHostile (Mobj); IsVisible = IsVisible (Mobj,False);
+			If (AvoidAllies && !IsHostile && IsVisible)
+			{
+				If (Mobj.bIsMonster) Chance -= 10;
+				If (Mobj.Player) Chance -= 40;
+				Continue;
+			}
+			
+			If (IsHostile && IsVisible && Mobj.Distance3DSquared (Origin) <= Range*Range)
+			{
+				Switch (AssessThreatLevel (Mobj))
+				{
+					Case THREAT_UNSTOPPABLE:
+						Chance += 500;
+						Break;
+					Case THREAT_SUPERDANGER:
+						Chance += 200;
+						Break;
+					Case THREAT_VERYDANGEROUS:
+						Chance += 80;
+						Break;
+					Case THREAT_DANGEROUS:
+						Chance += 40;
+						Break;
+					Case THREAT_ABOVENORMAL:
+						Chance += 20;
+						Break;
+					Case THREAT_NORMAL:
+						Chance += 10;
+						Break;
+					Case THREAT_MILD:
+						Chance += 8;
+						Break;
+					Case THREAT_LOW:
+						Chance += 5;
+						Break;
+					Case THREAT_VERYLOW:
+						Chance += 1;
+						Break;
+					Case THREAT_NONE:
+						Break;
+					Default:
+						Chance += 1;
+						Break;
+				}
+			}
+		}
+		
+		Return Chance;
+	}
+	
+	//Death flame handling.
+	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
+	Enum KAIFlameFlags
+	{
+		FSP_WARNMARINES = 1 << 0, //If any flames are succesfully created around the vehicle, should a marine warning zone be made ?
+		FSP_VEHICLEDEATH = 1 << 1 //Mark the warning zone as needing to vanish once all of the flames have evaporated.
+	}
+	
+	//Creates multiple flames within the bounding box of the vehicle. Used to create flaming wrecks when vehicles are gibbed.
+	//Flags: The flags that control the spawning behavior, look at KAIFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
+	//Amount: The random amount of flames that will be created, the X component is the minimum amount of flames, and Y is the maximum.
+	//Lifespan: The random lifespan each flame has in tics, the default is 35*30 (30 seconds). The X component is the minimum lifespan a flame can have, and Y is the maximum.
+	//RadMul: How much should the random flame position be multiplied by the vehicles' radius.
+	Void SpawnDeathFlames (Int Flags = FSP_WARNMARINES|FSP_VEHICLEDEATH, Vector2 Amount = (5,12), Vector2 Lifespan = (24*TICRATE,105*TICRATE), Double RadMul = 1.75)
+	{
+		Int RandomFlames = Random (Int(Amount.X),Int(Amount.Y));
+		Actor Flame;
+		Vector3 SpawnPos;
+		
+		//Spawn a random amount of flames around the APC wreck.
+		For (Int I = 0; I < RandomFlames; I++)
+		{
+			SpawnPos.XY = Vec2Offset(FRandom (-Radius*RadMul,Radius*RadMul),FRandom (-Radius,Radius));
+			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8,Height);
+			
+			//If the random position relative to the vehicle is valid.
+			If (Level.IsPointInLevel (SpawnPos))
+				Flame = Spawn ("MVP_Flame",SpawnPos); //Then spawn the flame.
+			
+			If (Flame)
+			{
+				Flame.Master = Self; //So the flame knows what actor to warp to.
+				MVP_Flame(Flame).Offsets = Level.Vec3Diff (Pos,SpawnPos);
+				Flame.ReactionTime = Int(FRandom (Lifespan.X,LifeSpan.Y));
+				DeathFlames.Push (Flame); //Add the valid flame to the list.
+			}
+		}
+		
+		//Clean up the null entries in the array.
+		For (Int I = DeathFlames.Size()-1; I >= 0; I--)
+			If (!DeathFlames[I]) DeathFlames.Delete(I); //Remove null entries.
+		
+		//Create a warning zone if any flames actually spawned.
+		If (Flags & FSP_WARNMARINES && DeathFlames.Size())
+			If (Flags & FSP_VEHICLEDEATH)
+				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);
+			Else
+				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);
+	}
+	
+	//Throws actors away from the caller, the code is mostly copied from BlastActor.
+	Void FlingActor (Actor Victim, Double Speed, Bool Harmless, Bool PushImmovables = False)
+	{
+		Double Ang = AngleTo(Victim);
+		Vector2 Move = AngleToVector(Ang, Speed);
+		
+		Victim.Vel.XY = Move;
+		Victim.Vel.Z = 500. / Victim.Mass;
+		
+		If (Victim.Player)
+		{
+			// Players handled automatically
+		}
+		Else If (!Harmless)
+		{
+			Victim.bBlasted = True;
+		}
+		
+		If (Victim.bTouchy) // Touchy objects die when blasted
+		{
+			Victim.bArmed = False; // Disarm
+			Victim.DamageMobj(Self, Self, Victim.Health, 'Melee', DMG_FORCED|DMG_EXPLOSION);
+		}
+	}
+}
+
+Mixin Class MVP_MarineFunctions
+{
 	//=====|Marine related functions|=====\\
 	Bool CustomMarinesAvailable()
 	{
@@ -211,7 +414,6 @@ Mixin Class MVP_SharedFunctions
 		Name CustomMarine = 'SmartMarine';
 		Class<Actor> WhatToSpawn;
 		Actor Spawnee;
-		Bool b;
 		
 		If (CustomMarinesAvailable())
 			WhatToSpawn = CustomMarine;
@@ -225,6 +427,7 @@ Mixin Class MVP_SharedFunctions
 		Else
 			Spawnee.CopyFriendliness (Self,False);
 		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
+		
 		Spawnee.Angle = Self.Angle;
 		If (SetMaster)
 			Spawnee.Master = Self;
@@ -234,7 +437,7 @@ Mixin Class MVP_SharedFunctions
 			Spawnee.Speed = 16;
 			Spawnee.bSeeFriendlyMonsters = True;
 			Spawnee.FriendlySeeBlocks = 16;
-			Spawnee.bAvoidMelee = True;
+			Spawnee.bAvoidMelee = Spawnee.bAvoidHazards = True;
 		}
 		
 		Return Spawnee;
@@ -289,183 +492,6 @@ Mixin Class MVP_SharedFunctions
 		
 		Return True;
 	}
-	
-	//=====|Other functions|=====\\
-	//Pass the vehicles' user variables as properties.
-	Void UpdateUserVariables()
-	{
-		RetreatRange = User_RetreatDistance;
-		SearchTime = User_ChaseTime;
-		bNoHeadlights = User_NoHeadlights;
-	}
-	
-	Enum FindCorpseFlags
-	{
-		FNCF_RAISABLEONLY	= 1 << 0, //Only look for corpses that can be resurrected.
-		FNCF_NOSIZECHECK	= 1 << 1, //Ignore the MaxCorpseRadius and MaxCorpseHeight properties.
-		FNCF_STOPFORVILES	= 1 << 2, //Abort the check if a friendly Archvile-type NPC is in the search radius. This is handled here to not have to run another iterator just for the Vile search.
-	}
-	
-	//Find the crushable corpse nearest to the vehicle. Used to get vehicles to crush corpses to deny enemy Archviles ando ther necormancer-type enemies.
-	Actor FindNearestCorpse (Int Flags = FNCF_RAISABLEONLY|FNCF_STOPFORVILES)
-	{
-		Array <Actor> NearbyCorpses;
-		Double NearestDistance = INT.MAX;
-		
-		BlockThingsIterator CorpseSearch = BlockThingsIterator.Create (Self,1024);
-		
-		While (CorpseSearch.Next())
-		{
-			Actor Mobj = CorpseSearch.Thing;
-			
-			//Skip this actor if it's invalid or yourself.
-			If (!Mobj || Mobj == Self) Continue;
-
-			//Don't crush anything if a friendly necromancer is nearby.
-			If (Flags & FNCF_STOPFORVILES && !IsDead(Mobj) && IsNecromancer(Mobj) && !IsActorHostile (Mobj) && CheckSight (Mobj)) Return Null;
-			
-			//Skip this actor if it's already your corpse target, is alive, is already crushed, is not a dead corpse, or cannot be targeted.
-			If (Mobj == CorpseTarget || !IsDead (Mobj) || Mobj.bDontGib || Mobj.bDontCorpse || !CanBeTargeted (Self, Mobj)) Continue;
-			
-			If (!Mobj.bIsMonster && !Mobj.Player) Continue; //Ignore destroyed props.
-			
-			If (Flags & FNCF_RAISABLEONLY && !Mobj.CanRaise()) Continue; //Cannot even be resurrected.
-			
-			If (Mobj.Pos.Z > Mobj.FloorZ) Continue; //Corpse is off the ground. Like if it's falling.
-			
-			If (!(Flags & FNCF_NOSIZECHECK) && Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
-			
-			If (!CheckSight (Mobj)) Continue; //And at last, check if the corpse is even visible.
-			
-			NearbyCorpses.Push(Mobj); //Add it to the list.
-		}
-		
-		Return GetClosestActor (NearbyCorpses,Self.Pos);
-	}
-	
-	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
-	//TODO: Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
-	//Range: The range around which to check for enemies.
-	//AvoidAllies: Deduct points from the score for any allies in the AOE.
-	//IDEA: Make the chance increment by the actors' threat level instead ?
-	Int AttackByQuantity (Double Range = 256, Bool AvoidAllies = False)
-	{
-		Actor Mobj;
-		Int Chance;
-		Bool IsHostile, IsVisible; //Caching
-		
-		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Self,Range);
-		
-		While (FindEnemies.Next())
-		{
-			Mobj = FindEnemies.Thing;
-			
-			If (IsDead (Mobj) || IsInanimateObject (Mobj) && Mobj == Self) Continue;
-			
-			IsHostile = IsHostile (Mobj); IsVisible = IsVisible (Mobj,False);
-			If (AvoidAllies && !IsHostile && IsVisible)
-			{
-				If (Mobj.bIsMonster) Chance -= 5;
-				If (Mobj.Player) Chance -= 25;
-				Continue;
-			}
-			
-			If (Mobj != Target && Mobj.Distance3DSquared (Target) <= Range*Range && IsHostile && IsVisible)
-			{
-				If (Mobj.Health >= 10)
-					Chance += 5;
-				Else
-					Chance += 1;
-				
-				//If the mobj is very dangerous, significantly raise the count.
-				If (AssessThreatLevel (Mobj) >= THREAT_DANGEROUS)
-					Chance += 25;
-			}
-		}
-		
-		Return Chance;
-	}
-	
-	//Death flame handling.
-	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
-	Enum KAIFlameFlags
-	{
-		FSP_WARNMARINES = 1 << 0, //If any flames are succesfully created around the vehicle, should a marine warning zone be made ?
-		FSP_VEHICLEDEATH = 1 << 1 //Mark the warning zone as needing to vanish once all of the flames have evaporated.
-	}
-	
-	//FIXME: Fix the bug that for some reason spawns flames halfway merged to the floor. Despite the spawnpos coordinates being fine.
-	//Creates multiple flames within the bounding box of the vehicle. Used to create flaming wrecks when vehicles are gibbed.
-	//Flags: The flags that control the spawning behavior, look at KAIFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
-	//Amount: The random amount of flames that will be created, the X component is the minimum amount of flames, and Y is the maximum.
-	//Lifespan: The random lifespan each flame has in tics, the default is 35*30 (30 seconds). The X component is the minimum lifespan a flame can have, and Y is the maximum.
-	Void SpawnDeathFlames (Int Flags = FSP_WARNMARINES|FSP_VEHICLEDEATH, Vector2 Amount = (5,12), Vector2 Lifespan = (24*TICRATE,105*TICRATE))
-	{
-		Int RandomFlames = Random (Int(Amount.X),Int(Amount.Y));
-		Actor Flame;
-		Vector3 SpawnPos;
-		console.printf ("my pos: %d %d %d",pos.x,pos.y,pos.z);
-		//Spawn a random amount of flames around the APC wreck.
-		For (Int I = 0; I < RandomFlames; I++)
-		{
-			SpawnPos.XY = Vec2Offset(FRandom (-Radius*1.75,Radius*1.75),FRandom (-Radius,Radius));
-			Sector Sec = Level.PointInSector(SpawnPos.XY);
-			SpawnPos.Z = Sec.NextLowestFloorAt(SpawnPos.X,SpawnPos.Y,0) + FRandom (8,Height);
-			//SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8,Height);
-			
-			//SpawnPos += (0, 0, SpawnPos.Z);
-			//console.printf ("%d",GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8, Height - 8));
-			console.printf ("pos1: %d %d %d",spawnpos.x,spawnpos.y,spawnpos.z);
-			//If the random position relative to the vehicle is valid.
-			If (Level.IsPointInLevel (SpawnPos))
-				Flame = Spawn ("MVP_Flame",SpawnPos); //Then spawn the flame.
-				else a_log ("fail");
-			
-			If (Flame)
-			{
-				Flame.Master = Self; //So the flame knows what actor to warp to.
-				MVP_Flame(Flame).Offsets = Level.Vec3Diff (SpawnPos,Pos);
-				Flame.ReactionTime = Int(FRandom (Lifespan.X,LifeSpan.Y));
-				DeathFlames.Push (Flame); //Add the valid flame to the list.
-			}
-		}
-		
-		//Clean up the null entries in the array.
-		For (Int I = DeathFlames.Size()-1; I >= 0; I--)
-			If (!DeathFlames[I]) DeathFlames.Delete(I); //Remove null entries.
-		
-		//Create a warning zone if any flames actually spawned.
-		If (Flags & FSP_WARNMARINES && DeathFlames.Size())
-			If (Flags & FSP_VEHICLEDEATH)
-				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);
-			Else
-				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);
-	}
-	
-	//Throws actors away from the caller, the code is mostly copied from BlastActor.
-	Void FlingActor (Actor Victim, Double Speed, Bool Harmless, Bool PushImmovables = False)
-	{
-		Double Ang = AngleTo(Victim);
-		Vector2 Move = AngleToVector(Ang, Speed);
-		
-		Victim.Vel.XY = Move;
-		Victim.Vel.Z = 500. / Victim.Mass;
-		
-		If (Victim.Player)
-		{
-			// Players handled automatically
-		}
-		Else If (!Harmless)
-		{
-			Victim.bBlasted = True;
-		}
-		
-		If (Victim.bTouchy) // Touchy objects die when blasted
-		{
-			Victim.bArmed = False; // Disarm
-			Victim.DamageMobj(Self, Self, Victim.Health, 'Melee', DMG_FORCED|DMG_EXPLOSION);
-		}
-	}
 }
 
 //A generic check used to find where a projectile will roughly land, to place a warning zone for marines there.
@@ -478,7 +504,7 @@ Class MVP_GenericWarnMarineCheck : KAI_LOFRaycast
 		Actor Mobj = Results.HitActor;
 		
 		//Standard KAI projectiles go through allies.
-		If (Mobj && (IsInanimateObject (Mobj) || Shooter && IsHostile (Shooter,Mobj)))
+		If (Mobj && (IsInanimateObject (Mobj) || Shooter && IsHostile (Shooter,Mobj)) && Mobj.bSolid)
 			Return Trace_Stop;
 		
 		//The trace specifically hit a projectile blocking line. e.g a window linedef or a polyobject.

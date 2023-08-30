@@ -20,20 +20,38 @@ Version "4.10.0"
 	#Include "ZScript/Vehicles/APC/APC.zsc"
 	#Include "ZScript/Vehicles/APC/APCProps.zsc" //The APC's OtherActors.zsc is already too long without the props.
 	#Include "ZScript/Vehicles/APC/OtherActors.zsc"
+	//Main Battle Tank
+	#Include "ZScript/Vehicles/MBT/MBT.zsc"
+	#Include "ZScript/Vehicles/MBT/MBTProps.zsc"
+	#Include "ZScript/Vehicles/MBT/OtherActors.zsc"
+	#Include "ZScript/Vehicles/MBT/SPAAG.zsc"
+	//#Include "ZScript/Vehicles/MBT/Terminator.zsc"
+	//#Include "ZScript/Vehicles/MBT/MLRS.zsc"
 	//MISSION 01 START
 	#Include "ZScript/Vehicles/Di-Cokka/Di-Cokka.zsc"
 	#Include "ZScript/Vehicles/Di-Cokka/OtherActors.zsc"
 
 //Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.
+//TODO: Since this isn't purely checking for marines + debug code, I should probably rename it.
 Class SM_MarineChecker : EventHandler
 {
 	Bool NoCustomMarines;
 	
-	//Debug code used to make all monsters able to see friendly monsters, if they can't already.
-	//I say this is for debugging, but it's mostly for me to screw around and make NPC battles with
-	//my marines and vehicles VS other monsters.
 	Override Void WorldThingSpawned (WorldEvent E)
 	{
+		//If there's 2000 or less monsters (For performance) on the map. Give newly spawned monsters +DOSHADOWBLOCK.
+		//Used to make tank smokescreens affect monster aiming in general, and in the future, for marine smoke grenades.
+		//Speaking of which, when I rewrite the marines, I'll probably need to add a check to not call this code twice.
+		If (MVP_Disable_DoShadowBlock && Level.Total_Monsters <= 2000 && E.Thing && E.Thing.bIsMonster)
+		{
+			//Ignore if the thing has the flag on already. Or is a lost soul-alike.
+			If (!E.Thing.bDoShadowBlock && !(E.Thing.bFloat && (E.Thing.bSkullFly || E.Thing.bRetargetAfterSlam)))
+				E.Thing.bDoShadowBlock = True;
+		}
+		
+		//Debug code used to make all monsters able to see friendly monsters, if they can't already.
+		//I say this is for debugging, but it's mostly for me to screw around and make NPC battles with
+		//my marines and vehicles VS other monsters.
 		If (MVP_Debug_SeeFriendlyMonsters)
 		{
 			If (E.Thing && E.Thing.bIsMonster && !E.Thing.bSeeFriendlyMonsters)
@@ -44,7 +62,19 @@ Class SM_MarineChecker : EventHandler
 			}
 		}
 	}
-	
+	//DEBUG DEBUG
+	Override Void WorldThingDamaged (WorldEvent E)
+	{
+		//If (e.inflictor && e.inflictor.getclassname() == "mvp_heatshell" && e.thing.getclassname() == "mvp_mbt")
+		//{
+		//	console.printf ("damage send %d",e.damage);
+		//}
+		//else If (e.inflictor && e.inflictor.getclassname() == "mvp_APFSDSshell" && e.thing.getclassname() == "mvp_mbt")
+		//{
+			//console.printf ("apfsds damage sent %d, damage type %s",e.damage,e.damagetype);
+		//}
+
+	}
 	//Replaces the Smart Marines' own bullets with their better MVP equivalents.
 	Override Void CheckReplacement (ReplaceEvent E)
 	{
@@ -55,13 +85,14 @@ Class SM_MarineChecker : EventHandler
 	}
 	
 	//Just a test, returns the current date in 24 hour format.
-	Struct ScopeBypass ClearScope {String Time;}
+	Struct ScopeBypass ClearScope {String Time; String Date;}
 	ScopeBypass ScopeHack;
 	Override Void UITick()
 	{
 		Super.UITick();
 		
 		ScopeHack.Time = SystemTime.Format ("%R",SystemTime.Now());
+		ScopeHack.Date = SystemTime.Format ("%B %e %G",SystemTime.Now());
 	}
 	//=============================================================================================
 	

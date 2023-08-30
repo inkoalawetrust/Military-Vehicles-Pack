@@ -31,6 +31,7 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "Explosive", 0.65;
 		DamageFactor "Grenade", 0.6;
 		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.4;
 		DamageFactor "Fire", 0.7;
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.80;
@@ -39,6 +40,8 @@ Class MVP_APC : MVP_BaseVehicle
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.7;
 		DamageFactor "RifleBullet", 0.75;
+		DamageFactor "Missile", 0.9;
+		DamageFactor "AntiAir", 0.6;
 		
 		+KAI_BaseVehicle.Transport;
 	}
@@ -120,7 +123,7 @@ Class MVP_APC : MVP_BaseVehicle
 		If (Health <= SpawnHealth()/4)
 			AggressionMultiplier *= 0.5;
 		UpdateThreatLevel();
-		If (KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
+		If (Target && KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
 			If (User_MarineAmount > 0)
 			{
@@ -200,6 +203,7 @@ Class MVP_APC : MVP_BaseVehicle
 	Int User_CrushMode;
 	Bool User_NoTargetPrediction; //The vehicle will not calculate it's targets' movement and lead its' shots.
 	Bool User_FocusFire; //Makes the small MG on the autocannon turret not actively try to not target the same thing as the autocannon.
+	Int User_MarineTID; //The TID to assign to marines spawned by this vehicle, for ACS scripting.
 	
 	Enum CorpseCrushModes
 	{
@@ -302,6 +306,7 @@ Class MVP_APC : MVP_BaseVehicle
 				{
 					Actor Marine;
 					Marine = SpawnMarine ((-120, FRandom (10,-10),0));
+					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
 					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;
@@ -453,7 +458,7 @@ Mixin Class MVP_APC_Smoke
 	Override Bool SpawnDamageSmoke()
 	{
 		If (!Super.SpawnDamageSmoke()) Return False;
-		Console.Printf ("Where there's smoke, there's fire. - %s, 2023",GetClassName());
+		//Console.Printf ("Where there's smoke, there's fire. - %s, 2023",GetClassName());
 		Double CardAng = GetNearestCardinalAngle();
 		Vector3 OldPos = Pos;
 		Vector3 SpawnPos = Vec3Angle (-40,CardAng);

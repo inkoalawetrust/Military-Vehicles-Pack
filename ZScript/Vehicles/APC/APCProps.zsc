@@ -22,6 +22,7 @@ Class MVP_APCProp : MVP_BaseProp
 		DamageFactor "Explosive", 0.65;
 		DamageFactor "Grenade", 0.6;
 		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.4;
 		DamageFactor "Fire", 0.7;
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.90; //APCs stop 50. cal bullets from ripping, so the multiple damage they do as they go through actors is not much issue.
@@ -30,6 +31,8 @@ Class MVP_APCProp : MVP_BaseProp
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.7;
 		DamageFactor "RifleBullet", 0.75;
+		DamageFactor "Missile", 0.9;
+		DamageFactor "AntiAir", 0.6;
 	}
 	
 	Override Void PostBeginPlay ()
@@ -204,6 +207,7 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 		Tag "Machine Gun Turret (Prop)";
 		Obituary "%o is bad at prop hunt";
 		DamageFactor "Autocannon", 0.8;
+		DamageFactor "Shrapnel", 0.5;
 	}
 	
 	Int WreckState; //These wreck states are used by the pre-destroyed versions of these prop turrets, so they are stored here to avoid code duplication.

@@ -206,6 +206,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 	Int User_SupplyAmount; //The amount of times a player can use a car carrying supplies before it runs out. 5 is the default.
 	Bool User_PainRay; //The car carries a non lethal weapon that pain locks enemies, similar to the Active Denial System.
 	Bool User_NoMarines; //The car spawns with no marines in it.
+	Int User_MarineTID; //The TID to assign to marines spawned by this vehicle, for ACS scripting.
 	
 	Actor[4] Marines; //Keeps track of the marines the car deployed.
 	Int WaitTimer; //Makes the car stop for a bit after picking up supplies, so you don't have to chase it.
@@ -291,6 +292,14 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				Marines[0] = SpawnMarine ((Default.Radius*0.70,-56,0),True); //Front left door.
 				Marines[1] = SpawnMarine ((-Default.Radius*0.75,-56,0),True); //Back right door.
 				Marines[2] = SpawnMarine ((-Default.Radius*0.75,56,0),True); //Back left door.
+				If (User_MarineTID != 0)
+				{
+					For (Int I = Marines.Size()-1; I >= 0; I--)
+					{
+						If (Marines[I])
+							Marines[I].ChangeTID(User_MarineTID);
+					}
+				}
 				User_NoMarines = True;
 				If (!CanAttack()) ThreatLevel = THREAT_NONE; //Check if the car has no attacks left to lower the threat level.
 			}
@@ -366,7 +375,7 @@ Mixin Class MVP_ArmyCar_Smoke
 		If (!Super.SpawnDamageSmoke()) Return False;
 		Vector3 SpawnPos = Vec3Angle (-70,GetNearestCardinalAngle());
 		SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-4,4),FRandom(-4,4),38));
-		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Actor Smoke = Spawn ("MVP_BrightFireParticle",SpawnPos);
 		Smoke.Roll = FRandom(-180,180);
 		Smoke.A_SetScale (FRandom(0.7,1.2));
 		Smoke.Vel.Z = FRandom (1,4);

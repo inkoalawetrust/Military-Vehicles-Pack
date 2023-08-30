@@ -26,4 +26,13 @@ DoomEdNums
 		17013 = MVP_DiCokka
 		17014 = MVP_DiCokkaProp
 		17015 = MVP_DiCokkaWreck
+	//Main Battle Tank
+		17016 = MVP_MBT
+		17017 = MVP_MBTProp
+		17018 = MVP_MBTWreck
+		17019 = MVP_MBTRuin
+		17020 = MVP_MBTTossedTurret
+		17021 = MVP_SPAAG
+		//17022 = MVP_FSV //BMPT
+		//17023 = MVP_MLRS //TOS-1
 }

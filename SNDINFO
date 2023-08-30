@@ -5,12 +5,14 @@ SFX/MSExplosion2 "Sounds/Vehicles/Di-Cokka/MSExplosion2.ogg"
 SFX/BigExplosion "Sounds/SFX/BigExplosion.ogg"
 SFX/Explosion "Sounds/SFX/Explosion.ogg" //Maybe get more explosion sounds, and turn SFX/Explosion into a random sound ?
 SFX/LiquidExplosion "Sounds/SFX/WaterBoom.ogg"
+SFX/LiquidExplosion2 "Sounds/SFX/AltWaterBoom.ogg"
 SFX/WaterImpact1 "Sounds/SFX/MGImpactWater1.ogg"
 SFX/WaterImpact2 "Sounds/SFX/MGImpactWater2.ogg"
 SFX/WaterImpact3 "Sounds/SFX/MGImpactWater3.ogg"
 SFX/WaterImpact4 "Sounds/SFX/MGImpactWater4.ogg"
 SFX/Fire "Sounds/SFX/Fire.ogg"
 SFX/MetalHit "Sounds/SFX/MetalImpact.ogg"
+SFX/MetalCrash "Sounds/SFX/MetalCrash.ogg"
 SFX/WheelHit "Sounds/SFX/WheelImpact.ogg"
 SFX/BulletRicochet1 "Sounds/SFX/BulletRicochet1.ogg"
 SFX/BulletRicochet2 "Sounds/SFX/BulletRicochet2.ogg"
@@ -60,10 +62,12 @@ $Random SFX/CasingImpact
 
 $Limit SFX/BigExplosion 0
 $Limit SFX/Explosion 0
-$Limit SFX/Fire 1
+$Limit SFX/Fire 4
 $Limit SFX/MetalHit 0
+$Limit SFX/MetalCrash 0
 $Limit SFX/WheelHit 0
 $Limit SFX/LiquidExplosion 0
+$Limit SFX/LiquidExplosion2 0
 $Limit SFX/WaterImpact1 0
 $Limit SFX/WaterImpact2 0
 $Limit SFX/WaterImpact3 0
@@ -142,6 +146,8 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/APC/Idle 0
 	$Limit Vehicle/APC/Moving 0
 	$Limit Vehicle/APC/MGFire 0
+	$Limit Vehicle/APC/SmallMGFire1 0
+	$Limit Vehicle/APC/SmallMGFire2 0
 	$Limit Vehicle/APC/MGImpact 0
 	$Limit Vehicle/APC/SmallMGImpact 0
 	$Limit Vehicle/APC/TurretTurn 1 256
@@ -163,3 +169,63 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/Di-Cokka/Pain 0
 	$Limit Vehicle/Di-Cokka/Death 0
 	$Limit Vehicle/Di-Cokka/MetalHit 0
+	
+	//Main Battle Tank
+	Vehicle/Tank/Move "Sounds/Vehicles/MBT/TankMove.ogg"
+	Vehicle/Tank/AltMove "Sounds/Vehicles/MBT/TankMove2.ogg"
+	Vehicle/Tank/MoveOriginal "Sounds/Vehicles/MBT/TankMoveOriginal.ogg"
+	Vehicle/Tank/Idle "Sounds/Vehicles/MBT/TankIdle.ogg"
+	Vehicle/Tank/IdleOriginal "Sounds/Vehicles/MBT/TankIdleOriginal.ogg"
+	Vehicle/Tank/APSRun "Sounds/Vehicles/MBT/APSActivate.ogg"
+	$Alias Vehicle/Tank/AltAPSRun Vehicle/ArmyCar/PainRay/On
+	Vehicle/Tank/Smokescreen "Sounds/Vehicles/MBT/SmokeDeploy.ogg"
+	
+	Vehicle/Tank/TurretTurn "Sounds/Vehicles/MBT/TankTurn.ogg"
+	Vehicle/Tank/TurretTurnOriginal "Sounds/Vehicles/MBT/TankTurnOriginal.ogg"
+	Vehicle/Tank/Reload "Sounds/Vehicles/MBT/TankLoad.ogg"
+	Vehicle/Tank/APFSDSShatter "Sounds/Vehicles/MBT/APFSDSBreak.ogg"
+	Vehicle/Tank/CannonFire1 "Sounds/Vehicles/MBT/TankFire1.ogg"
+	Vehicle/Tank/CannonFire2 "Sounds/Vehicles/MBT/TankFire2.ogg"
+	Vehicle/Tank/CannonFire3 "Sounds/Vehicles/MBT/TankFire3.ogg"
+	Vehicle/Tank/CoaxialFire "Sounds/Vehicles/MBT/TankSmallMG.ogg"
+	Vehicle/Tank/RocketMotor "Sounds/Vehicles/MBT/MissileFly.ogg"
+	
+	$Random Vehicle/Tank/CannonFire
+	{
+		Vehicle/Tank/CannonFire1
+		Vehicle/Tank/CannonFire2
+		Vehicle/Tank/CannonFire3
+	}
+	
+	Vehicle/Tank/Artillery1 "Sounds/Vehicles/MBT/TankRocketFire1.ogg"
+	Vehicle/Tank/Artillery2 "Sounds/Vehicles/MBT/TankRocketFire2.ogg"
+	Vehicle/Tank/Artillery3 "Sounds/Vehicles/MBT/TankRocketFire3.ogg"
+	
+	$Random Vehicle/Tank/Artillery
+	{
+		Vehicle/Tank/Artillery1
+		Vehicle/Tank/Artillery2
+		Vehicle/Tank/Artillery3
+	}
+	
+	$Limit Vehicle/Tank/Move 0
+	$Limit Vehicle/Tank/AltMove 0
+	$Limit Vehicle/Tank/MoveOriginal 0
+	$Limit Vehicle/Tank/Idle 0
+	$Limit Vehicle/Tank/IdleOriginal 0
+	$Limit Vehicle/Tank/APSRun 0
+	$Limit Vehicle/Tank/Smokescreen 0
+	
+	$Limit Vehicle/Tank/TurretTurn 0
+	$Limit Vehicle/Tank/TurretTurnOriginal 0
+	$Limit Vehicle/Tank/Reload 0
+	$Limit Vehicle/Tank/APFSDSSHatter 0
+	$Limit Vehicle/Tank/CannonFire1 0
+	$Limit Vehicle/Tank/CannonFire2 0
+	$Limit Vehicle/Tank/CannonFire3 0
+	$Limit Vehicle/Tank/CoaxialFire 0
+	$Limit Vehicle/Tank/RocketMotor 0
+	
+	$Limit Vehicle/Tank/Artillery1 0
+	$Limit Vehicle/Tank/Artillery2 0
+	$Limit Vehicle/Tank/Artillery3 0
