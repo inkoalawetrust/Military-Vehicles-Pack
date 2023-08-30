@@ -1,2 +1,3 @@
+Server Bool MVP_Disable_DoShadowBlock = False; //Disable giving +DOSHADOWBLOCK to monsters that don't have it.
 Server Bool MVP_Debug_SeeFriendlyMonsters = False; //Should monsters without SeeFriendlyMonsters have it turned on ?
 Server Int MVP_Debug_SeeFriendlyMonsters_Range = 10; //The range (In blockmap chunks) that hostile monsters affected by the above CVAR can see friendly monsters.

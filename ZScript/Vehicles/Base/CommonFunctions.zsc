@@ -308,19 +308,16 @@ Mixin Class MVP_SharedFunctions
 		Int RandomFlames = Random (Int(Amount.X),Int(Amount.Y));
 		Actor Flame;
 		Vector3 SpawnPos;
-		console.printf ("my pos: %d %d %d",pos.x,pos.y,pos.z);
+		
 		//Spawn a random amount of flames around the APC wreck.
 		For (Int I = 0; I < RandomFlames; I++)
 		{
 			SpawnPos.XY = Vec2Offset(FRandom (-Radius*RadMul,Radius*RadMul),FRandom (-Radius,Radius));
 			SpawnPos.Z = GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8,Height);
 			
-			//console.printf ("%d",GetZAt (SpawnPos.X,SpawnPos.Y,flags:GZF_ABSOLUTEPOS) + FRandom (8, Height - 8));
-			console.printf ("pos1: %d %d %d",spawnpos.x,spawnpos.y,spawnpos.z);
 			//If the random position relative to the vehicle is valid.
 			If (Level.IsPointInLevel (SpawnPos))
 				Flame = Spawn ("MVP_Flame",SpawnPos); //Then spawn the flame.
-				else a_log ("fail");
 			
 			If (Flame)
 			{
@@ -430,8 +427,8 @@ Mixin Class MVP_MarineFunctions
 		Else
 			Spawnee.CopyFriendliness (Self,False);
 		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
-		console.printf ("marine angle %d, vehicle angle %d",spawnee.angle,angle);
-		Spawnee.Angle = Self.Angle;console.printf ("new marine angle %d",spawnee.angle);
+		
+		Spawnee.Angle = Self.Angle;
 		If (SetMaster)
 			Spawnee.Master = Self;
 		//At least try to make the default ZDoom marines a bit smarter.

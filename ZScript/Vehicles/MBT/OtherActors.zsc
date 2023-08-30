@@ -513,7 +513,6 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 			Stop;
 		XDeath: //Bullet hit a bleeding actor.
 			TNT1 A 1; //Don't play the impact sound on bleeding actors.
-			tnt1 a 0 {console.printf ("i hit %s",Tracer.getclassname());}
 			TNT1 A 0 A_JumpIf ((Shatter || Tracer.Player && Tracer.Player.Cheats & CF_GODMODE2 || Tracer.bNoDamage),"XDeath.God"); //Go to non-bleeding state for super indestructible actors.
 			Stop;
 		XDeath.God:
@@ -678,8 +677,8 @@ Class MVP_ATGM : MVP_BaseProjectile
 		WarnZone = WarnMarines (MWRN_ALLIESTOO,512,Self);
 		MarineWarner = New ("KAI_LOFActorFinder");
 		MarineWarner.Shooter = Self;
-		TrackPoint = Spawn ("KAI_DebugPoint",Pos);
-		SmokeCounter = GameTicRate*5; //Used to add a limited burntime to the missile.
+		//TrackPoint = Spawn ("KAI_DebugPoint",Pos);
+		SmokeCounter = Int(GameTicRate*5.5); //Used to add a limited burntime to the missile.
 	}
 	
 	//Rocket trail.
@@ -746,7 +745,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 		Super.Tick();
 		If (IsFrozen()) Return;
 		If (TrackPoint) TrackPoint.SetOrigin(GetFutureTrajectory((8,8,8)),False);
-		//console.printf ("angle difference %f",DeltaAngle (Angle,OldAngle));
+		
 		If (DeltaAngle (Angle,OldAngle) < -0.1)
 			SteerDir = STEER_RIGHT;
 		Else If (DeltaAngle (Angle,OldAngle) > 0.1)
@@ -765,8 +764,6 @@ Class MVP_ATGM : MVP_BaseProjectile
 		ForEach (Mobj : MarineWarner.Mobjs)
 			If (Mobj && !IsDead (Mobj) && Mobj Is TheMarine && IsHostileToShooter(Mobj))
 				WarnSpecificMarine(Mobj); //Then warn them.
-		FSpawnParticleParams P; P.Color1 = "Red"; P.Style = STYLE_None; P.Lifetime = 1; P.Size = 8; P.StartAlpha = 1; P.FadeStep = -1; P.Flags = SPF_FULLBRIGHT;
-		KAI_LOFRaycast.VisualizeTracePath(Pos.PlusZ(Height/2),MarineWarner.Results.HitPos,MarineWarner.Results.Distance,4,p);
 		
 		If (WarnZone) WarnZone.SetOrigin (MarineWarner.Results.HitPos,True); //And move the detonation zone to the position the trace hit.
 	}
@@ -818,7 +815,6 @@ Class MVP_ATGM : MVP_BaseProjectile
 					TrailDelay = INT.MAX;
 					If (Flare) Flare.Destroy();
 					A_StopSound (CHAN_BODY);
-					a_log ("no more fuel");
 					Return FindState ("Glide");
 				}
 				
@@ -956,6 +952,7 @@ Class MVP_RocketFlame : MVP_Tracer
 	}
 }
 
+//Custom meandering decoy. Kinda like a flare, but invisible and self propelling, so not like a flare.
 Class MVP_SeekerDecoy : Actor
 {
 	Default
@@ -1008,12 +1005,12 @@ Class MVP_SeekerDecoy : Actor
 			Destroy();
 	}
 	//DEBUG
-	States
+	/*States
 	{
 		Spawn:
 			PLSS A -1;
 			Stop;
-	}
+	}*/
 }
 
 Class MVP_SmokeScreenParticle : Actor
@@ -1093,14 +1090,14 @@ Class MVP_SmokeScreen : Actor
 			Return;
 		
 		If (Timer > Mass)
-			{a_log ("hank schrader pulled up");Destroy();}
+			Destroy();
 		
 		If (Master)
 			SetOrigin (Master.Pos,True);
 		
 		If (++Timer % Speed != 0 && GetAge() > 1) //Not an interval tick to spawn more smoke in. Ignore this in the first tick to immediately begin smoking.
 			Return;
-		console.printf ("weed time %d, weed amount %d",timer,mass);
+		
 		Actor Smoke;
 		//Spawn random Smoke actors on the ground, the closer to the ground, the more Smoke spawned.
 		For (Int I = ReactionTime; 0 <= I; I--)

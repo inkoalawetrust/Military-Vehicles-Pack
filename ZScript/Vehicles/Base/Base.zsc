@@ -47,6 +47,7 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.8;
 		DamageFactor "RifleBullet", 0.8;
+		+DoShadowBlock;
 	}
 	
 	Override Void UserVariableDefaults ()
@@ -104,6 +105,7 @@ Class MVP_BaseTurret : KAI_BaseTurret
 		DamageFactor "MarineGrenade", 0.9;
 		DamageFactor "Grenade", 0.9;
 		DamageFactor "MarineRifle", 0.75;
+		+DoShadowBlock;
 	}
 	Mixin MVP_DamageSmokeHandling;
 	Override Void UserVariableDefaults ()

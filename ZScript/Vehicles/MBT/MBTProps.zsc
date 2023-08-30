@@ -396,6 +396,7 @@ Class MVP_MBTTossedTurret : MVP_MBTTurretWreck
 	{
 		//$Title Main Battle Tank Turret Wreck
 		//$Category Vehicles/Tanks
+		//$Sprite MBTDV1
 		+NoDamage;
 		Tag "Destroyed M6V3-EX Turret";
 	}
