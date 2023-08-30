@@ -1,4 +1,6 @@
 # NOTE:
+***YES, YOU CAN USE THE MVP, AND THE SMART MARINES, FOR YOUR MODS OR MAPS, AS LONG AS YOU CREDIT ME AND WHOEVER ELSE MADE THE CODE AND ASSETS YOU ARE USING.***
+# NOTE:
 ***It is HIGHLY RECOMMENDED that you use this mod with my [Smart Marine](https://github.com/inkoalawetrust/Smart-Marines/) mod, if you don't, the MVP will fall back to spawning [the default crappy ZDoom marines](https://zdoom.org/wiki/Classes:ScriptedMarine) instead for vehicles that drop soldiers. I am not liable for any frustrating and moronic behavior they (ZDoom marines) exhibit, and DO NOT REPORT ANY BUGS UNLESS THE SMART MARINES ARE ALSO INCLUDED OR LOADED ALONGSIDE YOUR PROJECT !***
 # NOTE:
 *This is just an overview of the pack*, for actual documentation you can visit the wiki [here](https://github.com/inkoalawetrust/Military-Vehicles-Pack/wiki).
