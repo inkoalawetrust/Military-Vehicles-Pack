@@ -1,11 +1,11 @@
 # NOTE:
 ***It is HIGHLY RECOMMENDED that you use this mod with my [Smart Marine](https://github.com/inkoalawetrust/Smart-Marines/) mod, if you don't, the MVP will fall back to spawning [the default crappy ZDoom marines](https://zdoom.org/wiki/Classes:ScriptedMarine) instead for vehicles that drop soldiers. I am not liable for any frustrating and moronic behavior they (ZDoom marines) exhibit, and DO NOT REPORT ANY BUGS UNLESS THE SMART MARINES ARE ALSO INCLUDED OR LOADED ALONGSIDE YOUR PROJECT !***
 # NOTE:
-*This is just an overview of the pack*, for actual documentation read the included document and demo map in the releases page.
+*This is just an overview of the pack*, for actual documentation you can visit the wiki [here](https://github.com/inkoalawetrust/Military-Vehicles-Pack/wiki).
 
 Any mention of marines from now on will be about my own marine NPCs.
 
-![](https://i.imgur.com/YVk58JK.gif)
+![](https://i.imgur.com/GIGYBME.gif)
 
 [(Renders of the vehicles.)](https://imgur.com/a/KUhbDRZ)
 
@@ -21,6 +21,7 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 ### Army Car: https://youtu.be/1droRFw7LEo
 ### Army Truck: https://youtu.be/au_r7aJN9Lw
 ### Armored Personnel Carrier: https://youtu.be/lbHNoUZze_w
+### Main Battle Tank: TBD
 
 ## What can they do ? (Overview)
 
@@ -66,3 +67,15 @@ The below videos serve as showcases and overviews of each of the vehicles that a
 - Produces fire particles and a different movement sound when it's health is low enough.
 - Dies by just falling apart like in MS, not exploding like other vehicles. When gibbed, it falls apart, then completely explodes into a shower of debris, again, like it does in the original games.
 - Uses as many Metal Slug sprites and sounds as I could find.
+
+### Main Battle Tank
+![](https://i.imgur.com/I5Xuw7Jm.jpg)
+- Is the most powerful vehicle in the mod. Having 6000 health and really strong damage factors/armor (Only takes 60% damage from all damage sources for example).
+- Is armed with a 130mm cannon that can pick between firing [HEAT](https://en.wikipedia.org/wiki/High-explosive_anti-tank), [APFSDS](https://en.wikipedia.org/wiki/Armour-piercing_fin-stabilized_discarding_sabot), [ATGMs](https://en.wikipedia.org/wiki/Anti-tank_guided_missile), and it's [coaxial machine gun](https://en.wikipedia.org/wiki/Weapon_mount#Coaxial). Based on the situation.
+- Can optionally be equipped with one of two [remote weapon stations](https://en.wikipedia.org/wiki/Remote_controlled_weapon_station), a .50 cal machine gun, or a 7.62mm minigun.
+- In addition to crushing corpses like the APC, it an also crush living NPCs and players as an attack. And also push obstacles out of its' way.
+- [Can take cover behind level geometry](https://en.wikipedia.org/wiki/Hull_down#Armoured_warfare).
+- Can deploy [smokescreens](https://en.wikipedia.org/wiki/Smoke_screen) when threatened enough.
+- Has an optional [hard](https://en.wikipedia.org/wiki/Active_protection_system#Hard-kill_measures) and [soft-kill](https://en.wikipedia.org/wiki/Active_protection_system#Soft-kill_measures) APS, which can shoot down projectiles, and distract homing projectiles, respectively. They are separate from each other.
+- When destroyed (But not gibbed), the crew can survive and jump out of the tank.
+- Retreats by reversing instead of turning around.
