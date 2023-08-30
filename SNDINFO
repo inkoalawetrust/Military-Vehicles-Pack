@@ -197,6 +197,17 @@ $Limit Weapon/RadioCall 0
 		Vehicle/Tank/CannonFire3
 	}
 	
+	Vehicle/Tank/CannonFireOriginal1 "Sounds/Vehicles/MBT/TankFireOriginal1.ogg"
+	Vehicle/Tank/CannonFireOriginal2 "Sounds/Vehicles/MBT/TankFireOriginal2.ogg"
+	Vehicle/Tank/CannonFireOriginal3 "Sounds/Vehicles/MBT/TankFireOriginal3.ogg"
+	
+	$Random Vehicle/Tank/CannonFireOriginal
+	{
+		Vehicle/Tank/CannonFireOriginal1
+		Vehicle/Tank/CannonFireOriginal2
+		Vehicle/Tank/CannonFireOriginal3
+	}
+	
 	Vehicle/Tank/Artillery1 "Sounds/Vehicles/MBT/TankRocketFire1.ogg"
 	Vehicle/Tank/Artillery2 "Sounds/Vehicles/MBT/TankRocketFire2.ogg"
 	Vehicle/Tank/Artillery3 "Sounds/Vehicles/MBT/TankRocketFire3.ogg"
@@ -223,6 +234,9 @@ $Limit Weapon/RadioCall 0
 	$Limit Vehicle/Tank/CannonFire1 0
 	$Limit Vehicle/Tank/CannonFire2 0
 	$Limit Vehicle/Tank/CannonFire3 0
+	$Limit Vehicle/Tank/CannonFireOriginal1 0
+	$Limit Vehicle/Tank/CannonFireOriginal2 0
+	$Limit Vehicle/Tank/CannonFireOriginal3 0
 	$Limit Vehicle/Tank/CoaxialFire 0
 	$Limit Vehicle/Tank/RocketMotor 0
 	

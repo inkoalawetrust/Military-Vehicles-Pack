@@ -79,6 +79,9 @@ Tank APS activate sound (APSActivate.ogg) is from the 2019 GDC sound library, "B
 Tank smokescreen deploying sound (SmokeDeploy.ogg) is from Call Of Duty United Offensive.
 Tank small machine gun firing sound (TankSmallMG.ogg) is from Call of Duty 2.
 Tank cannon firing sounds (TankFire1-3.ogg) are from Call of Duty 2.
+TankFireOriginal1.ogg is from FreeSound (https://freesound.org/people/qubodup/sounds/162260/) , edited by Gorman Freebmane
+TankFireOriginal2-3.ogg is from FreeSound (https://freesound.org/people/qubodup/sounds/239135/) , edited by inkoalawetrust
+
 Tank cannon loading sound (TankLoad.ogg) is from Call of Duty United Offensive.
 Tank turret turn sound (TankTurn.ogg): https://quicksounds.com/sound/21001/tank-heavy-turret-motor
 APFSDS round shatter sound (APFSDSBreak.ogg) is from the 2019 GDC Audio Library.

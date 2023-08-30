@@ -14,7 +14,6 @@
 
 //TODO
 //Probably move the APCs' bullets and shells, and the tanks' ATGM, into a generic projectiles file for reused projectile types.
-//Add the MBTs' original firing sounds when it chooses the original sound set.
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
@@ -88,11 +87,12 @@ Class MVP_MBT : MVP_BaseVehicle
 		
 		/*I just overheard a secure access transmission...soldiers have arrived and they're coming to rescue us.
 		Of course, I have my doubts that we'll live long enough to greet them.*/
-		if (Random(0,255) < (!User_Stationary ? 16 : 48))
+		If (Random(0,255) < (!User_Stationary ? 16 : 48))
 		{
 			IdleSound = "Vehicle/Tank/IdleOriginal";
 			ActiveSound = "Vehicle/Tank/MoveOriginal";
 			Turret.TurnSound = "Vehicle/Tank/TurretTurnOriginal";
+			Turret.AttackSound = "Vehicle/Tank/CannonFireOriginal";
 			Turret.bTurnSoundNoStop = False;
 		}
 		WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,192,Self,(96,0,Height/2));
@@ -858,6 +858,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		KAI_BaseTurret.CombatAngleTurnRate 40;
 		KAI_BaseTurret.CombatPitchTurnRate 30;
 		KAI_BaseTurret.TurnSound "Vehicle/Tank/TurretTurn";
+		AttackSound "Vehicle/Tank/CannonFire";
 		KAI_Actor.ThreatLevel THREAT_VERYDANGEROUS;
 		+KAI_BaseTurret.TransferDamage;
 		+KAI_BaseTurret.TurnSoundNoStop;
@@ -1377,7 +1378,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	Void A_TankFire (Int Type = TYPE_HEAT)
 	{
 		Double Vol = (Type == TYPE_ATGM) ? 0.5 : 1.0; //Quiet the firing sound when firing guided missiles.
-		A_StartSound ("Vehicle/Tank/CannonFire",CHAN_WEAPON,CHANF_OVERLAP,Vol,0.1);
+		A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,Vol,0.1);
 		
 		//Normal high explosive shell. The stock exploding projectiles tanks usually fire in media.
 		If (Type == TYPE_HEAT)

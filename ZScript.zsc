@@ -42,7 +42,7 @@ Class SM_MarineChecker : EventHandler
 		//If there's 2000 or less monsters (For performance) on the map. Give newly spawned monsters +DOSHADOWBLOCK.
 		//Used to make tank smokescreens affect monster aiming in general, and in the future, for marine smoke grenades.
 		//Speaking of which, when I rewrite the marines, I'll probably need to add a check to not call this code twice.
-		If (MVP_Disable_DoShadowBlock && Level.Total_Monsters <= 2000 && E.Thing && E.Thing.bIsMonster)
+		If (!MVP_Disable_DoShadowBlock && Level.Total_Monsters <= 2000 && E.Thing && E.Thing.bIsMonster)
 		{
 			//Ignore if the thing has the flag on already. Or is a lost soul-alike.
 			If (!E.Thing.bDoShadowBlock && !(E.Thing.bFloat && (E.Thing.bSkullFly || E.Thing.bRetargetAfterSlam)))

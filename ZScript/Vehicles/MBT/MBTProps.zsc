@@ -679,7 +679,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 			Wait;
 		FlyingDeath.Restart:
 			TNT1 A 0
-			{a_log ("ah shit, here we go again");
+			{
 				InFlight = True;
 				WarningZone = WarnMarines (MWRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
 			}
