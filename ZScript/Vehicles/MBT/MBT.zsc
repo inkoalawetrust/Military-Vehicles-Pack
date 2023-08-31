@@ -1115,7 +1115,6 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	Const TrophyRange = 640;
 	Const ShtoraRange = 1024;
 	
-	//DOCUMENT: When I document the two APS systems. Don't forget to mention that the lower their cooldown is, the more performance intensive they become.
 	Void RunTrophyAPS()
 	{
 		Array <Actor> Incoming; //Detectable incoming projectiles found.
