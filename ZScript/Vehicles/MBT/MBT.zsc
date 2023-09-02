@@ -442,7 +442,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	Bool User_FocusFire; //Should the tanks' remote weapon station, if any, not always try to not have the same target as the turret ?
 	Bool User_Stationary; //The tank always stays in place, similar to the HECU M1 Abrams tanks from Half-Life 1.
 	//Original code donut stael.
-	//Main difference is that this control both corpse AND live enemy crushing.
+	//Main difference is that this controls both corpse AND live enemy crushing.
 	Int User_CrushMode;
 	Enum CorpseCrushModes
 	{
@@ -1049,6 +1049,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				Target = OldTarg;
 			
 			If (!NoStateJump) SetStateLabel ("Fire");
+			Return True;
 		}
 		
 		Return False;

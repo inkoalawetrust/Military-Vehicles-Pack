@@ -126,7 +126,7 @@ Class MVP_SPAAGTurret : MVP_MBTTurret
 		If (!KAI_BaseTurret.ShouldAttack()) Return False;
 		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		If (!bLookAllAround && Target && !CheckFOV (Target,120/2)) Return False; //Out of sight.
-		If (Distance3DSquared (Target) >= MaxTargetRange*MaxTargetRange) 
+		If (Distance3DSquared (Target) >= MaxTargetRange*MaxTargetRange) Return False;
 		
 		If (Target == Self || !KAI_CheckMissileRange(Target,CMR_INVERTDIST) || IsDead (Target) || !IsActorHostile (Target)) Return False;
 		

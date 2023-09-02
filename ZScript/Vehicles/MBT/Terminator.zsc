@@ -1,1 +1,210 @@
-//Class MVP_BMPT : MVP_MBT
+Class MVP_BMPT : MVP_MBT
+{
+	Default
+	{
+		//$Title Tank Support Vehicle
+		//$Category Vehicles/Tanks
+		//$Sprite MMBT[1
+		Health 3000;
+		Tag "M6 Fire Support Vehicle";
+		KAI_BaseVehicle.VehicleTurret "MVP_BMPTTurret";
+	}
+	Override Void UserVariableDefaults ()
+	{
+		Super.UserVariableDefaults();
+		
+		User_APSDelay = INT.MAX; //Don't shoot projectiles down practically ever.
+		User_AltAPSDelay = INT.MAX; //Don't dazzle projectiles practically ever.
+		User_NoSmokescreen = True; //Only the MBT turret has smoke launchers. All variants can enter hull down positions though.
+		User_T72Mode = False; //No funny, this doesn't even have tossed sprites.
+	}
+}
+
+
+//TODO: When the BMPT is about to fire an ATGM add a 1-2 second delay, followed by a beeping. Also add backblast effects, and increase the warning zone range.
+Class MVP_BMPTTurret : MVP_MBTTurret
+{
+	Default
+	{
+		Health 1500;
+		Height 24;
+		Radius 64;
+		Tag "M6-FSCV Turret";
+		Mass 10000;
+		FriendlySeeBlocks 80;
+		MaxTargetRange 10000;
+		Obituary "%o was mowed down by a tank support vehicle";
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
+		AttackSound "Vehicle/APC/MGFire";
+		KAI_BaseTurret.MaximumPitch -80;
+		KAI_BaseTurret.MinimumPitch 10;
+		KAI_BaseTurret.AttackSpeed 230;
+		KAI_BaseTurret.FastAttackSpeed 250;
+		KAI_BaseTurret.CombatAngleTurnRate 80;
+		KAI_BaseTurret.CombatPitchTurnRate 60;
+		KAI_BaseTurret.Inaccuracy (6,6,6);
+	}
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		If (Inflictor Is "MVP_50CalBullet")
+			Return Inflictor.Obituary;
+		
+		Return MVP_BaseTurret.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		MVP_BaseTurret.PostBeginPlay();
+		MissileState = FindState ("Fire",True);
+		AttackStates.Push (FindState("Fire",True));
+		AttackStates.Push (FindState("Fire.ATGM",True));
+		WarningZone = WarnMarines (0,128,Self);
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (IsFrozen()) Return;
+		atgmcooldown = 1000; //DEBUG
+		If (ATGMCoolDown)
+			ATGMCooldown--;
+		
+		If (GetAge() % GameTicRate == 0) //Search for a tank every second.
+			NearbyTank = SearchForTanks ();
+	}
+	
+	//TODO: Make it so the BMPT either no longer fires ATGMs at powerful enemies when near tanks, or stops firing them at all.
+	Override Bool ShouldAttack (Bool NoStateJump)
+	{
+		If (!KAI_BaseTurret.ShouldAttack()) Return False;
+		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
+		If (!bLookAllAround && Target && !CheckFOV (Target,120/2)) Return False; //Out of sight.
+		If (Distance3DSquared (Target) >= MaxTargetRange*MaxTargetRange) Return False;
+		
+		If (!ATGMCooldown) //Try finding a strong enemy to fire a missile at.
+			A_FindStrongEnemy (Target, Target, 1024);
+		
+		Int Threat = AssessThreatLevel (Target);
+		
+		Int Chance = Random (0,32);
+		//Fire a missile if the target is dangerous, if the missile would kill a lot of enemies, or if the target is very far away indeed.
+		If (!ATGMCooldown && (Threat >= THREAT_DANGEROUS || AttackByQuantity (Target,448) >= 200-Chance || Distance3DSquared(Target) >= 7000*7000))
+		{
+			If (!NoStateJump)
+				SetStateLabel ("Fire.ATGM");
+			Return True;
+		}
+		
+		If (!NoStateJump) //Didn't decide to fire a rocket yet, so fire the machine guns.
+			SetStateLabel ("Fire");
+		
+		Return True;
+	}
+	
+	//Searches around the BMPT for visible friendly tanks, if it finds one, and if the tanks find a BMPT, the BMPT will focus on weak enemies, and the MBT on strong ones.
+	MVP_MBT SearchForTanks (Double Range = 2048)
+	{
+		MVP_MBT Ptr = Null;
+		ForEach (Veh : KAIHandler.AllVehicles)
+		{
+			If (!Veh || IsDead (Veh) || IsActorHostile (Veh)) //Nonexistent, dead, or hostile.
+				Continue;
+			
+			If (!(Veh.GetClass() == "MVP_MBT")) //Not an MBT.
+				Continue;
+			
+			If (Distance3DSquared (Veh) > Range*Range || !CheckSight (Veh,SF_IGNOREWATERBOUNDARY)) //Too far or not visible.
+				Continue;
+			
+			Ptr = MVP_MBT(Veh);
+		}
+		Return Ptr;
+	}
+	
+	//The elevation works different on the SPAAG since it can nearly aim straight up.
+	Int UpdateBMPTElevation (Int FaceDown, Int FaceStraight, Int FaceUp)
+	{
+		If (Pitch >= 10 && Pitch >= 5)
+			Return FaceDown;
+		Else If (Pitch < 5 && Pitch >= -5)
+			Return FaceStraight;
+		Else If (Pitch < -5)
+			Return FaceUp;
+		
+		Return FaceStraight;
+	}
+	
+	Int ATGMCooldown;
+	Int ATGMPosition; //Spawns the ATGM at one of 4 rocket tubes, cycles around with every rocket fired.
+	MVP_MBT NearbyTank; //A pointer to the closest tank.
+	
+	States
+	{
+		Spawn:
+			MBT1 A 0;
+			MBT1 # 1
+			{
+				RotateToVehicle(RTVF_ADDANGLE);
+				KAI_Look (maxseedist:MaxTargetRange,8196,bLookAllAround ? 360 : 120,extraflags:KAIL_CHASETARGET);
+				Frame = UpdateBMPTElevation (6,0,3); //G, A, D
+			}
+			Loop;
+		See:
+			MBT1 # 1
+			{
+				DoCombatTraverse();
+				RotateToVehicle();
+				KAI_LandVehicleChase (flags:LVC_MAKEFRIENDSIDLE,chaseflags:CHF_DONTMOVE);
+				UpdateTurretSnapTimer();
+				
+				Frame = UpdateBMPTElevation (6,0,3); //G, A, D
+			}
+			Loop;
+		Fire: //Wait, it's all APC ?
+			MBT1 ######## 1
+			{
+				Frame = UpdateBMPTElevation (6,0,3); //G, A, D
+			}
+			MBT1 # 3 Light ("50CalFiringLight") Bright //Right shot
+			{
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				AddProjectileSpread (Proj,(0.8,-0.8),(1.0,-1.0));
+				A_SpawnItemEx ("MVP_BulletCasing",-32,32,8,FRandom(2,-2),FRandom(8,14),FRandom(6,12));
+				Frame = UpdateBMPTElevation (7,1,4); //H, B, E
+			}
+			MBT1 # 3 Light ("50CalFiringLight") Bright //Left shot
+			{
+				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				AddProjectileSpread (Proj,(0.8,-0.8),(1.0,-1.0));
+				A_SpawnItemEx ("MVP_BulletCasing",-32,-32,8,FRandom(2,-2),FRandom(-8,-14),FRandom(6,12));
+				Frame = UpdateBMPTElevation (8,2,5); //I, C, F
+			}
+			MBT1 # 1
+			{
+				//If you have no target, or it's dead.
+				If (!Target || IsDead (Target))
+				{
+					A_ClearTarget();
+					LookForPlayers (True); //Look for a new target.
+				}
+				
+				If (Random2[pr_monsterrefire]() < 48 &&
+				//If the target is too high or low to shoot.
+				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
+				!KAI_TurretCheckLOF (Target,0,0,(0,-8,12),0,"MVP_50CalBullet")))
+				{
+					A_ClearTarget();
+					Return ResolveState ("See");
+				}
+				
+				HandleChaseTimer();
+				
+				Frame = UpdateBMPTElevation (6,0,3); //G, A, D
+				Return State (Null);
+			}
+			MBT1 # 0 KAI_TurretRefire (48,"See",True,fov:90/2);
+			Goto Fire+8;
+	}
+}

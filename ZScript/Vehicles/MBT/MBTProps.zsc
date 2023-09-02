@@ -742,6 +742,7 @@ Class MVP_MBTTerminatorTurretProp : MVP_MBTTurretProp
 		Height 24;
 		Radius 64;
 		Tag "M6-FSCV Turret (Prop)";
+		Mass 10000;
 	}
 	Override Bool SpawnDamageSmoke (){Return False;}
 	States
