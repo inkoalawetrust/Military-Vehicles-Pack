@@ -21,7 +21,6 @@ Class MVP_BMPT : MVP_MBT
 }
 
 
-//TODO: When the BMPT is about to fire an ATGM add a 1-2 second delay, followed by a beeping. Also add backblast effects, and increase the warning zone range.
 Class MVP_BMPTTurret : MVP_MBTTurret
 {
 	Default
@@ -59,21 +58,25 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		AttackStates.Push (FindState("Fire",True));
 		AttackStates.Push (FindState("Fire.ATGM",True));
 		WarningZone = WarnMarines (0,128,Self);
+		APSCooldown = APSDelay = INT.MAX;
+		AltAPSCooldown = AltAPSDelay = INT.MAX;
 	}
 	
 	Override Void Tick()
 	{
 		Super.Tick();
 		If (IsFrozen()) Return;
-		atgmcooldown = 1000; //DEBUG
+		
 		If (ATGMCoolDown)
 			ATGMCooldown--;
+		
+		If (MGDelay)
+			MGDelay--;
 		
 		If (GetAge() % GameTicRate == 0) //Search for a tank every second.
 			NearbyTank = SearchForTanks ();
 	}
 	
-	//TODO: Make it so the BMPT either no longer fires ATGMs at powerful enemies when near tanks, or stops firing them at all.
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!KAI_BaseTurret.ShouldAttack()) Return False;
@@ -86,19 +89,28 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		
 		Int Threat = AssessThreatLevel (Target);
 		
-		Int Chance = Random (0,32);
-		//Fire a missile if the target is dangerous, if the missile would kill a lot of enemies, or if the target is very far away indeed.
-		If (!ATGMCooldown && (Threat >= THREAT_DANGEROUS || AttackByQuantity (Target,448) >= 200-Chance || Distance3DSquared(Target) >= 7000*7000))
+		If (ShouldFireMissile (Threat))
 		{
 			If (!NoStateJump)
 				SetStateLabel ("Fire.ATGM");
 			Return True;
 		}
 		
+		If (MGDelay)
+			Return False;
+		
 		If (!NoStateJump) //Didn't decide to fire a rocket yet, so fire the machine guns.
 			SetStateLabel ("Fire");
 		
 		Return True;
+	}
+	
+	//Fire a missile if the target is dangerous, if the missile would kill a lot of enemies, or if the target is very far away indeed.
+	//However, if you have a friendly visible tank near you, only fire missiles at groups and distant enemies.
+	Bool ShouldFireMissile (Int EnemyThreatLevel)
+	{
+		Int Chance = Random (0,32);
+		Return (!ATGMCooldown && ((!NearbyTank && EnemyThreatLevel >= THREAT_DANGEROUS) || AttackByQuantity (Target,448) >= 200-Chance || Distance3DSquared(Target) >= 7000*7000));
 	}
 	
 	//Searches around the BMPT for visible friendly tanks, if it finds one, and if the tanks find a BMPT, the BMPT will focus on weak enemies, and the MBT on strong ones.
@@ -134,8 +146,47 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		Return FaceStraight;
 	}
 	
+	//Fires an ATGM at the specified offsets based on what launch tube is next to fire.
+	Void A_BMPTFire()
+	{
+		Double ATGMPos;
+		Switch (ATGMPosition) //Update fire coordinates based on current pos.
+		{
+			Case ATGM_POD1:
+				ATGMPos = 48;
+				Break;
+			Case ATGM_POD2:
+				ATGMPos = 32;
+				Break;
+			Case ATGM_POD3:
+				ATGMPos = -32;
+				Break;
+			Case ATGM_POD4:
+				ATGMPos = -48;
+				Break;
+		}
+		
+		A_StartSound ("Vehicle/Tank/RocketFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.1);
+		Actor Missile = A_SpawnProjectile ("MVP_ATGM",24,ATGMPos,flags:CMF_AIMDIRECTION,Pitch);
+		Missile.Tracer = Target;
+		
+		ATGMPosition++; //Loop to next missile position.
+		If (ATGMPosition > ATGM_POD4) //If the position is overflowed, set it back to 0.
+			ATGMPosition = ATGM_POD1;
+		
+		ATGMCooldown = GameTicRate*Random (8,10);
+	}
+	
+	Int MGDelay; //Delay firing the machinegun a bit right after firing a rocket.
 	Int ATGMCooldown;
 	Int ATGMPosition; //Spawns the ATGM at one of 4 rocket tubes, cycles around with every rocket fired.
+	Enum ATGMPositions //The positions to spawn the missile at, cycled through.
+	{
+		ATGM_POD1,
+		ATGM_POD2,
+		ATGM_POD3,
+		ATGM_POD4,
+	}
 	MVP_MBT NearbyTank; //A pointer to the closest tank.
 	
 	States
@@ -202,9 +253,39 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 				HandleChaseTimer();
 				
 				Frame = UpdateBMPTElevation (6,0,3); //G, A, D
+				
+				If (!ATGMCooldown && GetAge() % GameTicRate*2 == 0)
+				{
+					A_FindStrongEnemy (Target, Target, 1024); //Try finding a strong enemy to fire a missile at.
+					If (ShouldFireMissile (AssessThreatLevel (Target)))
+						Return ResolveState ("Fire.ATGM");
+				}
 				Return State (Null);
 			}
 			MBT1 # 0 KAI_TurretRefire (48,"See",True,fov:90/2);
 			Goto Fire+8;
+		Fire.ATGM:
+			MBT1 # 0
+			{
+				If (WarningZone) WarningZone.MaxTargetRange = 512; //Alert marines in an extra wide radius.
+				TurretAttackSpeed = GetDefaultByType("MVP_ATGM").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_ATGM").FastSpeed; //Use ATGM speed.
+				A_StartSound ("Vehicle/Tank/RocketLock",CHAN_VOICE,attenuation:0.5);
+			}
+			//4 seconds, updates every tick.
+			MBT1 ############################################################################################################################################ 1
+			{
+				Frame = UpdateBMPTElevation (6,0,3); //G, A, D
+			}
+			MBT1 # 1
+			{
+				A_BMPTFire();
+				TurretAttackSpeed = Default.TurretAttackSpeed; //Reset prediction speeds to the machine guns.
+				FastTurretAttackSpeed = Default.FastTurretAttackSpeed;
+				MGDelay = GameTicRate*Random (1,2);
+				If (WarningZone) WarningZone.MaxTargetRange = 128;
+			}
+			//MBT1 ##### 1 {Frame = UpdateBMPTElevation (6,0,3); /*G, A, D*/}
+			//Goto Fire.ATGM+141; //DEBUG: Loop the missile launcher sequence to test the changing pod positions.
+			Goto See;
 	}
 }

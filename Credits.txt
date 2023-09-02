@@ -90,7 +90,9 @@ Rocket artillery firing sounds:
 	TankRocketFire2.ogg: https://quicksounds.com/sound/18281/rocket-launcher-shot-49
 	TankRocketFire3.ogg: https://quicksounds.com/sound/18280/rocket-launcher-shot-48
 
+Missile launching sound (MissileLaunch.ogg) is from Half-Life 1.
 Missile flying sound (MissileFly.ogg) is from Battlefield 1942.
+Missile locking sound (MissileLock.ogg) made by me (inkoalawetrust).
 Original tank movement and turret turning sounds (TankMoveOriginal.ogg & TankTurnOriginal.ogg) are from Half Life 1.
 
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.

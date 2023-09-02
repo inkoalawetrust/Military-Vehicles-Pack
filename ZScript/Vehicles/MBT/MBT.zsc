@@ -1,14 +1,5 @@
 //VARIANT IDEAS:
 //General
-//A BMPT Terminator.
-	//It'll overall be weaker than the MBT, maybe having like 2000 health.
-	//Two autocannons, or maybe machine guns instead (Probably that), and armed with ATGMs with a reload time of maybe like, 10 seconds or so.
-	//It'll be limited to like -10 to 15/20 degrees of elevation.
-	/*Maybe give it the ability to kinda use its' missiles sparingly. e.g if it's firing its' guns at an enemy, but a strong enemy is nearby, like in 1024 MU,
-	then the turret will target the powerful enemy, and fire a missile at it, once the next missile is ready.*/
-	/*Make it so if it's near an MBT, it will begin following it. And for as long as they are in sight of each other. The BMPT will only focus on attacking
-	weak enemies with its' machine guns, unless a missile is ready. While the MBT turret will only focus on powerful enemies if there are any around.
-	Basically, give the BMPT it's real world role as tank support, instead of just having it be shittier MBT.*/
 //A TOS-1
 	//The hull should have similar, if not identical, stats to the SPAAG hull. Health, mass, rip level, etc.
 
@@ -92,7 +83,7 @@ Class MVP_MBT : MVP_BaseVehicle
 			IdleSound = "Vehicle/Tank/IdleOriginal";
 			ActiveSound = "Vehicle/Tank/MoveOriginal";
 			Turret.TurnSound = "Vehicle/Tank/TurretTurnOriginal";
-			Turret.AttackSound = "Vehicle/Tank/CannonFireOriginal";
+			If (GetClassName() == "MVP_MBT") Turret.AttackSound = "Vehicle/Tank/CannonFireOriginal";
 			Turret.bTurnSoundNoStop = False;
 		}
 		WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,192,Self,(96,0,Height/2));
@@ -509,9 +500,9 @@ Class MVP_MBT : MVP_BaseVehicle
 		See:
 			#### ABCDEF 2
 			{
-				A_QuakeEx (1,1,1,2,0,512,flags:QF_GROUNDONLY,rollintensity:0.2);
 				If (User_Stationary) //Shouldn't be here.
 					Return State (SpawnState);
+				A_QuakeEx (1,1,1,2,0,512,flags:QF_GROUNDONLY,rollintensity:0.2);
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
 				//Try to find someone else to run over before the stock retargeting code runs.
@@ -1026,7 +1017,8 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		If (IsOverPitchLimits (Target,8,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		If (Target == Self || !KAI_CheckMissileRange(Target,CMR_INVERTDIST) || IsDead (Target) || !IsActorHostile (Target)) Return False;
 		
-		Int Threat = AssessThreatLevel (Target);
+		If (NearbySupport) //If you have a tank near you, just focus on whatever the most powerful enemy is.
+			A_FindStrongEnemy (Target, Target, 2048, True);
 		
 		//If the cannon is busy loading, use the coaxial instead.
 		If (ReloadTime)
@@ -1088,6 +1080,9 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Super.Tick();
 		
 		If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True); //Track warn zone to aim direction.
+		
+		If (GetClassName() == "MVP_MBTTurret" && GetAge() % GameTicRate == 0) //Tanks search for a fire support vehicle every second.
+			NearbySupport = SearchForBMPTs ();
 		
 		If (!IsDead (Self)) //No reason to run these if we are dead.
 		{
@@ -1231,7 +1226,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	}
 	
 	//Finds a strong enemy around the origin, and sets it as the turrets' target, so that the APFSDS round can destroy it.
-	Bool A_FindStrongEnemy (Actor Avoid, Actor Origin, Double CheckRange)
+	Bool A_FindStrongEnemy (Actor Avoid, Actor Origin, Double CheckRange, Bool FindStrongest = False)
 	{
 		If (!Avoid || !CheckRange || !Origin) Return False;
 		
@@ -1249,7 +1244,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			
 			If (Mobj.bDormant || IsInanimateObject (Mobj)) Continue; //Don't attack dormant or inanimate object actors.
 			
-			If (AssessThreatLevel (Mobj) < ThreatLevelThreshold) Continue; //Not strong enough to target.
+			If (!FindStrongest && AssessThreatLevel (Mobj) < ThreatLevelThreshold) Continue; //Not strong enough to target.
 			
 			If (!CanBeTargeted(Self, Mobj)) Continue; //Can't be targeted. (Duh)
 			
@@ -1260,32 +1255,58 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			If (!IsActorHostile (Mobj)) Continue; //Actor isn't hostile.
 			
 			If (!CheckSight(Mobj)) Continue; //Actor is not visible.
+			
+			If (FindStrongest)
+			{
+				TargetList.Push(Mobj);
+				Continue;
+			}
+			
 			Target = Mobj;
 			Return True;
 		}
+		
+		If (FindStrongest) //Find the strongest actor in range, instead of the first one as dangerous or more dangerous than you.
+		{
+			Int BiggestThreat;
+			Actor GreatestEnemy = Target;
+			
+			ForEach (Mo : TargetList)
+			{
+				Int Threat = AssessThreatLevel (Mo);
+				
+				If (Threat > BiggestThreat)
+				{
+					BiggestThreat = Threat;
+					GreatestEnemy = Mo;
+				}
+			}
+			
+			Target = GreatestEnemy;
+			Return True;
+		}
+		
 		Return False;
 	}
 	
 	//Finds the nearest visible enemy vehicle.
 	Actor A_FindEnemyVehicle()
 	{
-		Let VehFind = ThinkerIterator.Create ("KAI_BaseVehicle");
-		Actor Mobj;
-		While (Mobj = Actor(VehFind.Next()))
+		ForEach (Veh : KAIHandler.AllVehicles)
 		{
-			If (Mobj.bDormant || IsInanimateObject (Mobj)) Continue; //Don't attack dormant or inanimate object actors.
+			If (Veh.bDormant || IsInanimateObject (Veh)) Continue; //Don't attack dormant or inanimate object actors.
 			
-			If (AssessThreatLevel (Mobj) < THREAT_ABOVENORMAL) Continue; //Not strong enough to target.
+			If (AssessThreatLevel (Veh) < THREAT_ABOVENORMAL) Continue; //Not strong enough to target.
 			
-			If (!CanBeTargeted(Self, Mobj)) Continue; //Can't be targeted. (Duh)
+			If (!CanBeTargeted(Self, Veh)) Continue; //Can't be targeted. (Duh)
 			
-			If (IsDead (Mobj)) Continue; //Is dead (Duuuuuuuuuuh)
+			If (IsDead (Veh)) Continue; //Is dead (Duuuuuuuuuuh)
 			
-			If (!IsActorHostile (Mobj)) Continue; //Actor isn't hostile.
+			If (!IsActorHostile (Veh)) Continue; //Actor isn't hostile.
 			
-			If (!CheckSight(Mobj)) Continue; //Actor is not visible.
+			If (!CheckSight(Veh)) Continue; //Actor is not visible.
 			
-			Return Mobj;
+			Return Veh;
 		}
 		Return Null;
 	}
@@ -1377,8 +1398,11 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	
 	Void A_TankFire (Int Type = TYPE_HEAT)
 	{
-		Double Vol = (Type == TYPE_ATGM) ? 0.5 : 1.0; //Quiet the firing sound when firing guided missiles.
-		A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,Vol,0.1);
+		//Double Vol = (Type == TYPE_ATGM) ? 0.5 : 1.0; //Quiet the firing sound when firing guided missiles.
+		If (Type != TYPE_ATGM)
+			A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.1);
+		Else
+			A_StartSound ("Vehicle/Tank/RocketFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.1);
 		
 		//Normal high explosive shell. The stock exploding projectiles tanks usually fire in media.
 		If (Type == TYPE_HEAT)
@@ -1465,6 +1489,27 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		}
 	}
 	
+	//Searches around the BMPT for visible friendly tanks, if it finds one, and if the tanks find a BMPT, the BMPT will focus on weak enemies, and the MBT on strong ones.
+	MVP_BMPT SearchForBMPTs (Double Range = 2048)
+	{
+		MVP_BMPT Ptr = Null;
+		ForEach (Veh : KAIHandler.AllVehicles)
+		{
+			If (!Veh || IsDead (Veh) || IsActorHostile (Veh)) //Nonexistent, dead, or hostile.
+				Continue;
+			
+			If (!(Veh.GetClass() == "MVP_BMPT")) //Not an BMPT.
+				Continue;
+			
+			If (Distance3DSquared (Veh) > Range*Range || !CheckSight (Veh,SF_IGNOREWATERBOUNDARY)) //Too far or not visible.
+				Continue;
+			
+			Ptr = MVP_BMPT(Veh);
+		}
+		Return Ptr;
+	}
+	
+	MVP_BMPT NearbySupport; //A pointer to the closest fire support vehicle, if any.
 	Actor WarningZone; //After the tank is finished, the marines' crude warning system will be turned into a generic hazard system for the library.
 	Actor PreFireZone; //Warning zone spawned in the 2 second space before the tank fires.
 	Int ShellType; //What the turret will fire.
