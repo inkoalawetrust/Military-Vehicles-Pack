@@ -264,9 +264,7 @@ Class MVP_HEATShell : MVP_BaseProjectile
 		Int Result = Super.SpecialMissileHit(Victim);
 		
 		If (Result == -1)
-		{
 			If (Pos.Z >= FloorZ+88) bFalling = True; //This is going to be an air blast, so mark it as such for the tank turrets' obituaries.
-		}
 		
 		Return Result;
 	}
