@@ -4,7 +4,7 @@ Class MVP_BMPT : MVP_MBT
 	{
 		//$Title Tank Support Vehicle
 		//$Category Vehicles/Tanks
-		//$Sprite MMBT[1
+		//$Sprite MMBT]1
 		Health 3000;
 		Tag "M6 Fire Support Vehicle";
 		KAI_BaseVehicle.VehicleTurret "MVP_BMPTTurret";
@@ -257,7 +257,7 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 				If (!ATGMCooldown && GetAge() % GameTicRate*2 == 0)
 				{
 					A_FindStrongEnemy (Target, Target, 1024); //Try finding a strong enemy to fire a missile at.
-					If (ShouldFireMissile (AssessThreatLevel (Target)))
+					If (Target && ShouldFireMissile (AssessThreatLevel (Target)))
 						Return ResolveState ("Fire.ATGM");
 				}
 				Return State (Null);

@@ -1,12 +1,10 @@
-//TODO:
-//I need editor sprites of the different tank variants.
 Class MVP_SPAAG : MVP_MBT
 {
 	Default
 	{
 		//$Title Self Propelled AA Gun
 		//$Category Vehicles/Tanks
-		//$Sprite MMBT[1
+		//$Sprite MMBT^1
 		Health 2000;
 		WoundHealth 1000;
 		GibHealth 1000;

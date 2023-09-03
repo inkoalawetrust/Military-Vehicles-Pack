@@ -113,17 +113,18 @@ Class MVP_MBT : MVP_BaseVehicle
 		If (VehicleTurret)
 		{
 			SpawnTurret (VehicleTurret);
-			If (User_RWS ~== "MG" || User_RWS ~== "MachineGun" || User_RWS ~== "Machine Gun")
-				Turret.VehicleTurret = "MVP_MBTRWS";
-			Else If (User_RWS ~== "Minigun" || User_RWS ~== "Gatling")
-				Turret.VehicleTurret = "MVP_MBTRWSMinigun";
-			Else If (User_RWS ~== "Random")
-				Turret.VehicleTurret = Random (True,False) ? "MVP_MBTRWS" : "MVP_MBTRWSMinigun";
-			If (Turret Is "MVP_MBTTurret")
+			If (VehicleTurret == "MVP_MBTTurret")
+			{
+				If (User_RWS ~== "MG" || User_RWS ~== "MachineGun" || User_RWS ~== "Machine Gun")
+					Turret.VehicleTurret = "MVP_MBTRWS";
+				Else If (User_RWS ~== "Minigun" || User_RWS ~== "Gatling")
+					Turret.VehicleTurret = "MVP_MBTRWSMinigun";
+				Else If (User_RWS ~== "Random")
+					Turret.VehicleTurret = Random (True,False) ? "MVP_MBTRWS" : "MVP_MBTRWSMinigun";
 				MVP_MBTTurret(Turret).MetalCoffin = User_T72Mode;
-			
-			MVP_MBTTurret(Turret).APSDelay/* = MVP_MBTTurret(Turret).APSCooldown*/ = User_APSDelay;
-			MVP_MBTTurret(Turret).AltAPSDelay/* = MVP_MBTTurret(Turret).AltAPSCooldown*/ = User_AltAPSDelay;
+				MVP_MBTTurret(Turret).APSDelay/* = MVP_MBTTurret(Turret).APSCooldown*/ = User_APSDelay;
+				MVP_MBTTurret(Turret).AltAPSDelay/* = MVP_MBTTurret(Turret).AltAPSCooldown*/ = User_AltAPSDelay;
+			}
 		}
 	}
 	
