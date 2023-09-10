@@ -41,7 +41,7 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		KAI_BaseTurret.FastAttackSpeed 250;
 		KAI_BaseTurret.CombatAngleTurnRate 80;
 		KAI_BaseTurret.CombatPitchTurnRate 60;
-		KAI_BaseTurret.Inaccuracy (6,6,6);
+		KAI_Actor.Inaccuracy (6,6,6);
 	}
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{

@@ -40,13 +40,16 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		DamageFactor "Disintegrate", 1.5;
 		DamageFactor "Railgun", 2.0;
 		DamageFactor "Falling", 1.25;
+		
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.8;
+		DamageFactor "LargeRifleBullet", 0.8; //Replaces MarineHMG.
 		DamageFactor "MarineGrenade", 0.7;
-		DamageFactor "MarineRifle", 0.7;
+		DamageFactor "MarineRifle", 0.7; //Not used anymore by Smart Marines as of the rewrite.
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.8;
 		DamageFactor "RifleBullet", 0.8;
+		DamageFactor "SmallRifleBullet", 0.6;
 		+DoShadowBlock;
 	}
 	
@@ -84,18 +87,22 @@ Class MVP_BaseTurret : KAI_BaseTurret
 		DamageFactor "Explosive", 0.75;
 		DamageFactor "Grenade", 0.7;
 		DamageFactor "HitScan", 0.8; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.6;
 		DamageFactor "Fire", 0.8;
 		DamageFactor "Crush", 1.5;
 		DamageFactor "Disintegrate", 1.5;
 		DamageFactor "Railgun", 2.0;
 		DamageFactor "Falling", 1.25;
+		
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.8;
+		DamageFactor "LargeRifleBullet", 0.8; //Replaces MarineHMG.
 		DamageFactor "MarineGrenade", 0.7;
-		DamageFactor "MarineRifle", 0.7;
+		DamageFactor "MarineRifle", 0.7; //Not used anymore by Smart Marines as of the rewrite.
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.8;
 		DamageFactor "RifleBullet", 0.8;
+		DamageFactor "SmallRifleBullet", 0.6;
 		//=========================
 		RipLevelMin 2;
 		Mass 500;

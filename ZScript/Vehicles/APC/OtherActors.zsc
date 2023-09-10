@@ -17,7 +17,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		KAI_BaseTurret.FastAttackSpeed 250;
 		KAI_BaseTurret.CombatAngleTurnRate 55;
 		KAI_BaseTurret.CombatPitchTurnRate 30;
-		KAI_BaseTurret.Inaccuracy (4,4,4);
+		KAI_Actor.Inaccuracy (4,4,4);
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		Tag "Machine Gun Turret";
 		Obituary "%o was gunned down by a machine gun turret";
@@ -272,7 +272,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		KAI_BaseTurret.MinimumPitch 20;
 		KAI_BaseTurret.AttackSpeed 180;
 		KAI_BaseTurret.FastAttackSpeed 200;
-		KAI_BaseTurret.Inaccuracy (2,2,2);
+		KAI_Actor.Inaccuracy (2,2,2);
 		//KAI_BaseTurret.TurnSoundRadius 4;
 		+MissileEvenMore;
 	}
@@ -665,7 +665,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		RipperLevel 3;
 		Obituary "%o was gunned down by a machine gun";
 		Decal "50CalChip";
-		DamageType "MarineHMG";
+		DamageType "LargeRifleBullet";
 		BounceSound "SFX/BulletRicochet";
 		KAI_BaseProjectile.TrailActor "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 4;
@@ -744,10 +744,8 @@ Class MVP_BulletCasing : Actor
 {
 	Default
 	{
-		Radius 12;
-		Height 16;
-		Speed 180;
-		FastSpeed 200;
+		Radius 4;
+		Height 8;
 		XScale 0.2;
 		YScale 0.166667; //0.2 / 1.2
 		+NoBlockmap;
@@ -830,11 +828,11 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 	
 	Static Bool DeflectOffTank (Actor Other) //Static so the 50. cal can call it too.
 	{
-		//Bounce of MBT turrets.
+		//Bounce off MBT turrets.
 		If (Other Is "MVP_MBTTurret" || Other Is "MVP_MBTTurretProp"
 		/*|| Other Is "MVP_MBTMissileTurret"*/ || Other Is "MVP_MBTMissileTurretProp"
-		/*|| Other Is "MVP_MBTTerminatorTurret"*/ || Other Is "MVP_MBTTerminatorTurretProp"
-		/*|| Other Is "MVP_MBTSPAAGTurret"*/ || Other Is "MVP_MBTSPAAGTurretProp")
+		|| Other Is "MVP_BMPTTurret" || Other Is "MVP_MBTTerminatorTurretProp"
+		|| Other Is "MVP_SPAAGTurret" || Other Is "MVP_MBTSPAAGTurretProp")
 			Return True;
 		//Deflect off the tank hulls too of course.
 		Else If (Other Is "MVP_MBT" || Other Is "MVP_MBTProp")

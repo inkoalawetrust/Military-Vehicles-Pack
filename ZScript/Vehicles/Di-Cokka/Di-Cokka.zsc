@@ -39,6 +39,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		DeathSound "Vehicle/Di-Cokka/Death";
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
+		DamageFactor 1;
 		DamageFactor "Melee", 1;
 		DamageFactor "Electric", 1;
 		DamageFactor "ExplosiveImpact", 1;
@@ -46,18 +47,22 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		DamageFactor "Explosive", 1;
 		DamageFactor "Grenade", 1;
 		DamageFactor "HitScan", 1; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 1;
 		DamageFactor "Fire", 1;
 		DamageFactor "Crush", 1;
 		DamageFactor "Disintegrate", 1;
 		DamageFactor "Railgun", 1;
 		DamageFactor "Falling", 1;
+		
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 1;
+		DamageFactor "LargeRifleBullet", 1; //Replaces MarineHMG.
 		DamageFactor "MarineGrenade", 1;
-		DamageFactor "MarineRifle", 1;
+		DamageFactor "MarineRifle", 1; //Not used anymore by Smart Marines as of the rewrite.
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 1;
 		DamageFactor "RifleBullet", 1;
+		DamageFactor "SmallRifleBullet", 1;
 	}
 	
 	String User_Color; //The Di-Cokkas' color.

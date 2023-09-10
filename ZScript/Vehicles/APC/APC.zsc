@@ -34,12 +34,14 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "Shrapnel", 0.4;
 		DamageFactor "Fire", 0.7;
 		//Damage factors specific to the Smart Marines.
-		DamageFactor "MarineHMG", 0.80;
+		DamageFactor "MarineHMG", 0.8; //Is now LargeRifleBullet
+		DamageFactor "LargeRifleBullet", 0.8;
 		DamageFactor "MarineGrenade", 0.6;
 		DamageFactor "MarineRifle", 0.7;
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.7;
 		DamageFactor "RifleBullet", 0.75;
+		DamageFactor "SmallRifleBullet", 0.5;
 		DamageFactor "Missile", 0.9;
 		DamageFactor "AntiAir", 0.6;
 		

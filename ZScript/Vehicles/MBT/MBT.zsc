@@ -56,11 +56,13 @@ Class MVP_MBT : MVP_BaseVehicle
 		DamageFactor "Plasma", 0.5;
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.2;
+		DamageFactor "LargeRifleBullet", 0.2;
 		DamageFactor "MarineGrenade", 0.5;
 		DamageFactor "MarineRifle", 0.55;
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.25;
 		DamageFactor "RifleBullet", 0.1;
+		DamageFactor "SmallRifleBullet", 0.1;
 		DamageFactor "Missile", 0.7;
 		DamageFactor "AntiAir", 0.3;
 		+DontSquash;

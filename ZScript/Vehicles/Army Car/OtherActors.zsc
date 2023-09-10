@@ -12,7 +12,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		Mass 250;
 		FriendlySeeBlocks 14; //Doesn't need that much sight range, since it's max target range is deliberately so low.
 		MaxTargetRange 1536;
-		DamageFactor "Electric", 1.25;
+		DamageFactor "Electric", 1.5;
 		Obituary "%o was killed by a non-lethal weapon, somehow";
 		Tag "Pain Ray";
 		DeathSound "Vehicle/ArmyCar/PainRay/Break";
@@ -252,6 +252,7 @@ Class MVP_ArmyCarProp : MVP_BaseProp
 		DamageFactor "MarineGrenade", 1.25;
 		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
+		DamageFactor "SmallRifleBullet", 0.75;
 	}
 	
 	Override Void PostBeginPlay ()

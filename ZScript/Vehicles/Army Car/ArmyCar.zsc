@@ -17,6 +17,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		DamageFactor "MarineGrenade", 1.25;
 		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
+		DamageFactor "SmallRifleBullet", 0.75;
 		ActiveSound "Vehicle/ArmyCar/Moving";
 		DeathSound "SFX/Explosion";
 		//+MissileEvenMore
