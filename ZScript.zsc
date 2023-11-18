@@ -32,8 +32,7 @@ Version "4.10.0"
 	#Include "ZScript/Vehicles/Di-Cokka/OtherActors.zsc"
 
 //Check if the Smart Marines (https://github.com/inkoalawetrust/Smart-Marines/releases) are loaded along with the military vehicles.
-//TODO: Since this isn't purely checking for marines + debug code, I should probably rename it.
-Class SM_MarineChecker : EventHandler
+Class MVP_Handler : EventHandler
 {
 	Bool NoCustomMarines;
 	
@@ -41,8 +40,8 @@ Class SM_MarineChecker : EventHandler
 	{
 		//If there's 2000 or less monsters (For performance) on the map. Give newly spawned monsters +DOSHADOWBLOCK.
 		//Used to make tank smokescreens affect monster aiming in general, and in the future, for marine smoke grenades.
-		//Speaking of which, when I rewrite the marines, I'll probably need to add a check to not call this code twice.
-		If (!MVP_Disable_DoShadowBlock && Level.Total_Monsters <= 2000 && E.Thing && E.Thing.bIsMonster)
+		//Ignore this if the marines are loaded however, since they have their own code for this.
+		If (NoCustomMarines && !MVP_Disable_DoShadowBlock && Level.Total_Monsters <= 2000 && E.Thing && E.Thing.bIsMonster)
 		{
 			//Ignore if the thing has the flag on already. Or is a lost soul-alike.
 			If (!E.Thing.bDoShadowBlock && !(E.Thing.bFloat && (E.Thing.bSkullFly || E.Thing.bRetargetAfterSlam)))
@@ -62,19 +61,7 @@ Class SM_MarineChecker : EventHandler
 			}
 		}
 	}
-	//DEBUG DEBUG
-	Override Void WorldThingDamaged (WorldEvent E)
-	{
-		//If (e.inflictor && e.inflictor.getclassname() == "mvp_heatshell" && e.thing.getclassname() == "mvp_mbt")
-		//{
-		//	console.printf ("damage send %d",e.damage);
-		//}
-		//else If (e.inflictor && e.inflictor.getclassname() == "mvp_APFSDSshell" && e.thing.getclassname() == "mvp_mbt")
-		//{
-			//console.printf ("apfsds damage sent %d, damage type %s",e.damage,e.damagetype);
-		//}
-
-	}
+	
 	//Replaces the Smart Marines' own bullets with their better MVP equivalents.
 	Override Void CheckReplacement (ReplaceEvent E)
 	{
@@ -98,12 +85,7 @@ Class SM_MarineChecker : EventHandler
 	
 	Bool SM_MarinesLoaded()
 	{
-		Let FindMarines = ServiceIterator.Find("SM_SmartMarines");
-		
-		While (FindMarines.Next())
-			Return True;
-		
-		Return False;
+		Return EventHandler.Find("SM_MarineHandler");
 	}
 	
 	Override Void OnRegister()

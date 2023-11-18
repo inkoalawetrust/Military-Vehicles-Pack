@@ -47,7 +47,7 @@ Class MVP_StupidFuckingFakeMarineHack : Actor
 	Override Void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
-		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
+		Let MarineCheck = MVP_Handler (EventHandler.Find("MVP_Handler"));
 		
 		If (!MarineCheck.NoCustomMarines)
 			Sprite = GetSpriteIndex ("MARJ"); //Make sure nothing stupid happens if no marines are available.

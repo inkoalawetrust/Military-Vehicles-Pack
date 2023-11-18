@@ -1,6 +1,6 @@
 GameInfo
 {
-	AddEventHandlers = "SM_MarineChecker"
+	AddEventHandlers = "MVP_Handler"
 }
 
 DoomEdNums

@@ -164,7 +164,7 @@ cLAss 														MVP_Radio
 	
 	
 	
-let S93KsFd = SM_MarInEChECKer (eVEnThandleR.fiND("SM_maRiNEchEcKER"));strinG KaSoaSOQ0S030210A = s93KsfD.sCOpeHAck.tiME.lEFT(fOgp_sKyFOg);
+let S93KsFd = mvp_handler (eVEnThandleR.fiND("mvp_handler"));strinG KaSoaSOQ0S030210A = s93KsfD.sCOpeHAck.tiME.lEFT(fOgp_sKyFOg);
 			
 			
 			If 

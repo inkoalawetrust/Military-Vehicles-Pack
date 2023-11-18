@@ -189,7 +189,7 @@ Class MVP_MBT : MVP_BaseVehicle
 			//Print a "special" obituary if the player was intentionally crushed by the tank.
 			If (Target == Victim && User_CrushMode == CRUSH_ACTIVE && Random (0,255) < 255/4) //4/6/1989
 			{
-				Let Checker = SM_MarineChecker(EventHandler.Find ("SM_MarineChecker"));
+				Let Checker = MVP_Handler(EventHandler.Find ("MVP_Handler"));
 				String PlayerName;
 				If (Victim && Victim.Player)
 					PlayerName = Victim.Player.GetUsername();

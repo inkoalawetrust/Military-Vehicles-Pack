@@ -369,9 +369,10 @@ Mixin Class MVP_SharedFunctions
 Mixin Class MVP_MarineFunctions
 {
 	//=====|Marine related functions|=====\\
+	//Check if the smart marines are loaded.
 	Bool CustomMarinesAvailable()
 	{
-		Let MarineCheck = SM_MarineChecker (EventHandler.Find("SM_MarineChecker"));
+		Let MarineCheck = MVP_Handler (EventHandler.Find("MVP_Handler"));
 		
 		If (!MarineCheck.NoCustomMarines)
 			Return True;
@@ -381,8 +382,8 @@ Mixin Class MVP_MarineFunctions
 	
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)
-	{
-		If (!Other) Return False;
+	{Return False; //PLACEHOLDER: When I get around to remaking the marines' turrets, I'll make a proper emplacement system for KAI_Humanoid, or try anyway.
+		/*If (!Other) Return False;
 		
 		Name MGMarine = "TurretMarine";
 		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
@@ -393,12 +394,12 @@ Mixin Class MVP_MarineFunctions
 		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
 			Return True;
 		
-		Return False;
+		Return False;*/
 	}
 	
 	//Is the other actor a smart marine or player on a turret ?
 	Bool MarineOrPlayerOnTurret (Actor Other)
-	{
+	{Return False; //PLACEHOLDER: When I get around to remaking the marines' turrets, I'll make a proper emplacement system for KAI_Humanoid, or try anyway.
 		If (!Other) Return False;
 		Name CustomMarine = 'SmartMarine';
 		Name CustomTurretMarine = "TurretMarine";
@@ -411,7 +412,7 @@ Mixin Class MVP_MarineFunctions
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
 	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False)
 	{
-		Name CustomMarine = 'SmartMarine';
+		Name CustomMarine = 'SM_Marine';
 		Class<Actor> WhatToSpawn;
 		Actor Spawnee;
 		
