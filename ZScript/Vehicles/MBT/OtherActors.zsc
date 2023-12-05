@@ -1,73 +1,4 @@
 //$GZDB_SKIP
-//Token given to marines when they "jump" out of the tank, to tell them to begin running away once they land.
-//God willing I don't have to do this kinda shit ever again after the rewrite.
-Class MVP_MarineLandWarning : Inventory
-{
-	Int Timer;
-	Int Warnings;
-	Actor GROSSHACK;
-	Const MarineRuns = 4;
-	Const RunInterval = 16;
-	Override Void AttachToOwner (Actor Other)
-	{
-		Super.AttachToOwner(Other);
-		If (Other)
-		{
-			GROSSHACK = Spawn ("MVP_StupidFuckingFakeMarineHack",Other.Pos);
-			GROSSHACK.Master = Other; //Stick to marine.
-			Other.bInvisible = True;
-		}
-	}
-	Override Void DoEffect ()
-	{
-		Super.DoEffect();
-		
-		If (!Master || Warnings >= MarineRuns) GoAwayAndDie();
-		
-		If (Owner.FloorZ >= Owner.Pos.Z) //Landed on the ground.
-		{
-			If (GROSSHACK) GROSSHACK.Destroy();
-			Owner.bInvisible = False;
-			If (Timer % RunInterval == 0)
-			{
-				If (Master Is "MVP_BaseVehicle")
-					MVP_BaseVehicle(Master).WarnSpecificMarine (Owner);
-				Else If (Master Is "MVP_BaseTurret")
-					MVP_BaseTurret(Master).WarnSpecificMarine (Owner);
-				Warnings++;
-			}
-			Timer++;
-		}
-	}
-}
-
-Class MVP_StupidFuckingFakeMarineHack : Actor
-{
-	Default {+NOBLOCKMAP;+NOCLIP;+THRUACTORS;}
-	Override Void PostBeginPlay()
-	{
-		Super.PostBeginPlay();
-		Let MarineCheck = MVP_Handler (EventHandler.Find("MVP_Handler"));
-		
-		If (!MarineCheck.NoCustomMarines)
-			Sprite = GetSpriteIndex ("MARJ"); //Make sure nothing stupid happens if no marines are available.
-	}
-	Override Void Tick()
-	{
-		If (Master)
-		{
-			SetOrigin (Master.Pos,True);
-			Angle = Master.Angle;
-		}
-	}
-	States
-	{
-		Spawn:
-			#### A -1;
-			Stop;
-	}
-}
-
 Class MVP_MBTFireEffect : KAI_MixinActor
 {
 	Default
@@ -391,7 +322,7 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 		Trail.A_SetTranslation ("Tracer_White"); //Cum blast
 	}
 	
-	//P_RipperBlood() is not exposed to ZScriot, like most useful functions apparently. So I had to copy it here for the DU dart.
+	//P_RipperBlood() is not exposed to ZScript, like most useful functions apparently. So I had to copy it here for the DU dart.
 	//It does ignore the cl_bloodtype checks however, since P_DrawSplash2 isn't exposed either.
 	Void ShitOutBlood (Actor AnnihilatedRemains)
 	{
@@ -649,9 +580,10 @@ Class MVP_ATGM : MVP_BaseProjectile
 	Mixin MVP_MarineFunctions;
 	Actor WarnZone;
 	Vector3 WarnPos;
-	KAI_LOFActorFinder MarineWarner;
+	KAI_LOFActorFinder NPCWarner;
 	Bool HitLiquid;
 	DynamicLight Light;
+	HazardInfo MissileThreat;
 	
 	Void DoSplash (Int LiquidType, Bool UpsideDown = False)
 	{
@@ -672,11 +604,24 @@ Class MVP_ATGM : MVP_BaseProjectile
 	{
 		Super.PostBeginPlay();
 		
-		WarnZone = WarnMarines (MWRN_ALLIESTOO,512,Self);
-		MarineWarner = New ("KAI_LOFActorFinder");
-		MarineWarner.Shooter = Self;
+		WarnZone = WarnNPCs (WRN_ALLIESTOO|WRN_EXPLOSIVE,512,Self,threatlevel:HazardInfo.HAZARD_HUGE);
+		NPCWarner = New ("KAI_LOFActorFinder");
+		NPCWarner.Shooter = Self;
 		//TrackPoint = Spawn ("KAI_DebugPoint",Pos);
 		SmokeCounter = Int(GameTicRate*5.5); //Used to add a limited burntime to the missile.
+		
+		MissileThreat = New ("HazardInfo");
+		If (MissileThreat)
+		{
+			MissileThreat.Position = KAI_Math.Vec3OffsetRelative (Self,(Speed*4,0,0));
+			MissileThreat.Origin = Target;
+			MissileThreat.Range = Radius*4;
+			MissileThreat.Type = HazardInfo.HAZARD_ATTACK;
+			MissileThreat.Level = HazardInfo.HAZARD_HUGE;
+			//MissileThreat.Flags = Flags;
+			MissileThreat.CustomTags.Push ("Projectile");
+			MissileThreat.CustomTags.Push ("Explosive");
+		}
 	}
 	
 	//Rocket trail.
@@ -756,14 +701,13 @@ Class MVP_ATGM : MVP_BaseProjectile
 		
 		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 		
-		MarineWarner.Trace (Pos.PlusZ(Height/2),CurSector,Direction,768,0);
+		NPCWarner.Trace (Pos.PlusZ(Height/2),CurSector,Direction,768,0);
 		//Check all the actors the trace hit.
-		Name TheMarine = "SmartMarine";
-		ForEach (Mobj : MarineWarner.Mobjs)
-			If (Mobj && !IsDead (Mobj) && Mobj Is TheMarine && IsHostileToShooter(Mobj))
-				WarnSpecificMarine(Mobj); //Then warn them.
+		ForEach (Mobj : NPCWarner.Mobjs)
+			If (Mobj && !IsDead (Mobj) && IsHostileToShooter(Mobj))
+				WarnSpecificNPC (MissileThreat, Mobj); //Then warn them.
 		
-		If (WarnZone) WarnZone.SetOrigin (MarineWarner.Results.HitPos,True); //And move the detonation zone to the position the trace hit.
+		If (WarnZone) WarnZone.SetOrigin (NPCWarner.Results.HitPos,True); //And move the detonation zone to the position the trace hit.
 	}
 	States
 	{

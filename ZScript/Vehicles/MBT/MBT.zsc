@@ -88,7 +88,7 @@ Class MVP_MBT : MVP_BaseVehicle
 			If (GetClassName() == "MVP_MBT") Turret.AttackSound = "Vehicle/Tank/CannonFireOriginal";
 			Turret.bTurnSoundNoStop = False;
 		}
-		WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,192,Self,(96,0,Height/2));
+		WarningZone = WarnNPCs (WRN_WARP|WRN_ALLIESTOO|WRN_CRUSHING,192,Self,(96,0,Height/2));
 	}
 	
 	Override Void Tick ()
@@ -994,7 +994,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		MissileState = FindState ("Fire",True);
 		AttackStates.Push (FindState("Fire",True));
 		AttackStates.Push (FindState("Fire.Coaxial",True));
-		WarningZone = WarnMarines (0,48,Self); //Default radius for the coaxial.
+		WarningZone = WarnNPCs (0,48,Self); //Default radius for the coaxial.
 	}
 	
 	//Don't use the threat assessment of MVP vehicles, which considers players and marines on turrets as huge deal. Since they do little against the tank.
@@ -1562,14 +1562,24 @@ Class MVP_MBTTurret : MVP_BaseTurret
 					GunLoaded = True;
 				}
 				ReadyToDecide = True; //Start deciding what to shoot in the last 2 seconds before firing.
-				If (WarningZone) WarningZone.MaxTargetRange = 512; //Set the range of the marine warn zone to the HEAT shells' blast radius.
+				If (WarningZone) //Morph the warn zone into the one used for the tanks' cannon.
+				{
+					WarningZone.MaxTargetRange = 512; //Set the range of the warn zone to the HEAT shells' blast radius.
+					Let Hazard = MVP_HazardZone(WarningZone).Hazard;
+					If (Hazard)
+					{
+						Hazard.Range = WarningZone.MaxTargetRange;
+						Hazard.Level = HazardInfo.HAZARD_HUGE;
+						Hazard.CustomTags.Push ("Explosive");
+					}
+				}
 				DecideAmmoType();
 				If (!(Target Is "KAI_BaseVehicle"))
 				{
 					Actor New = A_FindEnemyVehicle();
 					If (New) Target = New;
 				}
-				PreFireZone = WarnMarines (range:256,Self,(224,0,0));
+				PreFireZone = WarnNPCs (WRN_EXPLOSIVE,256,Self,(224,0,0),HazardInfo.HAZARD_HUGE);
 			}
 			MMBT ###################################################################### 1
 			{
@@ -1577,7 +1587,17 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				If (!ReadyToDecide)
 				{
 					If (PreFireZone) PreFireZone.Destroy();
-					If (WarningZone) WarningZone.MaxTargetRange = 48;
+					If (WarningZone)
+					{
+						WarningZone.MaxTargetRange = 48;
+						Let Hazard = MVP_HazardZone(WarningZone).Hazard;
+						If (Hazard)
+						{
+							Hazard.Range = WarningZone.MaxTargetRange;
+							Hazard.Level = HazardInfo.HAZARD_MEDIUM;
+							Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Explosive"));
+						}
+					}
 					TurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").FastSpeed;
 					Return FindState ("See");
 				}
@@ -1700,7 +1720,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			{
 				If (Turret) Turret.Destroy(); //Remove RWS
 				InFlight = True;
-				WarningZone = WarnMarines (MWRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
+				WarningZone = WarnNPCs (WRN_ALLIESTOO|WRN_VEHICLEDEATH|WRN_NOFLAMEREMOVE,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
 				Actor Boom = Spawn ("MVP_Explosion",Pos);
 				Boom.Scale *= 1.5;
 				Boom.SetDamage (384);
@@ -1743,7 +1763,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			TNT1 A 0
 			{
 				InFlight = True;
-				WarningZone = WarnMarines (MWRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
+				WarningZone = WarnNPCs (WRN_ALLIESTOO|WRN_VEHICLEDEATH|WRN_NOFLAMEREMOVE,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
 			}
 			Goto FlyingDeath.Landing;
 		//Whole turret vanishes if the tank was hit by something strong enough to gib it.
@@ -1767,12 +1787,11 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Marine.Vel.X = XVel * Cos (Angle) + YVel * Sin (Angle);
 		Marine.Vel.Y = XVel * Sin (Angle) - YVel * Cos (Angle);
 		Marine.Vel.Z = ZVel;
+		Marine.Angle = VectorAngle (Marine.Vel.X,Marine.Vel.Y);
+		console.printf ("%p angle is now %d",marine,marine.angle);
 		
 		If (CustomMarinesAvailable())
-		{
-			Let Token = Marine.GiveInventoryType ("MVP_MarineLandWarning");
-			Token.Master = Self; //To make the marines run away from the tank once they land.
-		}
+			Marine.SetStateLabel ("Jump.Loop");
 	}
 }
 
@@ -1844,28 +1863,32 @@ Class MVP_MBTRWS : MVP_BaseTurret
 		Return False;
 	}
 	
-	MVP_APCMachineGunLOFCheck MarineWarner; //A permanent pointer to a MG LOF check tracer. So that it can be fired when the turret is firing to warn marines.
+	MVP_APCMachineGunLOFCheck NPCWarner; //A permanent pointer to a MG LOF check tracer. So that it can be fired when the turret is firing to warn marines.
 	Override Void Tick()
 	{
 		Super.Tick();
 		
 		If (IsFrozen()) Return;
-		//When shooting, fire a ray that alerts any marines that would be caught in the line of fire.
+		//When shooting, fire a ray that alerts any NPCs that would be caught in the line of fire.
 		If (IsInAttackState())
 		{
 			Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 			
 			Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
-			MarineWarner.Shooter = Self;
-			MarineWarner.Other = Target;
-			MarineWarner.OnlyFindActors = True;
-			MarineWarner.Trace ((Pos.X,Pos.Y,Pos.Z+RWSAttackHeight),CurSector,Direction,Distance,0);
-			HitActors.Move(MarineWarner.Mobjs);
+			NPCWarner.Shooter = Self;
+			NPCWarner.Other = Target;
+			NPCWarner.OnlyFindActors = True;
+			NPCWarner.Trace ((Pos.X,Pos.Y,Pos.Z+RWSAttackHeight),CurSector,Direction,Distance,0);
+			HitActors.Move(NPCWarner.Mobjs);
 			//Check all the actors the trace hit.
-			Name TheMarine = "SmartMarine";
 			ForEach (Mobj : HitActors)
-				If (Mobj && !IsDead (Mobj) && Mobj Is TheMarine && IsHostile(Mobj))
-					WarnSpecificMarine(Mobj); //Then warn them.
+			{
+				If (Mobj && !IsDead (Mobj) && Mobj Is "KAI_Actor" && IsActorHostile(Mobj))
+				{
+					Let NewHaz = MakeNewHazard (Self, Mobj.Pos);
+					WarnSpecificNPC(NewHaz, Mobj); //Then warn them.
+				}
+			}
 			HitActors.Clear();
 		}
 	}
@@ -1873,14 +1896,14 @@ Class MVP_MBTRWS : MVP_BaseTurret
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
-		If (MarineWarner) MarineWarner.Destroy();
+		If (NPCWarner) NPCWarner.Destroy();
 		If (Master) Master.SetTag (Master.Default.GetTag());
 	}
 	
 	Override Void OnDestroy()
 	{
 		If (Master) Master.SetTag (Master.Default.GetTag());
-		If (MarineWarner) MarineWarner.Destroy();
+		If (NPCWarner) NPCWarner.Destroy();
 		Super.OnDestroy();
 	}
 	//====================================================
@@ -1891,7 +1914,27 @@ Class MVP_MBTRWS : MVP_BaseTurret
 		
 		MissileState = FindState ("Fire");
 		AttackStates.Push (FindState("Fire",True));
-		MarineWarner = New ("MVP_APCMachineGunLOFCheck"); //Create the warning trace for marines.
+		NPCWarner = New ("MVP_APCMachineGunLOFCheck"); //Create the warning trace for marines.
+	}
+	
+	//Make a quick ripping hazard and pass the will-be victims' position as the spot of the attack.
+	//Needed so each NPC caught in the ripper attacks' way gets their own position to run from.
+	Static HazardInfo MakeNewHazard (Actor Origin, Vector3 HazPos)
+	{
+		HazardInfo Hazard = New ("HazardInfo");
+		If (Hazard)
+		{
+			Hazard.Position = HazPos;
+			Hazard.Origin = Origin;
+			Hazard.Range = 64;
+			Hazard.Type = HazardInfo.HAZARD_ATTACK;
+			Hazard.Level = HazardInfo.HAZARD_LARGE;
+			//Hazard.Flags = Flags;
+			Hazard.CustomTags.Push ("Vehicle");
+			Hazard.CustomTags.Push ("Ripper");
+		}
+		
+		Return Hazard;
 	}
 	
 	States
@@ -2040,7 +2083,7 @@ Class MVP_MBTRWSMinigun : MVP_MBTRWS
 			If (!NoStateJump)
 			{
 				SetStateLabel ("Fire");
-				WarningZone = WarnMarines (0,48); //Create a warning zone to warn marines of wherever the machine gun is aiming.
+				WarningZone = WarnNPCs (0,48); //Create a warning zone to warn marines of wherever the machine gun is aiming.
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 			}
 			Return True;
@@ -2082,6 +2125,12 @@ Class MVP_MBTRWSMinigun : MVP_MBTRWS
 				If (ShotsFired > 200)
 				{
 					ThreatLevel = THREAT_DANGEROUS;
+					If (WarningZone)
+					{
+						Let Hazard = MVP_HazardZone(WarningZone).Hazard;
+						If (Hazard)
+							Hazard.Level = HazardInfo.HAZARD_LARGE;
+					}
 					A_SetTics (1);
 				}
 				Else If (ShotsFired > 40) A_SetTics (2);

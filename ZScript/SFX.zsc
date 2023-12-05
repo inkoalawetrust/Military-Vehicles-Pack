@@ -209,7 +209,7 @@ Class MVP_Flame : KAI_MixinActor
 				Die (Null,Null);
 			
 			If (GetAge() % 16 == 0)
-				A_Explode (Int(Damage*FRandom (0.75,1.5)),Int(MaxTargetRange),XF_HURTSOURCE|XF_NOTMISSILE,False,Int(MeleeRange));
+				A_Explode (Int(Damage*FRandom (0.75,1.5)),Int(MaxTargetRange),XF_HURTSOURCE|XF_NOTMISSILE|XF_THRUSTLESS,False,Int(MeleeRange));
 		}
 	}
 	

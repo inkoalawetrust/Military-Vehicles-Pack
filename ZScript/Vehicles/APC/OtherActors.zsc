@@ -31,7 +31,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 	Const DualMGAttackHeight = 12;
 	
 	Array <Actor> HitActors;
-	MVP_APCMachineGunLOFCheck MarineWarner; //A permanent pointer to a dual MG LOF check tracer. So that it can be fired when the turret is firing to warn marines.
+	MVP_APCMachineGunLOFCheck NPCWarner; //A permanent pointer to a dual MG LOF check tracer. So that it can be fired when the turret is firing to warn marines.
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
@@ -54,20 +54,20 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		
 		MissileState = FindState ("Fire");
 		AttackStates.Push (FindState("Fire",True));
-		MarineWarner = New ("MVP_APCMachineGunLOFCheck"); //Create the warning trace for marines.
+		NPCWarner = New ("MVP_APCMachineGunLOFCheck"); //Create the warning trace for marines.
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DmgFlags, Name MeansOfDeath)
 	{
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
-		If (MarineWarner) MarineWarner.Destroy();
+		If (NPCWarner) NPCWarner.Destroy();
 		If (Master) Master.SetTag (Master.Default.GetTag());
 	}
 	
 	Override Void OnDestroy()
 	{
 		If (Master) Master.SetTag (Master.Default.GetTag());
-		If (MarineWarner) MarineWarner.Destroy();
+		If (NPCWarner) NPCWarner.Destroy();
 		Super.OnDestroy();
 	}
 	
@@ -83,16 +83,20 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 			Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 			
 			Double Distance = Target ? Distance3D (Target)+32 : MaxTargetRange;
-			MarineWarner.Shooter = Self;
-			MarineWarner.Other = Target;
-			MarineWarner.OnlyFindActors = True;
-			MarineWarner.Trace ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),CurSector,Direction,Distance,0);
-			HitActors.Move(MarineWarner.Mobjs);
+			NPCWarner.Shooter = Self;
+			NPCWarner.Other = Target;
+			NPCWarner.OnlyFindActors = True;
+			NPCWarner.Trace ((Pos.X,Pos.Y,Pos.Z+DualMGAttackHeight),CurSector,Direction,Distance,0);
+			HitActors.Move(NPCWarner.Mobjs);
 			//Check all the actors the trace hit.
-			Name TheMarine = "SmartMarine";
 			ForEach (Mobj : HitActors)
-				If (Mobj && !IsDead (Mobj) && Mobj Is TheMarine && IsHostile(Mobj))
-					WarnSpecificMarine(Mobj); //Then warn them.
+			{
+				If (Mobj && !IsDead (Mobj) && Mobj Is "KAI_Actor" && IsActorHostile(Mobj))
+				{//console.printf ("iteration found a %s to alert, pointer %p",mobj.getclassname(),mobj);
+					Let NewHaz = MVP_MBTRWS.MakeNewHazard (Self, Mobj.Pos);
+					WarnSpecificNPC(NewHaz, Mobj); //Then warn them.
+				}
+			}
 			HitActors.Clear();
 		}
 	}
@@ -309,7 +313,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			If (!NoStateJump)
 			{
 				SetStateLabel ("Fire");
-				WarningZone = WarnMarines (0,128); //Create a warning zone to warn marines of wherever the autocannon is aiming.
+				WarningZone = WarnNPCs (WRN_EXPLOSIVE,128,threatlevel:HazardInfo.HAZARD_LARGE); //Create a warning zone to warn NPCs wherever the autocannon is aiming.
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 			}
 			Return True;
@@ -524,7 +528,7 @@ Class MVP_APCMGTurret : MVP_BaseTurret
 			If (!NoStateJump)
 			{
 				SetStateLabel ("Fire");
-				WarningZone = WarnMarines (0,48); //Create a warning zone to warn marines of wherever the machine gun is aiming.
+				WarningZone = WarnNPCs (0,48,threatlevel:HazardInfo.HAZARD_MEDIUM); //Create a warning zone to warn marines of wherever the machine gun is aiming.
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 			}
 			Return True;

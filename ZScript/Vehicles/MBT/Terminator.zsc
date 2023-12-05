@@ -57,7 +57,7 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		MissileState = FindState ("Fire",True);
 		AttackStates.Push (FindState("Fire",True));
 		AttackStates.Push (FindState("Fire.ATGM",True));
-		WarningZone = WarnMarines (0,128,Self);
+		WarningZone = WarnNPCs (0,128,Self,threatlevel:HazardInfo.HAZARD_LARGE);
 		APSCooldown = APSDelay = INT.MAX;
 		AltAPSCooldown = AltAPSDelay = INT.MAX;
 	}
@@ -166,7 +166,7 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 				Break;
 		}
 		
-		A_StartSound ("Vehicle/Tank/RocketFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.1);
+		A_StartSound ("Vehicle/Tank/RocketFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.5);
 		Actor Missile = A_SpawnProjectile ("MVP_ATGM",24,ATGMPos,flags:CMF_AIMDIRECTION,Pitch);
 		Missile.Tracer = Target;
 		
@@ -267,7 +267,16 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		Fire.ATGM:
 			MBT1 # 0
 			{
-				If (WarningZone) WarningZone.MaxTargetRange = 512; //Alert marines in an extra wide radius.
+				If (WarningZone)
+				{
+					WarningZone.MaxTargetRange = 512; //Alert NPCs in an extra wide radius.
+					If (MVP_HazardZone(WarningZone).Hazard)
+					{
+						MVP_HazardZone(WarningZone).Hazard.Range = WarningZone.MaxTargetRange;
+						MVP_HazardZone(WarningZone).Hazard.Level = HazardInfo.HAZARD_HUGE;
+						MVP_HazardZone(WarningZone).Hazard.CustomTags.Push ("Explosive"); //It's about to fire a missile.
+					}
+				}
 				TurretAttackSpeed = GetDefaultByType("MVP_ATGM").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_ATGM").FastSpeed; //Use ATGM speed.
 				A_StartSound ("Vehicle/Tank/RocketLock",CHAN_VOICE,attenuation:0.5);
 			}
@@ -282,7 +291,17 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 				TurretAttackSpeed = Default.TurretAttackSpeed; //Reset prediction speeds to the machine guns.
 				FastTurretAttackSpeed = Default.FastTurretAttackSpeed;
 				MGDelay = GameTicRate*Random (1,2);
-				If (WarningZone) WarningZone.MaxTargetRange = 128;
+				If (WarningZone)
+				{
+					WarningZone.MaxTargetRange = 128;
+					Let Hazard = MVP_HazardZone(WarningZone).Hazard;
+					If (Hazard)
+					{
+						Hazard.Range = WarningZone.MaxTargetRange;
+						Hazard.Level = HazardInfo.HAZARD_LARGE;
+						Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Explosive")); //Remove tag.
+					}
+				}
 			}
 			//MBT1 ##### 1 {Frame = UpdateBMPTElevation (6,0,3); /*G, A, D*/}
 			//Goto Fire.ATGM+141; //DEBUG: Loop the missile launcher sequence to test the changing pod positions.

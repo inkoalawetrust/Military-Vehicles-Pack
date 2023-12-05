@@ -449,7 +449,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Fire:
 			TNT1 A 0 //Makes the marines run from the turrets' impact zone.
 			{
-				WarningZone = WarnMarines (MWRN_ALLIESTOO,160);
+				WarningZone = WarnNPCs (WRN_ALLIESTOO|WRN_EXPLOSIVE,160,threatlevel:HazardInfo.HAZARD_MEDIUM);
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 			}
 			MSV1 ################################### 1 {Frame = A_DiCokkaFireDelay();}//1 second delay, so the RefireDelay is actually RefireDelay+1.
@@ -465,7 +465,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		Fire.Triple:
 			TNT1 A 0
 			{
-				WarningZone = WarnMarines (MWRN_ALLIESTOO,160);
+				WarningZone = WarnNPCs (WRN_ALLIESTOO|WRN_EXPLOSIVE,160,threatlevel:HazardInfo.HAZARD_LARGE);
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 				//When the hulls' health isn't too low, have a chance to make the tank stop to fire.
 				If (Master && !CriticallyLowHealth() && Random[pr_cajump](0,255) < 96) bDontStayAround = False; //Allow the tank to stop for a bit.

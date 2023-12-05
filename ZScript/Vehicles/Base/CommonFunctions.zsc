@@ -335,9 +335,9 @@ Mixin Class MVP_SharedFunctions
 		//Create a warning zone if any flames actually spawned.
 		If (Flags & FSP_WARNMARINES && DeathFlames.Size())
 			If (Flags & FSP_VEHICLEDEATH)
-				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO|MWRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);
+				DeathWarnZone = WarnNPCs (WRN_WARP|WRN_ALLIESTOO|WRN_VEHICLEDEATH,Radius*1.75+48,towho:Self);
 			Else
-				DeathWarnZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,Radius*1.75+48,towho:Self);
+				DeathWarnZone = WarnNPCs (WRN_WARP|WRN_ALLIESTOO,Radius*1.75+48,towho:Self);
 	}
 	
 	//Throws actors away from the caller, the code is mostly copied from BlastActor.
@@ -410,7 +410,7 @@ Mixin Class MVP_MarineFunctions
 	}
 	
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
-	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False)
+	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False, Bool SpawnRunning = False)
 	{
 		Name CustomMarine = 'SM_Marine';
 		Class<Actor> WhatToSpawn;
@@ -440,56 +440,99 @@ Mixin Class MVP_MarineFunctions
 			Spawnee.FriendlySeeBlocks = 16;
 			Spawnee.bAvoidMelee = Spawnee.bAvoidHazards = True;
 		}
+		Else
+		{
+			Name DeployToken = 'SM_VehicleDropToken';
+			//Helps when a vehicle drops multiple marines, so they don't get stuck.
+			If (SpawnRunning)
+				Spawnee.GiveInventoryType (DeployToken);
+		}
 		
 		Return Spawnee;
 	}
 	
-	Enum KAIMarineWarnFlags
+	Enum NPCWarnFlags
 	{
-		MWRN_ALLIESTOO = 1 << 0, //The warning zone should warn marines friendly to the caller as well.
-		MWRN_WARP = 1 << 1, //The warning zone should stick to the actor specified by the ToWho parameter.
-		MWRN_PAINONLY = 1 << 2, //The warning zone is just warning the marines of an attack that only causes pain (e.g the Pain Ray).
-		MWRN_VEHICLEDEATH = 1 << 3, //Despawn the warning zone if the vehicles DeathFlames array is empty.
+		WRN_ALLIESTOO		= 1 << 0, //The warning zone should warn marines friendly to the caller as well.
+		WRN_WARP			= 1 << 1, //The warning zone should stick to the actor specified by the ToWho parameter.
+		WRN_PAINONLY		= 1 << 2, //The warning zone is just warning the marines of an attack that only causes pain (e.g the Pain Ray).
+		WRN_VEHICLEDEATH	= 1 << 3, //Despawn the warning zone if the vehicles DeathFlames array is empty.
+		WRN_NOFLAMEREMOVE	= 1 << 4, //The warn type is for a vehicle death, but don't remove the zone just because there's no death flames.
+		WRN_EXPLOSIVE		= 1 << 5, //This is a hazard zone for an explosive attack.
+		WRN_CRUSHING		= 1 << 6, //This is a hazard zone for the ability of a vehicle to crush and push objects as it moves.
+		WRN_ANTIAIR			= 1 << 7, //This hazard is particularly dangerous to flying NPCs.
 	}
 	
-	//Spawns a warning zone for smart marines that gives them a token, which tells them to run away from the warning zone.
-	//Since it is basically a fancy wrapper for giving the "SM_ImInDanger" token, you could make your own actors to also support that token.
-	//Flags: The flags that determine the behavior of the warning zone. Info on the flags is above. Default flag is MWRN_WARP.
+	//Spawns a custom warning zone for KAI NPCs, that alerts them to evade vehicle attacks.
+	//Flags: The flags that determine the behavior of the warning zone. Info on the flags is above. Default flag is WRN_WARP.
 	//Range: The range of the warning zone (NO WAYU !?1?1?1?!@?@?!/@/3/$3?3??543?), default is 256.
 	//ToWho: What actor should the zone be attached to ?
 	//Offsets: The offsets which the warning zone uses when warping to the specified actor. Default is no offsets.
-	Actor WarnMarines (Int Flags = MWRN_WARP, Double Range = 256, Actor ToWho = Null, Vector3 Offsets = (0,0,0))
+	//ThreatLevel: Just how dangerous is the hazard ?
+	//Origin: The origin of the hazard zone, used for the standard attack hazard.
+	Actor WarnNPCs (Int Flags = WRN_WARP, Double Range = 256, Actor ToWho = Null, Vector3 Offsets = (0,0,0), Int ThreatLevel = HazardInfo.HAZARD_MEDIUM, Actor Origin = Null)
 	{
 		If (!CustomMarinesAvailable()) Return Null;
 		Vector3 SpawnPos = ToWho ? KAI_Math.Vec3OffsetRelative(ToWho,Offsets) : Self.Pos;
-		Actor WarnZone = Spawn ("SmartMarineWarningZone",SpawnPos);
+		Let WarnZone = Spawn ("MVP_HazardZone",SpawnPos);
 		
 		WarnZone.CopyFriendliness (Self,False);
-		If (Flags & MWRN_WARP) WarnZone.Master = ToWho;
-		If (Flags & MWRN_ALLIESTOO) SmartMarineWarningZone(WarnZone).Flags |= MWRN_ALLIESTOO;
-		If (Flags & MWRN_PAINONLY) SmartMarineWarningZone(WarnZone).Flags |= MWRN_PAINONLY; //I had forgot to make the function handle this warning zone flag for two months lmfao.
-		If (Flags & MWRN_VEHICLEDEATH) SmartMarineWarningZone(WarnZone).Flags = MWRN_VEHICLEDEATH;
+		If (Flags & WRN_WARP) WarnZone.Master = ToWho;
+		If (Flags & WRN_ALLIESTOO) MVP_HazardZone(WarnZone).Flags |= WRN_ALLIESTOO;
+		If (Flags & WRN_PAINONLY) MVP_HazardZone(WarnZone).Flags |= WRN_PAINONLY; //I had forgot to make the function handle this warning zone flag for two months lmfao.
+		If (Flags & WRN_VEHICLEDEATH) MVP_HazardZone(WarnZone).Flags |= WRN_VEHICLEDEATH;
+		If (Flags & WRN_NOFLAMEREMOVE) MVP_HazardZone(WarnZone).Flags |= WRN_NOFLAMEREMOVE;
+		If (Flags & WRN_EXPLOSIVE) MVP_HazardZone(WarnZone).Flags |= WRN_EXPLOSIVE;
+		If (Flags & WRN_CRUSHING) MVP_HazardZone(WarnZone).Flags |= WRN_CRUSHING;
+		If (Flags & WRN_ANTIAIR) MVP_HazardZone(WarnZone).Flags |= WRN_ANTIAIR;
 		WarnZone.MaxTargetRange = Range;
-		SmartMarineWarningZone(WarnZone).Offset = Offsets;
+		MVP_HazardZone(WarnZone).Offset = Offsets;
+		MVP_HazardZone(WarnZone).HazardLevel = ThreatLevel;
+		MVP_HazardZone(WarnZone).HazardOrigin = Origin;
 		
 		Return WarnZone; //Return a pointer to the created warning zone.
 	}
 	
-	//Only warn a specific marine, and return if the warning token was successfully given to them.
-	Bool WarnSpecificMarine (Actor Marine)
+	//Only warn a specific NPC of a hazard, and return if they got the hazard.
+	Bool WarnSpecificNPC (HazardInfo Hazard, Actor NPC)
 	{
-		Name WarningToken = "SM_ImInDanger";
-		Inventory Token;
-		
-		If (!Marine) //No marine to warn.
+		If (!NPC || !(NPC Is "KAI_Actor")) //No NPC to warn or not a KAI NPCs.
 			Return False;
 		
-		Token = Marine.GiveInventoryType (WarningToken); //Give the token to the marine.
-		If (Token)
-			Token.Master = Self;
+		ForEach (CurHaz : KAI_Actor(NPC).Hazards) //Check if they already got this hazard.
+		{
+			If (Hazard.AreHazardsIdentical (Hazard, CurHaz))
+				Return False;
+		}
+		console.printf ("WarnSpecificNPC(): Warned %s successfully with %p, NPC pointer %p",npc.getclassname(),hazard,npc);
+		KAI_Actor(NPC).Hazards.Push(Hazard);
 		
-		If (!(Marine.FindInventory (WarningToken)) || !(Marine.CountInv (WarningToken) <= 0)) //The marine didn't get a token.
-			Return False;
+		Return True;
+	}
+	void warnspecificmarine (actor _fuck_off){return;}
+	//Useful to call after a vehicle drops a marine, to get them to run out of the spawn point to not get stuck.
+	Bool MVP_NPCDropoffMove (Vector3 Offset, Actor NPC)
+	{
+		If (!NPC || !(NPC Is "KAI_Actor"))
+			{console.printf ("dropoff warning failed");Return False;}
+		
+		HazardInfo StuckWarning = New ("HazardInfo");
+		
+		If (StuckWarning)
+		{
+			StuckWarning.Position = KAI_Math.Vec3OffsetRelative (Self,Offset,flags:KAI_Math.V3R_ANGLEONLY);
+			StuckWarning.Origin = Self;
+			StuckWarning.Range = NPC.Radius*2.5; //Get out of own radius.
+			StuckWarning.Type = HazardInfo.HAZARD_ATTACK; //Not an attack, but attacks are the hazard type where the NPC is supposed to run away from Position.
+			StuckWarning.Level = HazardInfo.HAZARD_MEDIUM;
+			StuckWarning.CustomTags.Push ("Vehicle");
+			StuckWarning.CustomTags.Push ("StuckRisk"); //DOOR STUCK
+		}
+		Else
+			{console.printf ("dropoff warning didn't spawn");Return False;}
+		console.printf ("MVP_NPCDropoffMove(): SUCCESS");
+		stuckwarning.printhazardinfo();
+		KAI_actor(NPC).Hazards.Push (StuckWarning);
 		
 		Return True;
 	}

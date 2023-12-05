@@ -640,7 +640,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 			#### # 1
 			{
 				InFlight = bCastSpriteShadow = True;
-				WarningZone = WarnMarines (MWRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
+				WarningZone = WarnNPCs (WRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
 				Actor Boom = Spawn ("MVP_Explosion",Pos);
 				Boom.Scale *= 1.5;
 				Boom.SetDamage (384);
@@ -683,7 +683,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 			TNT1 A 0
 			{
 				InFlight = True;
-				WarningZone = WarnMarines (MWRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
+				WarningZone = WarnNPCs (WRN_ALLIESTOO,Radius*4,Self); //Create a new warning zone after the old one is erased due to the tank dying, to warn marines below.
 			}
 			Goto FlyingDeath.Landing;
 		//Whole turret vanishes if the tank was hit by something strong enough to gib it.

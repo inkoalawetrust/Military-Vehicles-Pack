@@ -368,6 +368,160 @@ Class MVP_LOFDebugGun : Pistol
 	}
 }
 
+//Generic vehicle hazard zone.
+Class MVP_HazardZone : KAI_MixinActor
+{
+	Default
+	{
+		Radius 0.1; Height 0;
+		MaxTargetRange 256;
+		+NotAutoaimed
+		+NoBlood;
+		+NoDamage;
+		+NoGravity;
+		+NoTarget;
+	}
+	
+	Int Flags;
+	Enum NPCWarnFlags
+	{
+		WRN_ALLIESTOO		= 1 << 0, //The warning zone should warn marines friendly to the caller as well.
+		WRN_WARP			= 1 << 1, //The warning zone should stick to the actor specified by the ToWho parameter.
+		WRN_PAINONLY		= 1 << 2, //The warning zone is just warning the marines of an attack that only causes pain (e.g the Pain Ray).
+		WRN_VEHICLEDEATH	= 1 << 3, //Despawn the warning zone if the vehicles DeathFlames array is empty.
+		WRN_NOFLAMEREMOVE	= 1 << 4, //The warn type is for a vehicle death, but don't remove the zone just because there's no death flames.
+		WRN_EXPLOSIVE		= 1 << 5, //This is a hazard zone for an explosive attack.
+		WRN_CRUSHING		= 1 << 6, //This is a hazard zone for the ability of a vehicle to crush and push objects as it moves.
+		WRN_ANTIAIR			= 1 << 7, //This hazard is particularly dangerous to flying NPCs.
+	}
+	
+	HazardInfo Hazard;
+	Int HazardLevel; //How dangerous is the hazard ?
+	Vector3 Offset;
+	Actor HazardOrigin; //A hardcoded pointer that sets the hazards' origin to this specific actor.
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		Hazard = New ("HazardInfo");
+		
+		If (Hazard)
+		{
+			Hazard.Position = Pos; //We are assumed to be at the impact point of the attack.
+			//This emits an attack type hazard by default, so the origin is the attacking vehicle, if one is assigned.
+			Hazard.Origin = Master; If (!Hazard.Origin) Hazard.Origin = Self; 
+			If (HazardOrigin) Hazard.Origin = HazardOrigin; //Nevermind that, the zone has a hardcoded origin to pass.
+			Hazard.Range = MaxTargetRange;
+			Hazard.Type = HazardInfo.HAZARD_ATTACK;
+			Hazard.Level = HazardLevel;
+			Hazard.Flags = 0;
+			Hazard.CustomTags.Push ("Vehicle");
+			If (Flags & WRN_VEHICLEDEATH) //This is emitted to signify a vehicle wreck, not a vehicle attack.
+			{
+				Hazard.CustomTags.Push ("VehicleDeath"); //Just in case.
+				Hazard.Type = HazardInfo.HAZARD_ACTOR;
+				Hazard.Position = (Double.NaN, Double.NaN, Double.NaN);
+				Hazard.Origin = Self;
+			}
+			If (Flags & WRN_PAINONLY) Hazard.CustomTags.Push ("PainOnly"); //This is only a pain hazard. Like the Army Car's pain ray.
+			If (Flags & WRN_EXPLOSIVE) Hazard.CustomTags.Push ("Explosive");
+			If (Flags & WRN_CRUSHING)
+			{
+				Hazard.CustomTags.Push ("VehicleCrush");
+				Hazard.Type = HazardInfo.HAZARD_ACTOR;
+				Hazard.Position = (Double.NaN, Double.NaN, Double.NaN);
+				Hazard.Origin = Self;
+			}
+			If (FLags & WRN_ANTIAIR) Hazard.CustomTags.Push ("AntiAir");
+			hazard.printhazardinfo();
+		}
+	}
+	
+	Override Void Tick ()
+	{
+		If (IsFrozen() || bDormant) Return;
+		
+		If (Hazard) Hazard.Position = Pos;
+		
+		//Can be used to attach the zone to an actor.
+		If (Master)
+			SetOrigin (KAI_Math.Vec3OffsetRelative (Master,Offset),True);
+		
+		If ((Flags & WRN_VEHICLEDEATH) && !(Flags & WRN_NOFLAMEREMOVE) && Master && Master Is "MVP_BaseVehicle") //If you are set to disappear when the vehicle has no death flames left. 
+			If (!MVP_BaseVehicle(Master).DeathFlames.Size())
+				Destroy();
+		
+		BlockThingsIterator Finder = BlockThingsIterator.Create (Self,MaxTargetRange);
+		
+		Actor Mobj;
+		
+		While (Finder.Next())
+		{
+			Bool EmitHazard, Skip = False;
+			
+			Mobj = Finder.Thing;
+			
+			If (!Hazard || !(Mobj Is "KAI_Actor") || IsInanimateObject (Mobj) || IsDead (Mobj) || Mobj.bDormant) //Skip non-KAI NPCs, props, dead actors, dormant actor.
+				Continue;
+			
+			//Exclude master vehicle.
+			KAI_BaseVehicle Turret, TurretSquared;
+			If (Master && Master Is "KAI_BaseVehicle" && Mobj == Master)
+			{
+				Turret = KAI_BaseVehicle(Master).Turret;
+				If (Turret) TurretSquared = Turret.Turret;
+			}
+			If (Mobj == Self || Mobj == Master || Mobj == Turret || Turret && Mobj == TurretSquared)
+				Continue;
+			
+			//Don't warn NPCs on the same side as the warning zone.
+			If (!(Flags && WRN_ALLIESTOO))
+			{
+				If (IsHostile (Mobj) && Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
+				{
+					If (!(Flags & WRN_PAINONLY)/* || (Flags & WRN_PAINONLY) && !MarineIsOnTurret(Mobj)*/)
+						EmitHazard = True;
+				}
+			}
+			//Warn all NPCs in the vicinity.
+			Else
+			{
+				If (Distance3DSquared(Mobj) <= MaxTargetRange*MaxTargetRange)
+				{
+					If (!(Flags & WRN_PAINONLY)/* || (Flags & WRN_PAINONLY) && !MarineIsOnTurret(Mobj)*/)
+						EmitHazard = True;
+				}
+			}
+			
+			If (!EmitHazard)
+				Continue;
+			
+			//Don't give duplicate hazard entries if the NPC already got this one.
+			ForEach (CurHaz : KAI_Actor(Mobj).Hazards)
+			{
+				If (Hazard.AreHazardsIdentical (Hazard, CurHaz))
+					Skip = True;
+			}
+			
+			If (Skip)
+				Continue;
+			string mastername = "None at all";
+			if (master) mastername =master.getclassname();
+			console.printf ("alerted a %s, the hazard is at %d %d %d, its' pointer is %p, and my master is %s",mobj.gettag(mobj.getclassname()),hazard.position,hazard,mastername);
+			KAI_Actor(Mobj).Hazards.Push(Hazard);
+		}
+	}
+	//DEBUG: Uncomment this to be able to see where the warning zones are at.
+	States
+	{
+		Spawn:
+			KAIS A 4 Bright;
+			Loop;
+	}
+}
+
+//DEPRECATED
 //The actor that warns marines around a specified area to run away from the zone in question, it uses the following properties and flags:
 //MaxTargetRange: Determines the exact size of the warning zone.
 //FIXME: Fix the really fucking stupid bug where when the zone alerts a marine, it will sometimes also alert other friendly NPCs and also make them target said zone.

@@ -387,10 +387,10 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				TRK1 G 0
 				{
 					Actor Marine;
-					Marine = SpawnMarine ((-128, FRandom (16,-16),0));
+					Marine = SpawnMarine ((-128, FRandom (16,-16),0),spawnrunning:True);
 					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
-					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
+					//MVP_NPCDropoffMove ((-128, FRandom (16,-16),0),Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;
 					User_MarineAmount--;
 					If (User_MarineAmount < 5)
@@ -423,7 +423,10 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				A_FaceTarget ();
 				VelFromAngle (14);
 				ChaseTimer = 0; //Just in case.
-				WarningZone = WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,512,towho:Self);
+				Int HazLvl = HazardInfo.HAZARD_MEDIUM;
+				If (Vel.XY.Length() >= 10.0) //The truck is extra dangerous when moving fast due to doing even more damage.
+					HazLvl = HazardInfo.HAZARD_LARGE;
+				WarningZone = WarnNPCs (WRN_WARP|WRN_ALLIESTOO,512,towho:Self,threatlevel:HazLvl);
 				ThreatLevel = THREAT_VERYDANGEROUS; //Very dangerous when ramming.
 				Return State (Null);
 			}

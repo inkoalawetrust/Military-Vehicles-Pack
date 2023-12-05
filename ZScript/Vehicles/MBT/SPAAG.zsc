@@ -114,7 +114,7 @@ Class MVP_SPAAGTurret : MVP_MBTTurret
 		
 		MissileState = FindState ("Fire",True);
 		AttackStates.Push (FindState("Fire",True));
-		WarningZone = WarnMarines (0,256,Self);
+		WarningZone = WarnNPCs (WRN_EXPLOSIVE|WRN_ANTIAIR,256,Self,threatlevel:HazardInfo.HAZARD_HUGE);
 		
 		If (Turret) //Spawn with the radar "lowered".
 			Turret.A_ChangeLinkFlags (1,1);

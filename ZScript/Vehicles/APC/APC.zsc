@@ -347,7 +347,7 @@ Class MVP_APC : MVP_BaseVehicle
 			{
 				A_StartSound ("SFX/Fire",flags:CHANF_LOOPING|CHANF_OVERLAP,attenuation:0.65);
 				SmokeCounter = Random (8,64); //Might as well make this otherwise useless variable useful.
-				WarnMarines (MWRN_WARP|MWRN_ALLIESTOO,80,towho:Self,(32,-48,24));
+				WarnNPCs (WRN_WARP|WRN_ALLIESTOO|WRN_VEHICLEDEATH|WRN_NOFLAMEREMOVE,80,towho:Self,(32,-48,24));
 			}
 			//Fall through
 		DeathFlameLoop:
