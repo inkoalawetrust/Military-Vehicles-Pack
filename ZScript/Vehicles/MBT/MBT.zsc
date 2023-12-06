@@ -1221,6 +1221,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			Proj.Tracer = Decoy;
 			FoundSomething = True;
 		}
+		
 		If (FoundSomething)
 		{
 			A_StartSound ("Vehicle/Tank/AltAPSRun",CHAN_VOICE,CHANF_OVERLAP,attenuation:0.7);
