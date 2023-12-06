@@ -388,6 +388,7 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 			bBloodlessImpact = True;
 			ExplodeMissile(Null,Victim);
 		}
+		
 		If (Victim Is "MVP_MBT" || Victim Is "MVP_MBTProp")
 			bExtremeDeath = (Random(0,255) < 64); //Don't always gib tanks.
 		Else If (Victim.Health >= 10000)
