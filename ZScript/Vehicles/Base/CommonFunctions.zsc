@@ -97,9 +97,11 @@ Mixin Class MVP_SharedFunctions
 	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
 	Int User_ChaseTime; //How much time the vehicle spends looking for its out-of-sight target before giving up.
 	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
+	
 	//Internal variables
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
 	Actor CorpseTarget; //The corpse that the vehicle is trying to crush.
+	
 	//=====|Virtual functions|=====\\
 	Override Void PostBeginPlay()
 	{
@@ -213,7 +215,7 @@ Mixin Class MVP_SharedFunctions
 			
 			If (!(Flags & FNCF_NOSIZECHECK) && Mobj.Radius > MaxCorpseRadius || Mobj.Height > MaxCorpseHeight) Continue; //Actor is too big.
 			
-			If (!CheckSight (Mobj)) Continue; //And at last, check if the corpse is even visible.
+			If (!CheckSight (Mobj) || !IsPosReachable (Mobj.Pos)) Continue; //And at last, check if the corpse is even visible.
 			
 			NearbyCorpses.Push(Mobj); //Add it to the list.
 		}
@@ -410,9 +412,11 @@ Mixin Class MVP_MarineFunctions
 	}
 	
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
-	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool SetMaster = False, Bool SpawnRunning = False)
+	//MAYDO: Since the MVP now needs the KAI library anyway. Maybe make a custom fallback marine ?
+	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool FollowVehicle = False, Bool SpawnRunning = False)
 	{
 		Name CustomMarine = 'SM_Marine';
+		Name SetOrder = 'SM_SetMarineOrder';
 		Class<Actor> WhatToSpawn;
 		Actor Spawnee;
 		
@@ -430,8 +434,25 @@ Mixin Class MVP_MarineFunctions
 		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
 		
 		Spawnee.Angle = Self.Angle;
-		If (SetMaster)
-			Spawnee.Master = Self;
+		If (FollowVehicle && Spawnee Is "SM_Marine")
+		{
+			//Need to use Zandronum hacks to get ZScript to work cross-mod without hard dependencies :)
+			If (CheckActorExists (SetOrder))
+			{
+				Inventory FollowMe = Inventory(Spawn (SetOrder));
+				
+				If (FollowMe)
+				{
+					FollowMe.Health = 1; //ORDER_FOLLOW
+					FollowMe.Master = Self; //The marines' commander, in this case, the vehicle that just spawned them.
+					If (!FollowMe.CallTryPickup (Spawnee))
+						FollowMe.Destroy();
+					else
+						console.printf ("SpawnMarine(): Successfully passed the SetMarineOrder() token to %p",spawnee);
+				}
+			}
+		}
+		
 		//At least try to make the default ZDoom marines a bit smarter.
 		If (WhatToSpawn != CustomMarine)
 		{
@@ -509,7 +530,7 @@ Mixin Class MVP_MarineFunctions
 		
 		Return True;
 	}
-	void warnspecificmarine (actor _fuck_off){return;}
+	
 	//Useful to call after a vehicle drops a marine, to get them to run out of the spawn point to not get stuck.
 	Bool MVP_NPCDropoffMove (Vector3 Offset, Actor NPC)
 	{
@@ -530,9 +551,9 @@ Mixin Class MVP_MarineFunctions
 		}
 		Else
 			{console.printf ("dropoff warning didn't spawn");Return False;}
-		console.printf ("MVP_NPCDropoffMove(): SUCCESS");
-		stuckwarning.printhazardinfo();
-		KAI_actor(NPC).Hazards.Push (StuckWarning);
+		console.printf ("MVP_NPCDropoffMove(): HAZARD SUCCESSFULLY PUSHED TO %p",NPC);
+		//stuckwarning.printhazardinfo();
+		KAI_Actor(NPC).Hazards.Push (StuckWarning);
 		
 		Return True;
 	}

@@ -307,10 +307,10 @@ Class MVP_APC : MVP_BaseVehicle
 				APC1 H 0
 				{
 					Actor Marine;
-					Marine = SpawnMarine ((-120, FRandom (10,-10),0));
+					Marine = SpawnMarine ((-120, RandomPick (10,-10),0),True);
 					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
-					WarnSpecificMarine (Marine); //Get the marine out of the way, so they don't get stuck on each other.
+					MVP_NPCDropoffMove ((-120, 0,48),Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;
 					User_MarineAmount--;
 				}
@@ -328,9 +328,6 @@ Class MVP_APC : MVP_BaseVehicle
 					UpdateThreatLevel();
 				}
 				Goto See;
-		//Waiting for TG5 to finish the sprite edits of the marine crew getting out of the APC and autocannon.
-		/*The APC is supposed to explode, catch on fire, then after about a few seconds, the crew will open the hatches and front door and get out.
-		And THEN the existing death code below runs, where a random amount of passengers also escape.*/
 		Death:
 			APC4 A 2 Bright
 			{
@@ -394,7 +391,8 @@ Class MVP_APC : MVP_BaseVehicle
 					Marine = SpawnMarine ((-112, FRandom (10,-10),0));
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
 					Marine.DamageMobj (Target,Target,Random (24,96),DeathType,DMG_NO_PAIN|DMG_THRUSTLESS); //Harm the marine by a random amount, the source being the APC's killer.
-					WarnSpecificMarine (Marine);
+					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
+					MVP_NPCDropoffMove ((-120, 0,48),Marine);
 					User_MarineAmount--;
 					SmokeCounter = Random (4,16); //Each marine has a random amount of time before they get out too.
 				}
@@ -433,7 +431,7 @@ Class MVP_APC : MVP_BaseVehicle
 				A_SpawnItemEx ("MVP_DestroyedAPCFrontDoor",64,-48,24,FRandom (4,-4),FRandom (-24,-32),FRandom (4,-4));
 				[B,Hatch] = A_SpawnItemEx ("MVP_APCHatch",96,8,48,FRandom (4,8),FRandom (6,-6),FRandom (24,32));
 				Hatch.Scale.X *= 2; Hatch.Scale.Y *= 2; //Big boy hatch, since the sprites are actually for the autocannons' hatch.
-				//Right row wheels, I don't know why the fuck the wheels fly in opposite directions, I've tried fixing it but it just won't go away for some fucking reason.
+				//BUG: Right row wheels, I don't know why the fuck the wheels fly in opposite directions, I've tried fixing it but it just won't go away for some fucking reason.
 				A_SpawnItemEx ("MVP_APCWheel",-32,-48,4,FRandom (6,-6),FRandom (24,32),FRandom (6,12));
 				A_SpawnItemEx ("MVP_APCWheel",96,-48,4,FRandom (6,-6),FRandom (24,32),FRandom (6,12));
 				//Left row wheels

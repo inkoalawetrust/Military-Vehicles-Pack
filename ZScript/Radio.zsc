@@ -26,8 +26,8 @@ Class MVP_Radio : Weapon
 	{
 		ORDER_NONE = 0,
 		ORDER_FOLLOW = 1, //Follow the player when having no target.
-		ORDER_WANDER = 2, //Wander around when having no target, instead of following the player.
-		ORDER_STAY = 3, //Stay in place until a target appears or you are ordered to start moving again. Then stand around again once the chase timer is out.
+		ORDER_STAY = 2, //Stay in place until a target appears or you are ordered to start moving again. Then stand around again once the chase timer is out.
+		ORDER_WANDER = 3, //Wander around when having no target, instead of following the player.
 		ORDER_GOTOPOINT = 4 //Go to the specified patrol point.
 	};
 	
@@ -56,7 +56,7 @@ Class MVP_Radio : Weapon
 	{
 		If (!Invoker.Owner) Return;
 		
-		Name CustomMarine = 'SmartMarine';
+		Name CustomMarine = 'SM_Marine';
 		FLineTraceData VehicleFinder;
 		MVP_BaseVehicle Vehicle;e();
 		Double FireZ = Height/2 - Floorclip + (PlayerPawn(Invoker.Owner).AttackZOffset * Player.CrouchFactor); //Replicates https://github.com/ZDoom/gzdoom/blob/master/src/playsim/p_map.cpp#L4512
@@ -94,22 +94,46 @@ Class MVP_Radio : Weapon
 		}
 	}
 	
+	//HACK: WHY CAN YOU NOT USE MIXINS FROM OTHER MODS FOR FUCKS SAKE. WHY DOES SPECIFYING THAT THE FUNCTION IS CLEARSCOPE AND STATIC DO FUCKING NOTHING.
+	Static ClearScope Bool CheckActorExists (Name ActorClass)
+	{
+		Class<Actor> Act = ActorClass;
+		Return !!Act;
+	}
+	
 	Action Void HandleOrders (Actor Other)
 	{
-		Name CustomMarine = 'SmartMarine';
+		Name CustomMarine = 'SM_Marine';
+		Name OrderToken = 'SM_SetMarineOrder';
 		MVP_BaseVehicle Vehicle;
 		
 		If (!Other) Return;
 		
 		If (Other.bDormant || MVP_BaseVehicle(Other) && MVP_BaseVehicle(Other).bNoOrders || !MarineFollowsCommands (Other) ) Return;
 		
-		//You are ordering a Smart Marine, so do the order by remotely calling Used() on the marine, and change CurrentMarineOrder manually.
-		//BUG: Ordering marines with the radio is fucking broken. Like everything on the marines always is.
 		If (Other Is CustomMarine)
-		{
-			If (Invoker.CurrentOrder == MarineGetCurrentOrder (Other)+1) Return;
-			SetMarineOrderTo (Other,Invoker.CurrentOrder-1);
-			Other.Used (Self);
+		{console.printf ("does %p follow commands ? %d",other,MarineFollowsCommands (Other));
+			//Need to use Zandronum hacks to get ZScript to work cross-mod without hard dependencies :)
+			If (CheckActorExists (OrderToken))
+			{
+				Inventory FollowMe = Inventory(Spawn (OrderToken));
+				
+				If (FollowMe)
+				{console.printf ("telling %p to follow the command %d",other,invoker.currentorder);
+					FollowMe.Health = Invoker.CurrentOrder;
+					//FollowMe.Master = Self; //The marines' commander, in this case, the vehicle that just spawned them.
+					If (!FollowMe.CallTryPickup (Other))
+						FollowMe.Destroy();
+					else
+						console.printf ("MVP_Radio(): Successfully passed the SetMarineOrder() token to %p",other);
+				}
+				
+				//Make marine idle to follow the player or wander.
+				If ((Invoker.CurrentOrder == ORDER_FOLLOW || Invoker.CurrentOrder == ORDER_WANDER) && 
+				Other.InStateSequence(Other.CurState,Other.ResolveState ("Spawn")))
+					Other.SetStateLabel ("Idle");
+			}
+
 			Return;
 		}
 		
@@ -156,7 +180,7 @@ Class MVP_Radio : Weapon
 	Action Void DoRadiusCommand (Actor Origin, Double Range = 1024)
 	{
 		If (!Origin) Return;
-		Name CustomMarine = 'SmartMarine';
+		Name CustomMarine = 'SM_Marine';
 		BlockThingsIterator VehicleFinder = BlockThingsIterator.Create (Origin,Range);
 		Actor Mobj;
 		
@@ -170,31 +194,11 @@ Class MVP_Radio : Weapon
 		}
 	}
 	
+	//HACK: Epic GZDoom fail.
 	Action Bool MarineFollowsCommands (Actor Other)
 	{
 		If (!Other) Return False;
-		
-		Let Check = ServiceIterator.Find ("SM_SmartMarines").Next();
-		
-		Return Check.GetInt ("FollowsOrders",ObjectArg:Other);
-	}
-	
-	Action Void SetMarineOrderTo (Actor Other, Int Order)
-	{
-		If (!Other) Return;
-		
-		Let Command = ServiceIterator.Find ("SM_SmartMarines").Next();
-		
-		Command.GetInt ("SetCurrentMarineOrder",IntArg:Order,ObjectArg:Other);
-	}
-	
-	Action Int MarineGetCurrentOrder (Actor Other)
-	{
-		If (!Other) Return False;
-		
-		Let Value = ServiceIterator.Find ("SM_SmartMarines").Next();
-		
-		Return Value.GetInt ("CurrentMarineOrder",ObjectArg:Other);
+		Return Other.ACS_ScriptCall ("SM_DoesMarineTakeOrders");
 	}
 	
 	States

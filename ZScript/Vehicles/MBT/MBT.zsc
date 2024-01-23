@@ -57,8 +57,8 @@ Class MVP_MBT : MVP_BaseVehicle
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.2;
 		DamageFactor "LargeRifleBullet", 0.2;
-		DamageFactor "MarineGrenade", 0.5;
-		DamageFactor "MarineRifle", 0.55;
+		DamageFactor "MarineGrenade", 0.4;
+		DamageFactor "MarineRifle", 0.1;
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.25;
 		DamageFactor "RifleBullet", 0.1;
@@ -80,7 +80,7 @@ Class MVP_MBT : MVP_BaseVehicle
 		
 		/*I just overheard a secure access transmission...soldiers have arrived and they're coming to rescue us.
 		Of course, I have my doubts that we'll live long enough to greet them.*/
-		If (Random(0,255) < (!User_Stationary ? 16 : 48))
+		If (Random(0,255) < (!User_Stationary ? 24 : 64))
 		{
 			IdleSound = "Vehicle/Tank/IdleOriginal";
 			ActiveSound = "Vehicle/Tank/MoveOriginal";
@@ -246,6 +246,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	//Increase smokescreen chance based on quantity and power of enemies around the target or yourself, and your targets' threat level.
 	Int ShouldDeploySmoke()
 	{
+		//If (IsPatrolling (Self) && bChaseGoal) Return 0;
 		Int Chance = Random (0,200);
 		If (G_SkillPropertyInt (SKILLP_FastMonsters)) Chance += 48; //Bonus chance for spammy fast monsters.
 		Actor Origin = Target;

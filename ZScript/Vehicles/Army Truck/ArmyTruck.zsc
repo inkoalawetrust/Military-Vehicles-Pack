@@ -390,7 +390,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 					Marine = SpawnMarine ((-128, FRandom (16,-16),0),spawnrunning:True);
 					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
-					//MVP_NPCDropoffMove ((-128, FRandom (16,-16),0),Marine); //Get the marine out of the way, so they don't get stuck on each other.
+					MVP_NPCDropoffMove ((-128, FRandom (16,-16),0),Marine); //Get the marine out of the way, so they don't get stuck on each other.
 					MarinesToSpawn--;
 					User_MarineAmount--;
 					If (User_MarineAmount < 5)
