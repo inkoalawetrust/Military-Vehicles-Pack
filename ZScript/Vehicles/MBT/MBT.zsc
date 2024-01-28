@@ -842,6 +842,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Mass 30000;
 		Tag "M6V3-EX Turret";
 		Obituary "%o was blown up by a tank turret";
+		//AutomapOffsets (0,114);
 		KAI_BaseTurret.MaximumPitch -20;
 		KAI_BaseTurret.MinimumPitch 10;
 		KAI_BaseTurret.TurnSoundRadius 0.5;

@@ -10,6 +10,7 @@ Class MVP_APCMachineGun : MVP_BaseTurret
 		Radius 32;
 		Mass 1200;
 		FriendlySeeBlocks 80; //A bit over 10000 map unit sight range, useful for vehicles with actual guns to attack with.
+		//AutomapOffsets (0,143);
 		KAI_BaseTurret.MaximumPitch -60;
 		KAI_BaseTurret.MinimumPitch 20;
 		KAI_BaseTurret.TurnSoundRadius 1.5;
@@ -271,6 +272,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 		Tag "Autocannon Turret";
 		Obituary "%o was blown up by an autocannon";
 		AttackSound "Vehicle/APC/AutocannonFire";
+		//AutomapOffsets (0,143);
 		KAI_BaseVehicle.VehicleTurret "MVP_APCMGTurret";
 		KAI_BaseTurret.MaximumPitch -50;
 		KAI_BaseTurret.MinimumPitch 20;

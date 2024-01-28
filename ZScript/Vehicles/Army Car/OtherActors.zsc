@@ -17,6 +17,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		Tag "Pain Ray";
 		DeathSound "Vehicle/ArmyCar/PainRay/Break";
 		AttackSound "Vehicle/ArmyCar/PainRay/Active";
+		//AutomapOffsets (0,103.5);
 		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		+MissileMore;
 		+LookAllAround;
