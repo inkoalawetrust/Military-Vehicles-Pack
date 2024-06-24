@@ -83,9 +83,16 @@ Class MVP_Handler : EventHandler
 	}
 	//=============================================================================================
 	
+	//HACK: Terms like "static clearscope" mean nothing in GZDoomland, where all classes MUST be in the same mod.
+	Static ClearScope Bool CheckActorExists (Name ActorClass)
+	{
+		Class<Actor> Act = ActorClass;
+		Return !!Act;
+	}
+	
 	Bool SM_MarinesLoaded()
 	{
-		Return EventHandler.Find("SM_MarineHandler");
+		Return CheckActorExists('SM_SetMarineOrder');
 	}
 	
 	Override Void OnRegister()
