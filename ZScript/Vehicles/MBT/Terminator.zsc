@@ -306,5 +306,19 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 			//MBT1 ##### 1 {Frame = UpdateBMPTElevation (6,0,3); /*G, A, D*/}
 			//Goto Fire.ATGM+141; //DEBUG: Loop the missile launcher sequence to test the changing pod positions.
 			Goto See;
+		Death:
+			MBTD G 1
+			{
+				Actor Boom = Spawn ("MVP_Explosion",Vec3Angle (96,GetNearestCardinalAngle(True)).PlusZ(Height/2));
+				Boom.Scale *= 2.5;
+				Boom.SetDamage (300);
+				Boom.MaxTargetRange = 384;
+				Boom.MeleeRange = 96;
+				Boom.bNoGravity = True;
+				Boom.bGetOwner = True; //So the dead tank is considered the source.
+				Boom.Target = Self;
+			}
+			MBTD G 1 RotateToVehicle (RTVF_NOTARGETCHECK);
+			Wait;
 	}
 }

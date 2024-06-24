@@ -93,3 +93,13 @@ decal ATGMScorch
 	RandomFlipX
 	RandomFlipY
 }
+
+decal HESHScorch
+{
+	Pic SCORCH1
+	Shade "00 00 00"
+	X-Scale 1.5
+	Y-Scale 1.5
+	RandomFlipX
+	RandomFlipY
+}

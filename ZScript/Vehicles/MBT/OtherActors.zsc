@@ -165,6 +165,7 @@ Class MVP_HEATShell : MVP_BaseProjectile
 		DamageFunction (Random(600,1000));
 		ProjectileKickback 512;
 		Obituary "%o was sent straight to god by a HEAT shell";
+		Tag "130mm High Explosive Anti Tank Munition";
 		Decal "HEATScorch";
 		DamageType "Shell";
 		KAI_BaseProjectile.TrailActor "MVP_Tracer";
@@ -303,6 +304,7 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 		KAI_BaseProjectile.MaxTrails 256;
 
 		Obituary "%o was penetrated by a depleted uranium rod";
+		Tag "130mm APFSDS Munition";
 		Decal "50CalChip";
 		DamageType "APShell";
 		+HitTracer; //Store the actor that killed the round as the tracer, used by the god mode code.
@@ -458,6 +460,242 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 			TNT1 A 1 A_StartSound ("Vehicle/APC/MGImpact",CHAN_WEAPON);
 			TNT1 A 17 A_QuakeEx (1,1,1,GameTicRate,0,256,falloff:32,rollintensity:1);
 			Stop;
+	}
+}
+
+Class MVP_HESHShell : MVP_BaseProjectile
+{
+	Default
+	{
+		Radius 16;
+		Height 22;
+		Speed 170;
+		FastSpeed 220;
+		XScale 0.25;
+		YScale 0.208333; //0.25 / 1.2
+		DamageFunction (Random(300,500));
+		ProjectileKickback 385;
+		ReactionTime /*17*/1000; //Time before the round detonates.
+		Obituary "%o was smacked by a HESH round";
+		Tag "130mm High Explosive Squash Head Munition";
+		//Decal "HEATScorch";
+		DamageType "Shell";
+		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.InitialTrailsSkipped 12;
+		KAI_BaseProjectile.MaxTrails 256;
+	}
+	
+	Void DoSplash (Int LiquidType, Bool UpsideDown = False)
+	{
+		If (LiquidType == LIQUID_NONE) Return;
+		HitLiquid = True;
+		Actor Splash = SpawnLiquidSplash (LiquidType,"SFX/AltLiquidExplosion",attenuation:0.35,700,256,110,'Explosive', True);
+		
+		Splash.A_QuakeEx (0.6,0.6,0.6,24,0,768,"",QF_SCALEDOWN|QF_GROUNDONLY,rollintensity:1);
+		Double Size = FRandom (3,5);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.Scale.X *= UpsideDown ? FRandom (-1.2,-2.5) : FRandom (1.2,2.5);
+		Splash.bXFlip = Random (False,True);
+	}
+	
+	Override Int DoSpecialDamage (Actor Target, Int Damage, Name DamageType)
+	{
+		If (Target)
+		{
+			If (Pos.Z >= Target.Pos.Z+Target.Height) //Hit the top of an actors' hitbox.
+				AboveMobj = True;
+			Else If (Pos.Z+Height <= Target.Pos.Z) //Hit the bottom of an actors' hitbox.
+				BelowMobj = True;
+		}
+		Int Dmg = Super.DoSpecialDamage (Target, Damage, DamageType);
+		Return Dmg;
+	}
+	
+	//Credit: RaveYard
+	static clearscope double EdgeFunction(Vector2 a, Vector2 b, Vector2 c)
+	{
+		return ((b.X - a.X)*(c.Y - a.Y) - (b.Y - a.Y)*(c.X - a.X));
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (IsFrozen()) Return;
+		If (bMissile) PlayFlybySound ("SFX/BulletFlyby",CHAN_VOICE,CHANF_NOSTOP,1,2.0,distance:600);
+		Else //No longer a missile AKA you hit something, now stick to it like a sticky bomb.
+		{
+			If (!BlockingLine && !BlockingMObj) Return;
+			Vector3 TrackPos;
+			If (BlockingLine && HitSide && (HitSide.Flags & Side.WALLF_POLYOBJ))
+			{
+				//Credit: RaveYard
+				//Get line angle.
+				Vector2 Dir = BlockingLine.Delta;//Level.Vec2Diff (BlockingLine.V1.P,BlockingLine.V2.P);
+				Double LineAngle = VectorAngle (Dir.X,Dir.Y);
+				
+				TrackPos.XY = (((BlockingLine.V1.P + BlockingLine.V2.P) / 2)); //Get the middle point of the line the HESH round hit, that can be considered its' "origin".
+				SetOrigin (KAI_Math.Vec3OffsetRelative2 ((TrackPos.XY,Pos.Z),SquashOfs,(LineAngle,0,0)),True);
+				Console.Printf ("BlockingLine Vertex 1: %d %d | Vertex 2: %d %d",BlockingLine.V1.P,BlockingLine.V2.P);
+				//Angle = GetAngleToPos (TrackPos,0);//HitMObj.Angle + AngDiff;
+				Angle = Atan2 (BlockingLine.Delta.Y,BlockingLine.Delta.X) + AngDiff;
+			}
+			If (BlockingMobj)
+			{
+				//TrackPos = BlockingMobj.Pos;
+				console.printf ("angdiff is %.2f",angdiff);
+				SetOrigin (KAI_Math.Vec3OffsetRelative2 (HitMobj.Pos,SquashOfs,(HitMobj.Angle - AngDiff,0,0)),True);
+				Angle = AngleTo (HitMobj);//HitMObj.Angle + AngDiff;
+			}
+			//SetOrigin (KAI_Math.Vec3OffsetRelative2 (TrackPos,SquashOfs,flags:KAI_Math.V3R_ANGLEONLY),True);
+			console.printf ("MVP_HESHSHELL: Warped to position %d %d %d",pos);
+		}
+	}
+	
+	Override Int SpecialMissileHit (Actor Victim)
+	{
+		If (!FuckYouGZDoom)
+			Return Super.SpecialMissileHit (Victim);
+		Else
+			Return 1;
+	}
+	
+	Bool HitLiquid;
+	DynamicLight Light;
+	Bool AboveMobj, BelowMobj;
+	Vector3 SquashOfs;
+	Double AngDiff;
+	Actor HitMobj;
+	Side HitSide;
+	Bool FuckYouGZDoom;
+	
+	States
+	{
+		Spawn:
+			MBT0 G 1 NoDelay
+			{
+				A_FaceMovementDirection ();
+				Frame = UpdateProjectileElevation (8,8,6,7,7); //I, I, G, H, H
+			}
+			Wait;
+		//TODO: When the the round hits a wall, make its' angle align with the line it hit.
+		Death:
+			TNT1 A 1
+			{
+				//The floor was hit.
+				If (Pos.Z <= FloorZ)
+				{
+					DoSplash(CheckLiquid(FloorPic));
+					Frame = 10; //K
+					SpriteOffset.Y -= 8;
+				}
+				//The ceiling was hit.
+				Else If (Pos.Z + Height >= CeilingZ)
+				{
+					DoSplash(CheckLiquid(CeilingPic),True);
+					bYFlip = True;
+					Frame = 10; //K
+					SpriteOffset.Y -= 16;
+				}
+				
+				If (BlockingLine)
+				{
+					//Fire a trace to get the exact location the shell should stick to.
+					FLineTraceData Trace;
+					LineTrace (Angle,Speed*2,Pitch,TRF_BLOCKSELF|TRF_SOLIDACTORS,offsetforward:-64,data:Trace);
+					SetOrigin ((Trace.HitLocation - Trace.HitDir.Unit() * Radius),True);
+					FSpawnParticleParams P; P.Color1 = "Red"; P.Style = STYLE_None; P.Lifetime = 35*5; P.Size = 2; P.StartAlpha = 1; P.FadeStep = -1; P.Flags = SPF_FULLBRIGHT;
+					KAI_LOFRaycast.VisualizeTracePath(Pos,Trace.HitLocation,Trace.Distance,0.5,p);
+					
+					SquashOfs.XY = Level.Vec2Diff (Pos.XY, ((BlockingLine.V1.P + BlockingLine.V2.P) / 2) );
+					Double EdgeVal = EdgeFunction (BlockingLine.V1.P,BlockingLine.V2.P,Pos.XY);
+					HitSide = (EdgeVal < 0) ? BlockingLine.SideDef[Line.Front] : BlockingLine.SideDef[Line.Back];
+					AngDiff += (EdgeVal < 0) ? 90 : -90; //Change angle offset based on direction of line.
+					Angle = Atan2 (BlockingLine.Delta.Y,BlockingLine.Delta.X) + AngDiff;
+				}
+				
+				If (Frame != 10) Frame = 9; //J: Default impact sprite for the plastic explosive landing on a wall or side of an actor.
+				console.printf ("MVP_HESHSHELL: Hit object at position %d %d %d",pos);
+				If (BlockingMobj)
+				{
+					AngDiff = AbsAngle (Angle, BlockingMobj.Angle);
+					console.printf ("angdiff is now set to %.2f, self is %p, BlockMobj is %p",angdiff,self,blockingmobj);
+					SquashOfs = KAI_Math.Vec3OffsetRelative2((0, 0, 0), Level.Vec3Diff(BlockingMobj.Pos, Pos), (-Angle, 0 , 0));
+					HitMobj = BlockingMobj;
+				}
+				
+				FuckYouGZDoom = True; //HACK: THE SHELL FUCKING HIT, IT'S DONE. IT WILL NOT MAGICALLY COME BACK TO LIFE AND DIE AGAIN !
+				bMissile = False;
+				console.printf ("MVP_HESHSHELL: Offsets upon impact are %d %d %d",squashofs);
+				
+				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+			}
+			MBT0 # 35 A_SetTics (ReactionTime);
+			TNT1 A 0
+			{
+				A_SprayDecal ("HESHScorch");
+				A_SetScale (0.7,0.7);
+				A_SetRenderStyle (1.0,Style_Add);
+				If (Pos.Z + Height >= CeilingZ) Scale.Y = -1; //If a ceiling was hit, invert the explosion.
+				Else If (Pos.Z >= FloorZ+88) Return ResolveState ("Death.Air"); //If the explosion happened above 88 map units from the ground, trigger the air explosion.
+				Return State (Null);
+			}
+			TNT1 A 0
+			{
+				SetZ (FloorZ); //Stick to the ground to explode properly.
+				Light = DynamicLight(Spawn("DynamicLight",Pos));
+				If (Light)
+				{
+					Light.Args[3] = 96;
+					Light.Args[0] = 231; //RGB
+					Light.Args[1] = 207;
+					Light.Args[2] = 13;
+				}
+				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				If (Ring)
+				{
+					Ring.Speed = 1;
+					Ring.FloatSpeed = 0.8;
+					Ring.Threshold = 2;
+					Ring.ReactionTime = (GameTicRate/2);
+				}
+				A_QuakeEx (1.5,1.5,1.5,GameTicRate*2,0,1536,"",QF_SCALEDOWN|QF_GROUNDONLY,falloff:64,rollintensity:1.5);
+				A_StartSound ("SFX/BigExplosion",flags:CHANF_OVERLAP,attenuation:0.35);
+				MakeAlliesImmuneToExplosion (Target, 384);
+				A_Explode (600,384,XF_EXPLICITDAMAGETYPE,True,192,damagetype:"Explosive");
+				RemoveAllyExplosionImmunity();
+				
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+				Duster.ReactionTime = 128;
+				Duster.Threshold = 512;
+			}
+			MBTF JKL 1 {Light.Args[3] += 32;}
+			MBTF MNO 4 {Light.Args[3] += 32;}
+			MBTF P 6 {Light.Args[3] += 32;}
+			MBTF Q 16 {If (Light) Light.Destroy();}
+			Stop;
+		Death.Air:
+			TNT1 A 0
+			{
+				Actor Boom = Spawn ("MVP_MBTFireEffect",Pos);
+				Boom.Scale *= 1.0;
+				Boom.Target = Target;
+				Boom.MaxTargetRange = 384;
+				Boom.MeleeRange = 128;
+				Boom.SetDamage(650);
+			}
+			Stop;
+
+	}
+}
+
+Class MVP_HESHFindHitSpot : KAI_LOFRaycast
+{
+	Override ETraceStatus TraceCallback ()
+	{
+		If (HitLevelGeometry (Results))
+			Return Trace_Stop;
+		
+		Return Trace_Skip;
 	}
 }
 

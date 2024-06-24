@@ -119,9 +119,9 @@ Class MVP_Radio : Weapon
 				Inventory FollowMe = Inventory(Spawn (OrderToken));
 				
 				If (FollowMe)
-				{console.printf ("telling %p to follow the command %d",other,invoker.currentorder);
+				{
 					FollowMe.Health = Invoker.CurrentOrder;
-					//FollowMe.Master = Self; //The marines' commander, in this case, the vehicle that just spawned them.
+					FollowMe.Master = Invoker.Owner; //The marines' commander. In this case, the player ordering them.
 					If (!FollowMe.CallTryPickup (Other))
 						FollowMe.Destroy();
 					else

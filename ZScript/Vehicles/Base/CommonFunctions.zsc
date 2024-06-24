@@ -434,7 +434,7 @@ Mixin Class MVP_MarineFunctions
 		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
 		
 		Spawnee.Angle = Self.Angle;
-		If (FollowVehicle && Spawnee Is "SM_Marine")
+		If (FollowVehicle && Spawnee Is CustomMarine)
 		{
 			//Need to use Zandronum hacks to get ZScript to work cross-mod without hard dependencies :)
 			If (CheckActorExists (SetOrder))

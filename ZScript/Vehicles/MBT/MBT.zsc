@@ -972,10 +972,27 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			}
 		}
 		
-		If (IsDead (Self) && MOD == 'Crush')
+		String HESHSpallObituaries[] = {
+		"%o thought %p was safe behind cover",
+		"%o reported %k for wallhacking",
+		"%o figured out why spall liners are important"};
+		
+		//HESH munition handling.
+		If (Inflictor Is "MVP_HESHShell")
+		{
+			If (MOD == "Shrapnel")
+				Return HESHSpallObituaries[Random(0,HESHSpallObituaries.Size()-1)];
+			
+			If (MOD == "Explosive")
+				Return "%o swallowed the forbidden plasticine";
+			
+			Return Inflictor.Obituary;
+		}
+		
+		If (IsDead (Self) && MOD == 'Crush') //Got crushed by the turret falling.
 			Return "%o had a Russian tank turret fall on them";
 		
-		If (IsDead (Self) && Inflictor Is "MVP_Explosion" || Inflictor Is "MVP_BigExplosion")
+		If (IsDead (Self) && Inflictor Is "MVP_Explosion" || Inflictor Is "MVP_BigExplosion") //Got blown up when the tank was destroyed.
 			Return "%o got blown up along with a tank";
 		
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack); //Return the generic obituary property.
@@ -1791,7 +1808,6 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Marine.Vel.Y = XVel * Sin (Angle) - YVel * Cos (Angle);
 		Marine.Vel.Z = ZVel;
 		Marine.Angle = VectorAngle (Marine.Vel.X,Marine.Vel.Y);
-		console.printf ("%p angle is now %d",marine,marine.angle);
 		
 		If (CustomMarinesAvailable())
 			Marine.SetStateLabel ("Jump.Loop");
