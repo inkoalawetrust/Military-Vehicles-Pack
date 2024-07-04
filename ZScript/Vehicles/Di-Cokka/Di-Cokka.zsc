@@ -27,6 +27,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 		KAI_BaseVehicle.MaxCorpseRadius 24; //Only crushes human sized objects. And only incidentally.
 		KAI_BaseVehicle.MaxCorpseHeight 60;
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL; //The Di-Cokkas' threat level is basically static.
+		KAI_Actor.ActorFollowDist 256;
 		
 		-NoPain; //This vehicle CAN feel pain.
 		PainChance 30;
@@ -155,7 +156,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
-				KAI_LandVehicleChase ("Spawn",chaseflags:CHF_DONTIDLE,followdist:256);
+				KAI_LandVehicleChase ("Spawn",chaseflags:CHF_DONTIDLE,followdist:FollowDist);
 				If (!User_NoCorpseCrush) KAI_CrushCorpses (1);
 			}
 			Loop;

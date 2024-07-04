@@ -97,6 +97,7 @@ Mixin Class MVP_SharedFunctions
 	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
 	Int User_ChaseTime; //How much time the vehicle spends looking for its out-of-sight target before giving up.
 	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
+	KAI_NPCGroup VehicleGroup; //The vehicles' group, with it as the leader. Relevant for vehicles that drop marines, to make them follow it as the master.
 	
 	//Internal variables
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
@@ -109,7 +110,8 @@ Mixin Class MVP_SharedFunctions
 		UpdateUserVariables(); //Pass the vehicles' user variables as properties to the KAI library.
 		If (!bFriendly) Species = 'MilitaryHostile';
 		
-		If (!User_DefaultOrder || User_DefaultOrder ~== "")
+		//URGENT: BUG: Doesn't fucking work?
+		If ((!User_DefaultOrder || User_DefaultOrder ~== "") && bFriendly)
 		{
 			//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
 			Array <PlayerPawn> VisibleFriends;
@@ -118,35 +120,35 @@ Mixin Class MVP_SharedFunctions
 			{
 				If (!PlayerInGame[I]) Continue;
 				
-				If (IsFriend (Players[I].Mo) && CheckSight (Players[I].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+				If (CheckSight (Players[I].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
 					VisibleFriends.Push (Players[I].Mo);
 			}
 			
 			//Found at least one visible friendly player to follow.
-			If (VisibleFriends.Size() - 1 >= 0)
-			{
+			If (VisibleFriends.Size())
+			{//CONSOLE.PRINTF ("default order is follow");
 				SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
-				CurrentOrder = ORDER_FOLLOW;
+				SetNPCOrder (ORDER_FOLLOW);
 			}
 			//No friendplayer, or they are out of sight
 			Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
-			{
-				CurrentOrder = ORDER_WANDER;
+			{//CONSOLE.PRINTF ("default order is wander");
+				SetNPCOrder (ORDER_WANDER);
 				bDontFollowPlayers = True;
 			}
 		}
 		Else If (User_DefaultOrder ~== "Follow")
 		{
-			CurrentOrder = ORDER_FOLLOW;
+			SetNPCOrder (ORDER_FOLLOW);
 		}
 		Else If (User_DefaultOrder ~== "Wander")
 		{
-			CurrentOrder = ORDER_WANDER;
+			SetNPCOrder (ORDER_WANDER);
 			bDontFollowPlayers = True;
 		}
 		Else If (User_DefaultOrder ~== "Stay" || User_DefaultOrder ~== "Stand")
 		{
-			CurrentOrder = ORDER_STAY;
+			SetNPCOrder (ORDER_STAY);
 		}
 	}
 	
@@ -366,11 +368,8 @@ Mixin Class MVP_SharedFunctions
 			Victim.DamageMobj(Self, Self, Victim.Health, 'Melee', DMG_FORCED|DMG_EXPLOSION);
 		}
 	}
-}
-
-Mixin Class MVP_MarineFunctions
-{
-	//=====|Marine related functions|=====\\
+	
+	//=====|Non-vehicle NPC related functions|=====\\
 	//Check if the smart marines are loaded.
 	Bool CustomMarinesAvailable()
 	{
@@ -382,6 +381,68 @@ Mixin Class MVP_MarineFunctions
 			Return False;
 	}
 	
+	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
+	//MAYDO: Since the MVP now needs the KAI library anyway. Maybe make a custom fallback marine ?
+	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool FollowVehicle = False, Bool SpawnRunning = False)
+	{
+		Name CustomMarine = 'SM_Marine';
+		Name MarineGroup = 'SM_MarineGroup';
+		Class<Actor> WhatToSpawn;
+		Actor Spawnee;
+		
+		If (CustomMarinesAvailable())
+			WhatToSpawn = CustomMarine;
+		//Smart Marines aren't loaded, so spawn shitty ZDoom marines instead.
+		Else
+			WhatToSpawn = "MarineChaingun";
+		
+		Spawnee = Spawn (WhatToSpawn,KAI_Math.Vec3OffsetRelative (Self,Position,flags:KAI_Math.V3R_ANGLEONLY),ALLOW_REPLACE);
+		If (Target != Goal)
+			Spawnee.CopyFriendliness (Self,True);
+		Else
+			Spawnee.CopyFriendliness (Self,False);
+		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
+		
+		Spawnee.Angle = Self.Angle;
+		If (FollowVehicle && Spawnee Is CustomMarine)
+		{
+			KAI_Actor(Spawnee).SetNPCOrder (KAI_Actor.ORDER_FOLLOW,False,Self);
+			//Spawnee.Master = Self;
+			//Spawnee.bDontFollowPlayers = True;
+			//Add dropped marines to the vehicles' group. Create the group if there's not one already.
+			If (!VehicleGroup)
+			{
+				Array<Actor> Members; Members.Push (Spawnee);
+				VehicleGroup = KAI_NPCGroup.CreateGroup (String.Format ("%s group",GetTag()),Members,Self,0,MarineGroup);
+			}
+			Else
+				VehicleGroup.AddNPCToGroup (Spawnee);
+		}
+		
+		//At least try to make the default ZDoom marines a bit smarter.
+		If (WhatToSpawn != CustomMarine)
+		{
+			Spawnee.Speed = 16;
+			Spawnee.bSeeFriendlyMonsters = True;
+			Spawnee.FriendlySeeBlocks = 16;
+			Spawnee.bAvoidMelee = Spawnee.bAvoidHazards = True;
+		}
+		Else
+		{
+			Name DeployToken = 'SM_VehicleDropToken';
+			//Helps when a vehicle drops multiple marines, so they don't get stuck.
+			If (SpawnRunning)
+				Spawnee.GiveInventoryType (DeployToken);
+		}
+		
+		Return Spawnee;
+	}
+}
+
+//NOTE: Big mess, these are no longer really marine related functions.
+Mixin Class MVP_MarineFunctions
+{
+	//=====|Marine related functions|=====\\
 	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
 	Bool MarineIsOnTurret (Actor Other)
 	{Return False; //PLACEHOLDER: When I get around to remaking the marines' turrets, I'll make a proper emplacement system for KAI_Humanoid, or try anyway.
@@ -402,74 +463,13 @@ Mixin Class MVP_MarineFunctions
 	//Is the other actor a smart marine or player on a turret ?
 	Bool MarineOrPlayerOnTurret (Actor Other)
 	{Return False; //PLACEHOLDER: When I get around to remaking the marines' turrets, I'll make a proper emplacement system for KAI_Humanoid, or try anyway.
-		If (!Other) Return False;
+		/*If (!Other) Return False;
 		Name CustomMarine = 'SmartMarine';
 		Name CustomTurretMarine = "TurretMarine";
 		Name TurretWeapon = 'SmartMarineMGWeapon';
 		Return (CustomMarinesAvailable() && (Other Is CustomMarine && MarineIsOnTurret (Other)
 		|| Other Is CustomTurretMarine
-		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon));
-	}
-	
-	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
-	//MAYDO: Since the MVP now needs the KAI library anyway. Maybe make a custom fallback marine ?
-	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool FollowVehicle = False, Bool SpawnRunning = False)
-	{
-		Name CustomMarine = 'SM_Marine';
-		Name SetOrder = 'SM_SetMarineOrder';
-		Class<Actor> WhatToSpawn;
-		Actor Spawnee;
-		
-		If (CustomMarinesAvailable())
-			WhatToSpawn = CustomMarine;
-		//Smart Marines aren't loaded, so spawn shitty ZDoom marines instead.
-		Else
-			WhatToSpawn = "MarineChaingun";
-		
-		Spawnee = Spawn (WhatToSpawn,KAI_Math.Vec3OffsetRelative (Self,Position,flags:KAI_Math.V3R_ANGLEONLY),ALLOW_REPLACE);
-		If (Target != Goal)
-			Spawnee.CopyFriendliness (Self,True);
-		Else
-			Spawnee.CopyFriendliness (Self,False);
-		Spawnee.bSummonedMonster = True; //Mark marines as being spawned from another actor.
-		
-		Spawnee.Angle = Self.Angle;
-		If (FollowVehicle && Spawnee Is CustomMarine)
-		{
-			//Need to use Zandronum hacks to get ZScript to work cross-mod without hard dependencies :)
-			If (CheckActorExists (SetOrder))
-			{
-				Inventory FollowMe = Inventory(Spawn (SetOrder));
-				
-				If (FollowMe)
-				{
-					FollowMe.Health = 1; //ORDER_FOLLOW
-					FollowMe.Master = Self; //The marines' commander, in this case, the vehicle that just spawned them.
-					If (!FollowMe.CallTryPickup (Spawnee))
-						FollowMe.Destroy();
-					else
-						console.printf ("SpawnMarine(): Successfully passed the SetMarineOrder() token to %p",spawnee);
-				}
-			}
-		}
-		
-		//At least try to make the default ZDoom marines a bit smarter.
-		If (WhatToSpawn != CustomMarine)
-		{
-			Spawnee.Speed = 16;
-			Spawnee.bSeeFriendlyMonsters = True;
-			Spawnee.FriendlySeeBlocks = 16;
-			Spawnee.bAvoidMelee = Spawnee.bAvoidHazards = True;
-		}
-		Else
-		{
-			Name DeployToken = 'SM_VehicleDropToken';
-			//Helps when a vehicle drops multiple marines, so they don't get stuck.
-			If (SpawnRunning)
-				Spawnee.GiveInventoryType (DeployToken);
-		}
-		
-		Return Spawnee;
+		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon));*/
 	}
 	
 	Enum NPCWarnFlags
@@ -493,7 +493,6 @@ Mixin Class MVP_MarineFunctions
 	//Origin: The origin of the hazard zone, used for the standard attack hazard.
 	Actor WarnNPCs (Int Flags = WRN_WARP, Double Range = 256, Actor ToWho = Null, Vector3 Offsets = (0,0,0), Int ThreatLevel = HazardInfo.HAZARD_MEDIUM, Actor Origin = Null)
 	{
-		If (!CustomMarinesAvailable()) Return Null;
 		Vector3 SpawnPos = ToWho ? KAI_Math.Vec3OffsetRelative(ToWho,Offsets) : Self.Pos;
 		Let WarnZone = Spawn ("MVP_HazardZone",SpawnPos);
 		

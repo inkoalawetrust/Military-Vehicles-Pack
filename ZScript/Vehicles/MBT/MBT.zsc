@@ -30,6 +30,7 @@ Class MVP_MBT : MVP_BaseVehicle
 		RipLevelMin 16;
 		KAI_Actor.ThreatLevel THREAT_VERYDANGEROUS;
 		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
+		KAI_Actor.ActorFollowDist 512;
 		KAI_BaseVehicle.VehicleTurret "MVP_MBTTurret"; //Normal tank turret.
 		KAI_BaseVehicle.MaxPushMass 25000;
 		KAI_BaseVehicle.MaxPushRadius 128;
@@ -538,7 +539,7 @@ Class MVP_MBT : MVP_BaseVehicle
 				Else
 					RetreatRange = RealRange;
 				
-				KAI_LandVehicleChase (flags:LVC_USERETREATSTATE|LVC_PLAYERSASTHREATS|LVC_MAKEFRIENDSIDLE|(DoZigZag ? LVC_ZIGZAGGING : 0),turnradius:TankAngleLimit,512);
+				KAI_LandVehicleChase (flags:LVC_USERETREATSTATE|LVC_PLAYERSASTHREATS|LVC_MAKEFRIENDSIDLE|(DoZigZag ? LVC_ZIGZAGGING : 0),turnradius:TankAngleLimit,FollowDist);
 				RetreatRange = RealRange;
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 				Return State (Null);

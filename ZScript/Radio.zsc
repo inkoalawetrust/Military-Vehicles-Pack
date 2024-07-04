@@ -109,10 +109,11 @@ Class MVP_Radio : Weapon
 		
 		If (!Other) Return;
 		
-		If (Other.bDormant || MVP_BaseVehicle(Other) && MVP_BaseVehicle(Other).bNoOrders || !MarineFollowsCommands (Other) ) Return;
+		If (Other.bDormant || MVP_BaseVehicle(Other) && KAI_Actor(Other).bIgnoreOrders || !MarineFollowsCommands (Other) ) Return;
 		
 		If (Other Is CustomMarine)
 		{console.printf ("does %p follow commands ? %d",other,MarineFollowsCommands (Other));
+			
 			//Need to use Zandronum hacks to get ZScript to work cross-mod without hard dependencies :)
 			If (CheckActorExists (OrderToken))
 			{
@@ -197,8 +198,8 @@ Class MVP_Radio : Weapon
 	//HACK: Epic GZDoom fail.
 	Action Bool MarineFollowsCommands (Actor Other)
 	{
-		If (!Other) Return False;
-		Return Other.ACS_ScriptCall ("SM_DoesMarineTakeOrders");
+		If (!Other || !(Other Is "KAI_Actor")) Return False;
+		Return !KAI_Actor(Other).bIgnoreOrders;
 	}
 	
 	States

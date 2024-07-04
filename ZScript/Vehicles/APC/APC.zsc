@@ -23,6 +23,7 @@ Class MVP_APC : MVP_BaseVehicle
 		ActiveSound "Vehicle/APC/Moving";
 		DeathSound "SFX/Explosion";
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //MAYDO: It should be THREAT_VERYDANGEROUS instead, at least when it has a turret. But I think I'll reserve that for future vehicles like the MBT.
+		KAI_Actor.ActorFollowDist 384;
 		
 		//"Armor"
 		DamageFactor 0.75; //Generic damage factor.
@@ -269,7 +270,7 @@ Class MVP_APC : MVP_BaseVehicle
 				Params.StepThreshold = 32;
 				Params.RunRad = 384;
 				
-				KAI_LandVehicleChase ("Spawn",LVC_ATTACKWHENSCARED,turnradius:8,384,Params);
+				KAI_LandVehicleChase ("Spawn",LVC_ATTACKWHENSCARED,turnradius:8,FollowDist,Params);
 				
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 			}

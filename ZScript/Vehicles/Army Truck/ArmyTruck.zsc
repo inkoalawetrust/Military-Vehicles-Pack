@@ -17,6 +17,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 		RipLevelMin 2;
 		MeleeRange 96; //Used for when the truck runs away.
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //Carries a lot of soldiers by default.
+		KAI_Actor.ActorFollowDist 384;
 		
 		Obituary "%o was ran over by a truck.";
 		Tag "Army Truck";
@@ -354,7 +355,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				Params.Attempts = 32;
 				Params.StepThreshold = 56;
 				Params.RunRad = 512;
-				KAI_LandVehicleChase (flags:LVC_ATTACKWHENSCARED|LVC_MAKEFRIENDSIDLE,turnradius:6,followdist:384,moveparams:Params);
+				KAI_LandVehicleChase (flags:LVC_ATTACKWHENSCARED|LVC_MAKEFRIENDSIDLE,turnradius:6,followdist:FollowDist,moveparams:Params);
 			}
 			Loop;
 		//The trucks' marine deploying loop.

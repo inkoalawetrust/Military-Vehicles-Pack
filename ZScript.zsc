@@ -92,7 +92,7 @@ Class MVP_Handler : EventHandler
 	
 	Bool SM_MarinesLoaded()
 	{
-		Return CheckActorExists('SM_SetMarineOrder');
+		Return CheckActorExists('SM_DogRageToken');
 	}
 	
 	Override Void OnRegister()

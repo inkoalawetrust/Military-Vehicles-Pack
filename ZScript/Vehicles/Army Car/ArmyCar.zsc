@@ -14,6 +14,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Tag "Army Car";
 		KAI_BaseVehicle.VehicleTurret "MVP_PainRay";
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
+		KAI_Actor.ActorFollowDist 384;
 		DamageFactor "MarineGrenade", 1.25;
 		DamageFactor "Grenade", 1.25;
 		DamageFactor "RifleBullet", 0.9;
