@@ -514,10 +514,10 @@ Class MVP_MBT : MVP_BaseVehicle
 				If (User_CrushMode == CRUSH_ACTIVE)
 					If (!Target || Distance3DSquared (Target) > TankCrushRange*TankCrushRange || IsFlying(Target))
 						MBT_RunShitOver (360,TankCrushRange);
-				MoveToParams Params;//console.printf ("retreat dist %d",retreatrange);
+				KAIMoveParams Params;//console.printf ("retreat dist %d",retreatrange);
 				Params.DetourFactor = 0.25;
 				Params.Attempts = 32;
-				Params.StepThreshold = 32;
+				Params.MaxSteps = 32;
 				Params.RunRad = 384;
 				
 				Bool TargetLevel = AssessThreatLevel (Target);
@@ -1974,11 +1974,12 @@ Class MVP_MBTRWS : MVP_BaseTurret
 			{
 				DoCombatTraverse();
 				RotateToVehicle();
-				MoveToParams Params;
+				//NOTE: Wait what? Why did I pass movement parameters for a fucking turret lmao? Well, guess I'll keep it as is for now.
+				KAIMoveParams Params;
 				Params.RunRad = 256;
 				Params.DetourFactor = 1.0;
 				Params.Attempts = 32;
-				Params.StepThreshold = 32;
+				Params.MaxSteps = 32;
 				KAI_LandVehicleChase (chaseflags:CHF_DONTIDLE|CHF_DONTMOVE,moveparams:params);
 				UpdateTurretSnapTimer();
 				Frame = UpdateRWSElevation (24,18,20,22); //Y, S, U, W

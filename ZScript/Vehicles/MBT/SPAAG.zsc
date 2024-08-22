@@ -447,7 +447,7 @@ Class MVP_AAShell : MVP_AutocannonShell
 		Return Dmg;
 	}
 	
-	Override Void TrailSpawn (Actor Trail)
+	Override Void TrailSpawn (VisualThinker Trail)
 	{
 		Super.TrailSpawn (Trail);
 		

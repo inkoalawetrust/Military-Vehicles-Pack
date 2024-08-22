@@ -350,10 +350,10 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.6);
 				
-				MoveToParams Params;
+				KAIMoveParams Params;
 				Params.DetourFactor = 0.9;
 				Params.Attempts = 32;
-				Params.StepThreshold = 56;
+				Params.MaxSteps = 56;
 				Params.RunRad = 512;
 				KAI_LandVehicleChase (flags:LVC_ATTACKWHENSCARED|LVC_MAKEFRIENDSIDLE,turnradius:6,followdist:FollowDist,moveparams:Params);
 			}

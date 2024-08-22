@@ -168,7 +168,7 @@ Class MVP_HEATShell : MVP_BaseProjectile
 		Tag "130mm High Explosive Anti Tank Munition";
 		Decal "HEATScorch";
 		DamageType "Shell";
-		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.TrailSprite "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 24;
 		KAI_BaseProjectile.MaxTrails 256;
 	}
@@ -299,7 +299,7 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 		RipperLevel 12;
 		
 		KAI_BaseProjectile.RipDepth 32;
-		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.TrailSprite "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 24;
 		KAI_BaseProjectile.MaxTrails 256;
 
@@ -316,12 +316,12 @@ Class MVP_APFSDSShell : MVP_BaseProjectile
 		+KAI_BaseProjectile.RipOnce;
 	}
 	
-	Override Void TrailSpawn (Actor Trail)
+	Override Void TrailSpawn (VisualThinker Trail)
 	{
 		Super.TrailSpawn (Trail);
 		If (!Trail) Return;
 		
-		Trail.A_SetTranslation ("Tracer_White"); //Cum blast
+		Trail.SetTranslation ("Tracer_White"); //Cum blast
 	}
 	
 	//P_RipperBlood() is not exposed to ZScript, like most useful functions apparently. So I had to copy it here for the DU dart.
@@ -480,7 +480,7 @@ Class MVP_HESHShell : MVP_BaseProjectile
 		Tag "130mm High Explosive Squash Head Munition";
 		//Decal "HEATScorch";
 		DamageType "Shell";
-		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.TrailSprite "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 12;
 		KAI_BaseProjectile.MaxTrails 256;
 	}
@@ -801,7 +801,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 		Height 16;
 		Speed 80;
 		FastSpeed 120;
-		DamageFunction (Random(500,800));
+		DamageFunction (Random(600,800));
 		Decal "ATGMScorch";
 		DamageType "Missile";
 		Projectile;
@@ -864,9 +864,9 @@ Class MVP_ATGM : MVP_BaseProjectile
 	}
 	
 	//Rocket trail.
-	Override Void TrailSpawn (Actor Trail)
+	Override Void ActorTrailSpawn (Actor Trail)
 	{
-		Super.TrailSpawn(Trail);
+		Super.ActorTrailSpawn(Trail);
 		Trail.bStandStill = True;
 		Trail.SetOrigin (KAI_Math.Vec3OffsetRelative (Self,(-48,0,0)),False);
 		Trail.Roll = FRandom(-180,180);
@@ -1094,7 +1094,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 	}
 }
 
-Class MVP_RocketFlame : MVP_Tracer
+Class MVP_RocketFlame : KAI_TracerActor
 {
 	Default
 	{

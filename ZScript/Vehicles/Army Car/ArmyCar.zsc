@@ -249,10 +249,10 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 				A_StopSound (CHAN_IDLING);
 				A_StartSound ("Vehicle/ArmyCar/Moving",CHAN_MOVING,CHANF_LOOPING,attenuation:0.8);
 				
-				MoveToParams Params;
+				KAIMoveParams Params;
 				Params.DetourFactor = 0.70;
 				Params.Attempts = 32;
-				Params.StepThreshold = 48;
+				Params.MaxSteps = 48;
 				Params.RunRad = 384;
 				
 				KAI_LandVehicleChase(chaseflags:CHF_DONTIDLE,moveparams:Params);

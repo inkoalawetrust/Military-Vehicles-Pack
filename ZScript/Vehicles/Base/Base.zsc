@@ -288,22 +288,22 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 		}
 	}
 	
-	Override Void TrailSpawn (Actor Trail)
+	Override Void TrailSpawn (VisualThinker Trail)
 	{
 		Super.TrailSpawn(Trail);
 		
-		Trail.bNeverRespawn = True; //Make bullet and missile tracers vanish once the projectile vanishes or explodes.
+		If (Trail Is "KAI_Tracer")
+			KAI_Tracer(Trail).DestroyIfNoOwner = True; //Make bullet and missile tracers vanish once the projectile vanishes or explodes.
 	}
 }
 
 //The MVPs' stock bullet tracer.
 Class MVP_Tracer : KAI_Tracer
 {
-	States
+	Override Void SetProperties()
 	{
-		Spawn:
-			MVP1 B -1 Bright;
-			Stop;
+		Super.SetProperties();
+		DefaultSprite = TexMan.CheckForTexture("MVP1B0",TexMan.Type_Sprite);
 	}
 }
 

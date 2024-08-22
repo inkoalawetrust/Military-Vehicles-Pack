@@ -673,7 +673,7 @@ Class MVP_50CalBullet : MVP_BaseProjectile
 		Decal "50CalChip";
 		DamageType "LargeRifleBullet";
 		BounceSound "SFX/BulletRicochet";
-		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.TrailSprite "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 4;
 		KAI_BaseProjectile.MaxTrails 128;
 		KAI_BaseProjectile.RipDepth 5;
@@ -789,7 +789,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		DamageType "RifleBullet";
 		Obituary "%o found out that rifle rounds are more dangerous than in the movies";
 		BounceSound "SFX/BulletRicochet";
-		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.TrailSprite "MVP_Tracer";
 		KAI_BaseProjectile.InitialTrailsSkipped 2;
 		KAI_BaseProjectile.MaxTrails 64;
 		KAI_BaseProjectile.TrailLineSpacing 1;
@@ -808,7 +808,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		Splash.bXFlip = Random (False,True);
 	}
 	
-	Override Void TrailSpawn (Actor Trail)
+	Override Void TrailSpawn (VisualThinker Trail)
 	{
 		Super.TrailSpawn (Trail);
 		
@@ -897,7 +897,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		Obituary "%o took a 30mm round to the face";
 		Decal "30mmScorch";
 		DamageType "Autocannon";
-		KAI_BaseProjectile.TrailActor "MVP_Tracer";
+		KAI_BaseProjectile.TrailSprite "MVP_AutocannonTrail";
 		KAI_BaseProjectile.TrailDelay 1;
 		KAI_BaseProjectile.InitialTrailsSkipped 16;
 		KAI_BaseProjectile.TrailFadeAndScaleStart 64;
@@ -906,13 +906,6 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 		KAI_BaseProjectile.ScaleAmountX -0.05;
 		KAI_BaseProjectile.ScaleAmountY -0.05;
 		KAI_BaseProjectile.FadeAmount -0.05;
-	}
-	
-	Override Void TrailSpawn (Actor Trail)
-	{
-		Super.TrailSpawn (Trail);
-		
-		Trail.Scale.X = Trail.Scale.Y = 1.1;
 	}
 	
 	Override Void Tick()
@@ -1066,6 +1059,15 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 			GAXP C 0 {If (Light) Light.Destroy();}
 			GAXP DEFGHIJ 4 Bright;
 			Stop;
+	}
+}
+
+Class MVP_AutocannonTrail : MVP_Tracer
+{
+	Override Void SetProperties()
+	{
+		Super.SetProperties();
+		DefaultScale = (1.1,1.1);
 	}
 }
 
