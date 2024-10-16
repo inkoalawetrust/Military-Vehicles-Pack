@@ -71,6 +71,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		Super.OnTurretDeath(DeadTurret,Removed);
 		
 		User_PainRay = False; //No more painray.
+		If (DeadTurret) DeadTurret.AutomapOffsets = (0,0); //No more automap offsets, we fell off + ratio.
 		If (!CanAttack()) ThreatLevel = THREAT_NONE; //Check if the car has no attacks left to lower the threat level.
 	}
 	

@@ -206,6 +206,7 @@ Class MVP_APCMachineGunProp : MVP_BaseTurretProp
 		Mass 700;
 		KAI_BaseTurret.MaximumPitch -70;
 		KAI_BaseTurret.MinimumPitch 20;
+		AutomapOffsets (0,143);
 		Tag "Machine Gun Turret (Prop)";
 		Obituary "%o is bad at prop hunt";
 		DamageFactor "Autocannon", 0.8;
@@ -274,6 +275,7 @@ Class MVP_APCAutocannonProp : MVP_APCMachineGunProp
 		Mass 1000;
 		Tag "Autocannon Turret (Prop)";
 		Obituary "%o got killed by an empty prop";
+		AutomapOffsets (0,143);
 		KAI_BaseVehicle.VehicleTurret "MVP_APCMGTurretProp";
 	}
 	
@@ -349,6 +351,7 @@ Class MVP_APCMGTurretProp : KAI_BaseTurretProp
 		Radius 24;
 		Mass 125;
 		RipLevelMin 1;
+		AutomapOffsets (0,182);
 		KAI_BaseTurret.MaximumPitch -60;
 		KAI_BaseTurret.MinimumPitch 20;
 		Obituary "%o found out that even empty guns can kill %h"; //First time I've had to actually use an obituary keyword that isn't %o lol.

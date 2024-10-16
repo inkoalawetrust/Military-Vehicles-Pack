@@ -145,9 +145,9 @@ Class MVP_APC : MVP_BaseVehicle
 	{
 		Int Lvl = Super.AssessThreatLevel (Other, CheckPlayers);
 		
-		//If you have a turret, and the other actor is not above THREAT_VERYDANGEROUS, harmless, or a marine or player on a turret.
+		//If you have a turret, and the other actor is not above THREAT_VERYDANGEROUS or harmless.
 		//Then dial down the returned threat level a notch. Since armed APCs' trivialize a lot of enemies.
-		If (Turret && !IsDead (Turret) && Lvl <= THREAT_VERYDANGEROUS && Lvl <= THREAT_NONE && !MarineOrPlayerOnTurret (Other))
+		If (Turret && !IsDead (Turret) && Lvl <= THREAT_VERYDANGEROUS && Lvl != THREAT_NONE)
 			Return Lvl-1;
 		
 		Return Lvl;

@@ -233,6 +233,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		MaxTargetRange 6144;
 		Tag "Di-Cokka Turret";
 		Obituary "%o was blown up by a Rebel tank.";
+		AutomapOffsets (0,111);
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
 		KAI_BaseTurret.MaximumPitch -20;
 		KAI_BaseTurret.MinimumPitch 10;
@@ -427,7 +428,7 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 	States
 	{
 		Spawn:
-			MSV1 A 0;
+			MSV1 G 0;
 			MSV1 # 1
 			{
 				RotateToVehicle();

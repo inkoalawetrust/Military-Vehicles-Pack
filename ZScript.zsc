@@ -90,7 +90,7 @@ Class MVP_Handler : EventHandler
 		Return !!Act;
 	}
 	
-	Bool SM_MarinesLoaded()
+	Bool SM_MarinesLoaded() //Look for smart marine marine-specific class.
 	{
 		Return CheckActorExists('SM_DogRageToken');
 	}

@@ -1,9 +1,7 @@
 //The radio that is used to issue commands to vehicle friendly to the radio operator.
 
 //To do:
-//See if it would be possible to order vehicles (And even marines (!)) to go to a certain point, if they aren't already patrolling.
-//I should probably make my own walkie talkie sprites at some point, that way I can also do stuff like make the current order and command type visible on overlays that appear on the radios' screen.
-//God fucking fuck fuck make the fucking radio work with my marines again ffuck fuck/
+//Make radio work with the KAI NPC order system, apparently I forgot to do this even though I thought I did.
 
 Class MVP_Radio : Weapon
 {
@@ -22,15 +20,6 @@ Class MVP_Radio : Weapon
 		+Inventory.InvBar;
 	}
 	
-	Enum VehicleCommands
-	{
-		ORDER_NONE = 0,
-		ORDER_FOLLOW = 1, //Follow the player when having no target.
-		ORDER_STAY = 2, //Stay in place until a target appears or you are ordered to start moving again. Then stand around again once the chase timer is out.
-		ORDER_WANDER = 3, //Wander around when having no target, instead of following the player.
-		ORDER_GOTOPOINT = 4 //Go to the specified patrol point.
-	};
-	
 	Enum OrderType
 	{
 		TYPE_RAYCAST = 1, //Order the vehicle in front of the player.
@@ -47,28 +36,26 @@ Class MVP_Radio : Weapon
 		Super.PostBeginPlay();
 		
 		//Default settings
-		CurrentOrder = ORDER_STAY;
+		CurrentOrder = KAI_Actor.ORDER_STAY;
 		CurrentType = TYPE_RAYCAST;
 		Crosshair = 7; //The default order type requires you to actually aim at the vehicles.
 	}
 	
 	Action Void A_CallRadio()
 	{
-		If (!Invoker.Owner) Return;
+		If (!Invoker.Owner) Return; //Bruh
 		
-		Name CustomMarine = 'SM_Marine';
-		FLineTraceData VehicleFinder;
-		MVP_BaseVehicle Vehicle;e();
-		Double FireZ = Height/2 - Floorclip + (PlayerPawn(Invoker.Owner).AttackZOffset * Player.CrouchFactor); //Replicates https://github.com/ZDoom/gzdoom/blob/master/src/playsim/p_map.cpp#L4512
-		Actor Mobj;
+		FLineTraceData NPCFinder;
+		MVP_BaseVehicle Vehicle;
+		Double FireZ = Height/2 - Floorclip + (PlayerPawn(Invoker.Owner).AttackZOffset * Player.CrouchFactor);e(); //Replicates https://github.com/ZDoom/gzdoom/blob/master/src/playsim/p_map.cpp#L4512
+		KAI_Actor Mobj;
 		
 		If (Invoker.CurrentType == TYPE_RAYCAST)
 		{
-			LineTrace (Angle,PLAYERMISSILERANGE,BulletSlope(),0,FireZ,data:VehicleFinder);
+			LineTrace (Angle,PLAYERMISSILERANGE,BulletSlope(),0,FireZ,data:NPCFinder);
+			Mobj = KAI_Actor(NPCFinder.HitActor);
 			
-			Mobj = VehicleFinder.HitActor;
-			
-			If (VehicleFinder.HitType == Trace_HitActor && (Mobj Is "MVP_BaseVehicle" || Mobj Is CustomMarine) && IsFriend (Mobj) && Mobj.Health > 0)
+			If (Mobj && IsFriend (Mobj) && Mobj.Health > 0)
 			{
 				//If (Vehicle.CurrentOrder == Invoker.CurrentOrder) Return;
 				
@@ -78,73 +65,27 @@ Class MVP_Radio : Weapon
 		}
 		Else If (Invoker.CurrentType == TYPE_RADIUS)
 		{
-			DoRadiusCommand (Self);
+			DoRadiusCommand (Invoker.Owner.Pos);
 			Return;
 		}
 		Else If (Invoker.CurrentType == TYPE_RAYCASTRADIUS)
 		{
-			LineTrace (Angle,PLAYERMISSILERANGE,BulletSlope(),0,FireZ,data:VehicleFinder);
-			
-			Mobj = Spawn ("BulletPuff",VehicleFinder.HitLocation);
-			
-			DoRadiusCommand (Mobj);
-			
-			Mobj.Destroy();
+			LineTrace (Angle,PLAYERMISSILERANGE,BulletSlope(),0,FireZ,data:NPCFinder);
+			DoRadiusCommand (NPCFinder.HitLocation);
 			Return;
 		}
 	}
 	
-	//HACK: WHY CAN YOU NOT USE MIXINS FROM OTHER MODS FOR FUCKS SAKE. WHY DOES SPECIFYING THAT THE FUNCTION IS CLEARSCOPE AND STATIC DO FUCKING NOTHING.
-	Static ClearScope Bool CheckActorExists (Name ActorClass)
+	Action Void HandleOrders (KAI_Actor Other)
 	{
-		Class<Actor> Act = ActorClass;
-		Return !!Act;
-	}
-	
-	Action Void HandleOrders (Actor Other)
-	{
-		Name CustomMarine = 'SM_Marine';
-		Name OrderToken = 'SM_SetMarineOrder';
-		MVP_BaseVehicle Vehicle;
-		
 		If (!Other) Return;
 		
-		If (Other.bDormant || MVP_BaseVehicle(Other) && KAI_Actor(Other).bIgnoreOrders || !MarineFollowsCommands (Other) ) Return;
+		If (Other.bDormant) Return;
 		
-		If (Other Is CustomMarine)
-		{console.printf ("does %p follow commands ? %d",other,MarineFollowsCommands (Other));
-			
-			//Need to use Zandronum hacks to get ZScript to work cross-mod without hard dependencies :)
-			If (CheckActorExists (OrderToken))
-			{
-				Inventory FollowMe = Inventory(Spawn (OrderToken));
-				
-				If (FollowMe)
-				{
-					FollowMe.Health = Invoker.CurrentOrder;
-					FollowMe.Master = Invoker.Owner; //The marines' commander. In this case, the player ordering them.
-					If (!FollowMe.CallTryPickup (Other))
-						FollowMe.Destroy();
-					else
-						console.printf ("MVP_Radio(): Successfully passed the SetMarineOrder() token to %p",other);
-				}
-				
-				//Make marine idle to follow the player or wander.
-				If ((Invoker.CurrentOrder == ORDER_FOLLOW || Invoker.CurrentOrder == ORDER_WANDER) && 
-				Other.InStateSequence(Other.CurState,Other.ResolveState ("Spawn")))
-					Other.SetStateLabel ("Idle");
-			}
-
-			Return;
-		}
-		
-		If (Other Is "MVP_BaseVehicle") Vehicle = MVP_BaseVehicle(Other);
-		
-		If (Vehicle.CurrentOrder == Invoker.CurrentOrder) Return;
-		
-		Vehicle.CurrentOrder = Invoker.CurrentOrder;
-		
-		If (Invoker.CurrentOrder == ORDER_STAY)
+		If (Other.CurrentOrder == Invoker.CurrentOrder) Return; //NPC already using order that the radio is set to.
+		console.printf("%p order is %d, radio is set to %d",other,other.currentorder,invoker.currentorder);
+		Other.SetNPCOrder(Invoker.CurrentOrder,False,Invoker.Owner);
+		/*If (Invoker.CurrentOrder == KAI_Actor.ORDER_STAY)
 		{
 			Vehicle.ChaseTimer = 0;
 			If (Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("See")) ||
@@ -152,7 +93,7 @@ Class MVP_Radio : Weapon
 				Vehicle.SetStateLabel ("Spawn");
 			Return;
 		}
-		Else If (Invoker.CurrentOrder == ORDER_WANDER)
+		Else If (Invoker.CurrentOrder == KAI_Actor.ORDER_WANDER)
 		{
 			Vehicle.bDontFollowPlayers = True;
 			If (Vehicle.Target == Null)
@@ -164,7 +105,7 @@ Class MVP_Radio : Weapon
 			}
 			Return;
 		}
-		Else If (Invoker.CurrentOrder == ORDER_FOLLOW)
+		Else If (Invoker.CurrentOrder == KAI_Actor.ORDER_FOLLOW)
 		{
 			Vehicle.bDontFollowPlayers = False;
 			If (Player)
@@ -175,31 +116,22 @@ Class MVP_Radio : Weapon
 				Vehicle.SetStateLabel ("See");
 			}
 			Return;
-		}
+		}*/
 	}
 	
-	Action Void DoRadiusCommand (Actor Origin, Double Range = 1024)
+	Action Void DoRadiusCommand (Vector3 Origin, Double Range = 1024)
 	{
-		If (!Origin) Return;
-		Name CustomMarine = 'SM_Marine';
-		BlockThingsIterator VehicleFinder = BlockThingsIterator.Create (Origin,Range);
-		Actor Mobj;
+		BlockThingsIterator VehicleFinder = BlockThingsIterator.CreateFromPos (Origin.X,Origin.Y,Origin.Z,Invoker.Owner.Height,Range,False);
+		KAI_Actor Mobj;
 		
 		While (VehicleFinder.Next())
 		{
-			Mobj = VehicleFinder.Thing;
+			Mobj = KAI_Actor(VehicleFinder.Thing);
 			If (!Mobj) Continue;
 			
-			If ((Mobj Is "MVP_BaseVehicle" || Mobj Is CustomMarine) && IsFriend(Mobj) && Mobj.Health > 0 && Origin.Distance3DSquared (Mobj) <= 1024*1024)
+			If (IsFriend(Mobj) && Mobj.Health > 0 && Level.Vec3Diff(Origin,Mobj.Pos).Length() <= 1024)
 				Invoker.HandleOrders(Mobj);
 		}
-	}
-	
-	//HACK: Epic GZDoom fail.
-	Action Bool MarineFollowsCommands (Actor Other)
-	{
-		If (!Other || !(Other Is "KAI_Actor")) Return False;
-		Return !KAI_Actor(Other).bIgnoreOrders;
 	}
 	
 	States
@@ -222,7 +154,7 @@ Class MVP_Radio : Weapon
 		Ready:
 			RADI F 1 A_WeaponReady (WRF_ALLOWRELOAD);
 			Loop;
-		//Command vehicles.
+		//Command KAI NPCs.
 		Fire:
 			RADI GHIJ 3;
 			RADI J 8
@@ -240,22 +172,22 @@ Class MVP_Radio : Weapon
 			{
 				Invoker.CurrentOrder++;
 				
-				If (Invoker.CurrentOrder > 3) Invoker.CurrentOrder = Invoker.ORDER_FOLLOW; //Don't go out of bounds.
+				If (Invoker.CurrentOrder > 3) Invoker.CurrentOrder = KAI_Actor.ORDER_FOLLOW; //Don't go out of bounds.
 				
 				//If (Invoker.CurrentOrder != ORDER_GOTOPOINT) Invoker.Selection.Clear();
 				Switch (Invoker.CurrentOrder)
 				{
-					Case ORDER_WANDER:
+					Case KAI_Actor.ORDER_WANDER:
 						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Move independently");
 						Break;
-					Case ORDER_FOLLOW:
+					Case KAI_Actor.ORDER_FOLLOW:
 						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Follow player");
 						Break;
-					Case ORDER_STAY:
+					Case KAI_Actor.ORDER_STAY:
 						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Stay in place");
 						Break;
-					Case ORDER_GOTOPOINT:
-						Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Go to specified location");
+					//Case KAI_Actor.ORDER_GOTOPOINT:
+					//	Console.PrintfEx (PRINT_LOW,"\c[Green]Current Order: Go to specified location");
 					Default:
 						Break;
 				}

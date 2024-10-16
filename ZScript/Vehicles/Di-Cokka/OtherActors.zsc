@@ -140,6 +140,7 @@ Class MVP_DiCokkaTurretProp : MVP_BaseTurretProp
 		KAI_BaseTurret.MinimumPitch 10;
 		+KAI_BaseTurret.TransferDamage;
 		DeathSound "Vehicle/Di-Cokka/Death";
+		AutomapOffsets (0,111);
 		
 		//Doesn't have any damage factors. It's a cartoon vehicle, plus it's already overall weaker than the other vehicles like the APC.
 		//Well actually it does, but only a slight reduction in damage from generic and Smart Marine hitscans.
@@ -166,7 +167,7 @@ Class MVP_DiCokkaTurretProp : MVP_BaseTurretProp
 	States
 	{
 		Spawn:
-			MSV1 A 0;
+			MSV1 G 0;
 			MSV1 # 1
 			{
 				RotateToVehicle(RTVF_RELATIVEONLY);

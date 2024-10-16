@@ -843,7 +843,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Mass 30000;
 		Tag "M6V3-EX Turret";
 		Obituary "%o was blown up by a tank turret";
-		//AutomapOffsets (0,114);
+		AutomapOffsets (0,114);
 		KAI_BaseTurret.MaximumPitch -20;
 		KAI_BaseTurret.MinimumPitch 10;
 		KAI_BaseTurret.TurnSoundRadius 0.5;
@@ -1753,6 +1753,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				
 				SetOrigin (Pos.PlusZ(Height+8),True);
 				bFallOnDeath = True;
+				AutomapOffsets = (0,0);
 				Vel.Z = TossVelocity = FRandom (32,56);
 				Double XVel = FRandom (-2,8); Double YVel = FRandom (8,16);
 				Vel.X = XVel * Cos (Angle) + YVel * Sin (Angle);
@@ -1811,7 +1812,10 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Marine.Angle = VectorAngle (Marine.Vel.X,Marine.Vel.Y);
 		
 		If (CustomMarinesAvailable())
+		{
 			Marine.SetStateLabel ("Jump.Loop");
+			Marine.A_SetTranslation('Marine_DarkGreen');
+		}
 	}
 }
 
@@ -1836,6 +1840,7 @@ Class MVP_MBTRWS : MVP_BaseTurret
 		KAI_BaseTurret.CombatAngleTurnRate 50;
 		KAI_BaseTurret.CombatPitchTurnRate 37;
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
+		AutomapOffsets (/*8*/0,172);
 		AttackSound "Vehicle/APC/MGFire";
 		Tag "M20 Remote Weapon Station";
 		Obituary "%o was gunned down by a tanks' remote weapon station";

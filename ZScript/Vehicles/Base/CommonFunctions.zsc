@@ -93,7 +93,8 @@ Mixin Class MVP_DamageSmokeHandling
 
 Mixin Class MVP_SharedFunctions
 {
-	String User_DefaultOrder; //The default order the vehicle follows upon spawning.
+	String User_DefaultOrder; //The default order the vehicle follows upon spawning. It will not move upon spawning by default.
+	Bool User_SpawnMoving; //The vehicle will fully obey its' default order upon spawning. i.e wandering immediately on map start
 	Double User_RetreatDistance; //The amount of distance the vehicle keeps from enemies.
 	Int User_ChaseTime; //How much time the vehicle spends looking for its out-of-sight target before giving up.
 	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
@@ -110,7 +111,6 @@ Mixin Class MVP_SharedFunctions
 		UpdateUserVariables(); //Pass the vehicles' user variables as properties to the KAI library.
 		If (!bFriendly) Species = 'MilitaryHostile';
 		
-		//URGENT: BUG: Doesn't fucking work?
 		If ((!User_DefaultOrder || User_DefaultOrder ~== "") && bFriendly)
 		{
 			//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
@@ -163,12 +163,31 @@ Mixin Class MVP_SharedFunctions
 		Return (Other && (IsHostile (Other) || IsTargetingAllies (Self, Other)));
 	}
 	
-	Override Int AssessThreatLevel (Actor Other, Bool CheckPlayers)
+	//High quality marine code rip.
+	Override Void AfterOrderChange (NPCOrders OldOrder, Bool Increment, Actor Commander, Bool IgnoreAllegiance, Bool FromACS)
 	{
-		//Enemy players or marines on turrets are very dangerous.
-		If (MarineOrPlayerOnTurret (Other)) Return THREAT_VERYDANGEROUS;
+		//Have m̶a̶r̶i̶n̶e̶ vehicle idle to follow whatever actor, or if they are in the spawn state and set to wander aimlessly.
+		If ((User_SpawnMoving || GetAge() >= 1) && (CurrentOrder == ORDER_FOLLOW || CurrentOrder == ORDER_WANDER) && IsInState (Self,"Spawn"))
+			SetStateLabel ("Idle");
 		
-		Return Super.AssessThreatLevel (Other, CheckPlayers);
+		//Make all actors in the groups you are follow your order, if you are leading.
+		ForEach (Group : Groups)
+		{
+			If (Group.Leader != Self) Continue;
+			ForEach (Member : Group.Members)
+			{
+				If (Member Is "KAI_Actor" && Member != Self)
+				{
+					If (KAI_DebugPrintMessages) console.printf ("setting order to %d for %p (%s)",currentorder,member,member.getclassname());
+					KAI_Actor(Member).SetNPCOrder (CurrentOrder,False,Self);
+					If (Member Is "MVP_BaseVehicle")
+					{
+						If ((KAI_Actor(Member).CurrentOrder == ORDER_FOLLOW || KAI_Actor(Member).CurrentOrder == ORDER_WANDER) && IsInState (Member,"Spawn"))
+							Member.SetStateLabel ("Idle");
+					}
+				}
+			}
+		}
 	}
 	
 	//=====|Other functions|=====\\
@@ -439,39 +458,9 @@ Mixin Class MVP_SharedFunctions
 	}
 }
 
-//NOTE: Big mess, these are no longer really marine related functions.
+//NOTE: Big mess, these are no longer really marine related functions. At all.
 Mixin Class MVP_MarineFunctions
-{
-	//=====|Marine related functions|=====\\
-	//Is the marine on a turret ? Literally just a convoluted way to return if the OnTurret bool is true or false for the marine.
-	Bool MarineIsOnTurret (Actor Other)
-	{Return False; //PLACEHOLDER: When I get around to remaking the marines' turrets, I'll make a proper emplacement system for KAI_Humanoid, or try anyway.
-		/*If (!Other) Return False;
-		
-		Name MGMarine = "TurretMarine";
-		Let IsOnTurret = ServiceIterator.Find ("SM_SmartMarines").Next();
-		
-		If (Other.GetClassName() == MGMarine)
-			Return True;
-		
-		If (IsOnTurret.GetInt ("IsOnTurret",ObjectArg:Other))
-			Return True;
-		
-		Return False;*/
-	}
-	
-	//Is the other actor a smart marine or player on a turret ?
-	Bool MarineOrPlayerOnTurret (Actor Other)
-	{Return False; //PLACEHOLDER: When I get around to remaking the marines' turrets, I'll make a proper emplacement system for KAI_Humanoid, or try anyway.
-		/*If (!Other) Return False;
-		Name CustomMarine = 'SmartMarine';
-		Name CustomTurretMarine = "TurretMarine";
-		Name TurretWeapon = 'SmartMarineMGWeapon';
-		Return (CustomMarinesAvailable() && (Other Is CustomMarine && MarineIsOnTurret (Other)
-		|| Other Is CustomTurretMarine
-		|| Other.Player && Other.Player.ReadyWeapon && Other.Player.ReadyWeapon.GetClassName() == TurretWeapon));*/
-	}
-	
+{	
 	Enum NPCWarnFlags
 	{
 		WRN_ALLIESTOO		= 1 << 0, //The warning zone should warn marines friendly to the caller as well.

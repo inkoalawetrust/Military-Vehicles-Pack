@@ -517,6 +517,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 		KAI_BaseTurret.MinimumPitch 10;
 		MVP_BaseTurretProp.SmokeDelay 0;
 		+KAI_BaseTurret.TransferDamage;
+		AutomapOffsets (0,114);
 		
 		//"Armor"
 		DamageFactor 0.6; //Generic damage factor.
@@ -652,6 +653,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 				
 				SetOrigin (Pos.PlusZ(Height+8),True);
 				bFallOnDeath = True;
+				AutomapOffsets = (0,0);
 				Vel.Z = TossVelocity = FRandom (32,56);
 				Double XVel = FRandom (-2,8); Double YVel = FRandom (8,16);
 				Vel.X = XVel * Cos (Angle) + YVel * Sin (Angle);
@@ -928,6 +930,7 @@ Class MVP_MBTRWSProp : MVP_BaseTurretProp
 		XScale 0.5; //The remote weapon stations are rendered at double the resolution of the rest of the tank hull and turret, for extra detail.
 		YScale 0.416666;
 		Mass 50;
+		AutomapOffsets (/*8*/0,172);
 		KAI_BaseTurret.MaximumPitch -35;
 		KAI_BaseTurret.MinimumPitch 15;
 		AttackSound "Vehicle/APC/MGFire";

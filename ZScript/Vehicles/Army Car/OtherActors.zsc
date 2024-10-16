@@ -17,7 +17,7 @@ Class MVP_PainRay : MVP_BaseTurret
 		Tag "Pain Ray";
 		DeathSound "Vehicle/ArmyCar/PainRay/Break";
 		AttackSound "Vehicle/ArmyCar/PainRay/Active";
-		//AutomapOffsets (0,103.5);
+		AutomapOffsets (0,103.5);
 		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		+MissileMore;
 		+LookAllAround;
@@ -441,6 +441,7 @@ Class MVP_PainRayProp : KAI_BaseTurretProp
 		Obituary "%o was killed by a prop, somehow";
 		Tag "Pain Ray (Prop)";
 		+KAI_BaseTurret.FallOnDeath;
+		AutomapOffsets (0,103.5);
 	}
 	States
 	{
