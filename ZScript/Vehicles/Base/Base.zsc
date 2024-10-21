@@ -2,6 +2,8 @@
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
 The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
 first tick. Which is literally worse than the turrets spawning on the ground.*/
+/*Apparently non-standard ASCII frames (i.e SPRT=1) don't work in UDB, so when I redo the SPAAG and Terminator
+editor sprites to not have the armor skirts on their hull. Move all the MVP editor sprites to an MVPE sprite name.*/
 
 //IDEA:
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.

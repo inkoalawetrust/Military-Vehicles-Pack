@@ -214,7 +214,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 	{
 		//More likely to drop marines or ram when about to die.
 		If (Health <= SpawnHealth()/4)
-			AggressionMultiplier *= 0.5;
+			MissileChanceMult *= 0.5;
 		
 		If (User_MarineAmount <= 0) ThreatLevel = THREAT_NONE; //It's defenseless so it's no threat unless it's ramming.
 		Else If (User_MarineAmount >= 5) ThreatLevel = THREAT_DANGEROUS; //It's got 5+ soldiers so it's dangerous. Default
@@ -252,7 +252,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 			}
 		}
 		
-		AggressionMultiplier = Default.AggressionMultiplier;
+		MissileChanceMult = Default.MissileChanceMult;
 		Return False;
 	}
 	

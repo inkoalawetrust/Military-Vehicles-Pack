@@ -1,11 +1,10 @@
-//TODO: Replace the hulls in the editor sprites of the SPAAG and MLRS with the skirtless version.
 Class MVP_SPAAG : MVP_MBT
 {
 	Default
 	{
 		//$Title Self Propelled AA Gun
 		//$Category Vehicles/Tanks
-		//$Sprite MMBT^1
+		//$Sprite MVPEC1
 		Health 2000;
 		WoundHealth 1000;
 		GibHealth 1000;

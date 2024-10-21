@@ -4,7 +4,7 @@ Class MVP_DiCokkaProp : MVP_BaseProp
 	{
 		//$Title Di-Cokka (Prop)
 		//$Category Vehicles/Di-Cokka
-		//$Sprite MSV1Z1
+		//$Sprite MVPEA1
 		Health 600;
 		GibHealth 100;
 		WoundHealth 300;
@@ -187,7 +187,7 @@ Class MVP_DiCokkaWreck : MVP_DiCokkaProp
 	{
 		//$Title Di-Cokka (Wreck)
 		//$Category Vehicles/Di-Cokka
-		//$Sprite MSV1[1
+		//$Sprite MVPEB1
 		
 		KAI_BaseVehicle.VehicleTurret "MVP_DiCokkaTurretWreck";
 		Height 51;

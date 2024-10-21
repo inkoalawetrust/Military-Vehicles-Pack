@@ -22,7 +22,7 @@ Class MVP_APC : MVP_BaseVehicle
 		Tag "Armored Personnel Carrier";
 		ActiveSound "Vehicle/APC/Moving";
 		DeathSound "SFX/Explosion";
-		KAI_Actor.ThreatLevel THREAT_DANGEROUS; //MAYDO: It should be THREAT_VERYDANGEROUS instead, at least when it has a turret. But I think I'll reserve that for future vehicles like the MBT.
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		KAI_Actor.ActorFollowDist 384;
 		
 		//"Armor"
@@ -124,7 +124,7 @@ Class MVP_APC : MVP_BaseVehicle
 	{
 		//More likely to drop marines when about to die.
 		If (Health <= SpawnHealth()/4)
-			AggressionMultiplier *= 0.5;
+			MissileChanceMult *= 0.5;
 		UpdateThreatLevel();
 		If (Target && KAI_CheckMissileRange(Target) && Target != Goal && !(IsPatrolling(Self) && bChaseGoal))
 		{
@@ -137,7 +137,7 @@ Class MVP_APC : MVP_BaseVehicle
 		}
 		
 		//Why is this even here ? No fucking clue, this is why I comment half the codebase.
-		AggressionMultiplier = Default.AggressionMultiplier;
+		MissileChanceMult = Default.MissileChanceMult;
 		Return False;
 	}
 	

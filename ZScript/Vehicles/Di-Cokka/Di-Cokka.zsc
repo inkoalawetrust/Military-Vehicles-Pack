@@ -5,7 +5,7 @@ Class MVP_DiCokka : MVP_BaseVehicle
 	{
 		//$Title Di-Cokka
 		//$Category Vehicles/Di-Cokka
-		//$Sprite MSV1Z1
+		//$Sprite MVPEA1
 		Health 600;
 		GibHealth 100;
 		WoundHealth 300;
@@ -295,9 +295,9 @@ Class MVP_DiCokkaTurret : MVP_BaseTurret
 		//Increase attack chance when close to death.
 		Bool AboutToDie = CriticallyLowHealth();
 		If (AboutToDie)
-			AggressionMultiplier *= 0.8;
+			MissileChanceMult *= 0.8;
 		Else
-			AggressionMultiplier = Default.AggressionMultiplier;
+			MissileChanceMult = Default.MissileChanceMult;
 		
 		If (!RefireDelay && Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,200,128,(0,0,14),TLOF_DoStayAround))
 		{
