@@ -1,0 +1,106 @@
+//TODO: Work on this at some other point, don't really feel like working on it now. And I also need to make a basic KAI_Chase() function first IMO.
+//Shitty fallback NPC that they spawn instead if the Smart Marines aren't loaded.
+//IDEA: Add a string CVAR that specifies what NPC to drop?
+Class MVP_CrapMarine : KAI_Humanoid
+{
+	Default
+	{
+		Health 80;
+		GibHealth 20;
+		Height 56;
+		DeathHeight 12;
+		CameraHeight 50;
+		Radius 16;
+		YScale 0.98;
+		Mass 100;
+		Speed 10;
+		FastSpeed 12;
+		MeleeRange 64;
+		PainChance 96;
+		PainThreshold 5;
+		FriendlySeeBlocks 64;
+		MaxDropOffHeight 64;
+		MaxTargetRange 8192;
+		MinMissileChance 100;
+		Tag "MVP Marine NPC";
+		Species "Military";
+		Decal "BulletChip";
+		Obituary "%o was shot by a marine.";
+		DropItem "Clip";
+		DropItem "Clip", 128, 2;
+		PainSound "MVPMarine/Pain";
+		DeathSound "MVPMarine/Death";
+		AttackSound "Chainguy/Attack";
+		KAI_Actor.ThreatLevel THREAT_MILD;
+		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
+		KAI_Actor.Inaccuracy (8,8,8);
+		KAI_Actor.InaccuracyFrequency 0.8;
+		Monster;
+		+JumpDown;
+		+MissileMore;
+		+MissileEvenMore;
+		+Telestomp;
+		+NoInfightSpecies;
+		+FloorClip;
+		+AvoidMelee;
+		+AvoidHazards; //This ONLY works for crushing ceilings and NOTHING ELSE. So it's largely useless but I'm still adding it.
+		+SeeFriendlyMonsters; //No more ZScript code hacks.
+		+DoShadowBlock;
+		//+DropOff;
+	}
+	
+	Override Void AfterOrderChange (NPCOrders OldOrder, Bool Increment, Actor Commander, Bool IgnoreAllegiance, Bool FromACS)
+	{
+		//Have marine idle to follow whatever actor, or if they are in the spawn state and set to wander aimlessly.
+		If ((CurrentOrder == ORDER_FOLLOW || CurrentOrder == ORDER_WANDER) && IsInState (Self,"Spawn"))
+			SetIdle();
+		
+		If (CurrentOrder == ORDER_STAY)
+			SetStateLabel("Spawn");
+	}
+	
+	//Ironically, despite being a custom NPC, a lot of this crap is just, copied from ScriptedMarine lmao.
+	States
+	{
+		Spawn:
+			PLAY A 1 KAI_Look(fov:120,KAIL_CHASETARGET);
+			Loop;
+		See:
+			PLAY ABCD 4
+			{
+				A_Chase();
+			}
+			Loop;
+		Missile:
+			PLAY E 4 A_FaceTarget (15,15);
+			PLAY FFF 6 BRIGHT
+			{
+				A_StartSound (AttackSound,CHAN_WEAPON);
+				A_SpawnProjectile ("MVP_RifleBullet",angle:Angle+FRandom(3,-3),flags:CMF_AIMDIRECTION,Pitch+FRandom(3,-3));
+				A_FaceTarget (15,15);
+			}
+			PLAY A 0 A_MonsterRefire(16,"See");// TODO: Add KAI refire function here or whatever.
+			Goto Missile;
+		Pain:
+			PLAY G 4;
+			PLAY G 4 A_Pain;
+			Goto See;
+		Death:
+			PLAY H 10;
+			PLAY I 10 A_Scream;
+			PLAY J 10 A_NoBlocking;
+			PLAY KLM 10;
+			PLAY N -1;
+			Stop;
+		XDeath:
+			PLAY O 5;
+			PLAY P 5 A_XScream;
+			PLAY Q 5 A_NoBlocking;
+			PLAY RSTUV 5;
+			PLAY W -1;
+			Stop;
+		Raise:
+			PLAY MLKJIH 5;
+			Goto See;
+	}
+}

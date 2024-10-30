@@ -87,6 +87,17 @@ $Limit SFX/MSExplosion2 0
 //$Limit BulletRicochet5 0
 $Limit Weapon/RadioCall 0
 
+//Crap marine
+MVPMarine/Death1 DSPLDETH
+MVPMarine/Death2 DSPDIEHI
+MVPMarine/XDeath DSSLOP
+Marine/Pain		 DSPLPAIN
+$Random MVPMarine/Death
+{
+	MVPMarine/Death1
+	MVPMarine/Death2
+}
+
 //=====|Vehicle specific sound effects|=====\\
 	//Army car
 	Vehicle/ArmyCar/Idle "Sounds/Vehicles/Army Car/CarIdle.ogg"

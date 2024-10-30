@@ -8,6 +8,7 @@ Version "4.12.0"
 #Include "ZScript/Vehicles/Base/EventHandlers.zsc"
 #Include "ZScript/SFX.zsc"
 #Include "ZScript/Radio.zsc"
+#Include "ZScript/BasicMarine.zsc"
 
 //=====|The vehicles|=====\\
 	//Army Car

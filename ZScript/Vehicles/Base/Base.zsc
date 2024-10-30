@@ -2,13 +2,13 @@
 /*Try and fix the vehicle turrets to be at the top of their vehicle even at the first tick of their existance.
 The first fix I tried was immediately warping the turret to its vehicle. Which somehow turns the turrets into the vehicle they are attached on in the
 first tick. Which is literally worse than the turrets spawning on the ground.*/
-/*Apparently non-standard ASCII frames (i.e SPRT=1) don't work in UDB, so when I redo the SPAAG and Terminator
-editor sprites to not have the armor skirts on their hull. Move all the MVP editor sprites to an MVPE sprite name.*/
 
 //IDEA:
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
+//Remaster the Army Truck and APC sprites one day, adding more detail here and there, and most importantly redoing those shitty fucking death animations.
 //Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Definitely needs a rewrite of the marines.
 //Make bullet splashes work on swimmable 3D floors.
+//Make a custom MVP_VehicleGroup structure for marines that are supposed to be following their specified vehicle.
 
 Class MVP_BaseVehicle : KAI_BaseVehicle
 {
@@ -436,7 +436,6 @@ Class MVP_HazardZone : KAI_MixinActor
 				Hazard.Origin = Self;
 			}
 			If (FLags & WRN_ANTIAIR) Hazard.CustomTags.Push ("AntiAir");
-			hazard.printhazardinfo();
 		}
 	}
 	
@@ -508,9 +507,6 @@ Class MVP_HazardZone : KAI_MixinActor
 			
 			If (Skip)
 				Continue;
-			string mastername = "None at all";
-			if (master) mastername =master.getclassname();
-			console.printf ("alerted a %s, the hazard is at %d %d %d, its' pointer is %p, and my master is %s",mobj.gettag(mobj.getclassname()),hazard.position,hazard,mastername);
 			KAI_Actor(Mobj).Hazards.Push(Hazard);
 		}
 	}
