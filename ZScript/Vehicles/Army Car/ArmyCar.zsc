@@ -113,7 +113,7 @@ Class MVP_ArmyCar : MVP_BaseVehicle
 		If (Turret.Health <= Turret.SpawnHealth()/4) Return False; //The pain ray is really weak, so don't risk losing it.
 		If (!User_NoMarines || User_NoMarines && !User_PainRay) Return False; //Still have marines in, or no pain ray, so don't stop.
 		//Don't stop if you or your turrets' target is more dangerous than you.
-		If (AssessThreatLevel (Target, False) > Self.ThreatLevel || AssessThreatLevel (Turret.Target, False) > Self.ThreatLevel) {a_log ("too strong");Return False;}
+		If (AssessThreatLevel (Target, False) > Self.ThreatLevel || AssessThreatLevel (Turret.Target, False) > Self.ThreatLevel) Return False;
 		
 		//And at last, run the standard KAI vehicle checks.
 		If (KAI_BaseVehicle.StayStillAndShoot(CheckSightFrom))

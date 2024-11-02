@@ -468,7 +468,7 @@ Class MVP_ArmyTruck : MVP_BaseVehicle
 				If (TotalMassHit >= 10000 || !Target || CancelCharge)
 				{
 					HitThings.Clear();
-					TotalMassHit = 0;a_log ("enough smashing");
+					TotalMassHit = 0;
 					bSkullFly = bSlidesOnWalls = CancelCharge = False;
 					If (WarningZone)
 						WarningZone.Destroy();

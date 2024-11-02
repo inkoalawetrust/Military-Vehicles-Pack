@@ -1908,11 +1908,8 @@ Class MVP_MBTRWS : MVP_BaseTurret
 			//Check all the actors the trace hit.
 			ForEach (Mobj : HitActors)
 			{
-				If (Mobj && !IsDead (Mobj) && Mobj Is "KAI_Actor" && IsActorHostile(Mobj))
-				{
-					Let NewHaz = MakeNewHazard (Self, Mobj.Pos);
-					WarnSpecificNPC(NewHaz, Mobj); //Then warn them.
-				}
+				If (Mobj && !IsDead (Mobj) && IsActorHostile(Mobj))
+					HazardInfo.GiveHazard(Mobj,MVP_MBTRWS.MakeNewHazard (Self, Mobj.Pos));
 			}
 			HitActors.Clear();
 		}

@@ -502,28 +502,11 @@ Mixin Class MVP_MarineFunctions
 		Return WarnZone; //Return a pointer to the created warning zone.
 	}
 	
-	//Only warn a specific NPC of a hazard, and return if they got the hazard.
-	Bool WarnSpecificNPC (HazardInfo Hazard, Actor NPC)
-	{
-		If (!NPC || !(NPC Is "KAI_Actor")) //No NPC to warn or not a KAI NPCs.
-			Return False;
-		
-		ForEach (CurHaz : KAI_Actor(NPC).Hazards) //Check if they already got this hazard.
-		{
-			If (Hazard.AreHazardsIdentical (Hazard, CurHaz))
-				Return False;
-		}
-		console.printf ("WarnSpecificNPC(): Warned %s successfully with %p, NPC pointer %p",npc.getclassname(),hazard,npc);
-		KAI_Actor(NPC).Hazards.Push(Hazard);
-		
-		Return True;
-	}
-	
 	//Useful to call after a vehicle drops a marine, to get them to run out of the spawn point to not get stuck.
 	Bool MVP_NPCDropoffMove (Vector3 Offset, Actor NPC)
 	{
 		If (!NPC || !(NPC Is "KAI_Actor"))
-			{console.printf ("dropoff warning failed");Return False;}
+			Return False;
 		
 		HazardInfo StuckWarning = New ("HazardInfo");
 		
@@ -538,9 +521,7 @@ Mixin Class MVP_MarineFunctions
 			StuckWarning.CustomTags.Push ("StuckRisk"); //DOOR STUCK
 		}
 		Else
-			{console.printf ("dropoff warning didn't spawn");Return False;}
-		console.printf ("MVP_NPCDropoffMove(): HAZARD SUCCESSFULLY PUSHED TO %p",NPC);
-		//stuckwarning.printhazardinfo();
+			Return False;
 		KAI_Actor(NPC).Hazards.Push (StuckWarning);
 		
 		Return True;

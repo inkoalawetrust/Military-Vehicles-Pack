@@ -944,7 +944,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 		//Check all the actors the trace hit.
 		ForEach (Mobj : NPCWarner.Mobjs)
 			If (Mobj && !IsDead (Mobj) && IsHostileToShooter(Mobj))
-				WarnSpecificNPC (MissileThreat, Mobj); //Then warn them.
+				HazardInfo.GiveHazard (Mobj, MissileThreat); //Then warn them.
 		
 		If (WarnZone) WarnZone.SetOrigin (NPCWarner.Results.HitPos,True); //And move the detonation zone to the position the trace hit.
 	}

@@ -83,40 +83,8 @@ Class MVP_Radio : Weapon
 		If (Other.bDormant) Return;
 		
 		If (Other.CurrentOrder == Invoker.CurrentOrder) Return; //NPC already using order that the radio is set to.
-		console.printf("%p order is %d, radio is set to %d",other,other.currentorder,invoker.currentorder);
+		
 		Other.SetNPCOrder(Invoker.CurrentOrder,False,Invoker.Owner);
-		/*If (Invoker.CurrentOrder == KAI_Actor.ORDER_STAY)
-		{
-			Vehicle.ChaseTimer = 0;
-			If (Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("See")) ||
-			Vehicle.InStateSequence(Vehicle.CurState,Vehicle.ResolveState ("Idle")))
-				Vehicle.SetStateLabel ("Spawn");
-			Return;
-		}
-		Else If (Invoker.CurrentOrder == KAI_Actor.ORDER_WANDER)
-		{
-			Vehicle.bDontFollowPlayers = True;
-			If (Vehicle.Target == Null)
-			{
-				If (!Vehicle.FindState ("Idle"))
-					Vehicle.SetStateLabel ("See");
-				Else
-					Vehicle.SetStateLabel ("Idle");
-			}
-			Return;
-		}
-		Else If (Invoker.CurrentOrder == KAI_Actor.ORDER_FOLLOW)
-		{
-			Vehicle.bDontFollowPlayers = False;
-			If (Player)
-				SetFriendPlayer (Player);
-			If (Vehicle.Target == Null)
-			{
-				//Vehicle.A_Face (Self);
-				Vehicle.SetStateLabel ("See");
-			}
-			Return;
-		}*/
 	}
 	
 	Action Void DoRadiusCommand (Vector3 Origin, Double Range = 1024)
