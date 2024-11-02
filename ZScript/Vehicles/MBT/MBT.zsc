@@ -564,7 +564,10 @@ Class MVP_MBT : MVP_BaseVehicle
 				A_QuakeEx (1,1,1,2,0,512,flags:QF_GROUNDONLY,rollintensity:0.2);
 				A_StopSound (CHAN_IDLING);
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,attenuation:0.5);
+				Double RealSpeed = Speed;
+				If (!User_T72Mode) Speed *= 1.5;
 				KAI_VehicleRetreat (Target,96,512,32,VRF_ZIGZAG,0.25,TankAngleLimit);
+				Speed = RealSpeed;
 				If (User_CrushMode != CRUSH_NONE) KAI_CrushCorpses();
 				Int Temp = RetreatLoops;
 				RetreatLoops = 0;
