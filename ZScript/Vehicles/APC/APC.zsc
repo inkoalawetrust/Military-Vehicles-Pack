@@ -391,7 +391,7 @@ Class MVP_APC : MVP_BaseVehicle
 					Actor Marine;
 					Marine = SpawnMarine ((-112, FRandom (10,-10),0));
 					Marine.SetOrigin ((Marine.Pos.X,Marine.Pos.Y,Marine.Pos.Z+48),False);
-					Marine.DamageMobj (Target,Target,Random (24,96),DeathType,DMG_NO_PAIN|DMG_THRUSTLESS); //Harm the marine by a random amount, the source being the APC's killer.
+					MVP_NPCDamageAfterExit (Marine,Target,Random (24,96),DeathType,DMG_NO_PAIN|DMG_THRUSTLESS);//Harm the marine by a random amount, the source being the APC's killer.
 					If (User_MarineTID != 0) Marine.ChangeTID (User_MarineTID);
 					MVP_NPCDropoffMove ((-120, 0,48),Marine);
 					User_MarineAmount--;

@@ -24,6 +24,7 @@ Class MVP_MBT : MVP_BaseVehicle
 		DeathHeight 61;
 		MeleeRange 88;
 		MaxSlopeSteepness 0.65;
+		MaxStepHeight 35;
 		Mass 30000;
 		FriendlySeeBlocks 128;
 		MaxTargetRange 16384;
@@ -1807,7 +1808,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	{
 		Actor Marine; //Gunner comes out the left hatch.
 		Marine = SpawnMarine (PosOfs);
-		Marine.DamageMobj (Target,Target,Random (16,48),DeathType,DMG_NO_PAIN|DMG_THRUSTLESS); //Harm the marine by a random amount, the source being the MBT's killer.
+		MVP_NPCDamageAfterExit (Marine,Target,Random (16,48),DeathType,DMG_NO_PAIN|DMG_THRUSTLESS); //Harm the marine by a random amount, the source being the MBT's killer.
 		//SpawnItemEx velocity code.
 		Marine.Vel.X = XVel * Cos (Angle) + YVel * Sin (Angle);
 		Marine.Vel.Y = XVel * Sin (Angle) - YVel * Cos (Angle);

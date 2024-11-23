@@ -526,6 +526,26 @@ Mixin Class MVP_MarineFunctions
 		
 		Return True;
 	}
+	
+	//HACK: Damage the actor drop with the specified parameters after one tic.
+	Bool MVP_NPCDamageAfterExit (Actor Who, Actor Inflictor, Int Damage, Name DamageType, Int DmgFlags = DMG_NO_PAIN|DMG_THRUSTLESS)
+	{
+		If (!Who)
+			Return False;
+		
+		Let Harm = Who.GiveInventoryType("MVP_DamageOnExit");
+		
+		If (Harm)
+		{console.printf ("passed damage token");
+			Harm.Target = Inflictor;
+			Harm.Health = Damage;
+			Harm.DeathType = DamageType;
+			Harm.Threshold = DmgFlags;
+			Return True;
+		}
+		
+		Return False;
+	}
 }
 
 //A generic check used to find where a projectile will roughly land, to place a warning zone for marines there.

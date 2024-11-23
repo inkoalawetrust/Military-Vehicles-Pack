@@ -518,3 +518,21 @@ Class MVP_HazardZone : KAI_MixinActor
 			Loop;
 	}*/
 }
+
+/*HACK: This is here to damage marines that exit a destroyed vehicle after 1 tic instead of immediately, because that
+otherwise won't work with the smart marines wearing armor. If the marines' armor code is in PostBeginPlay(), he
+user_armor variable they have will work. But they will be damaged before they get their armor. If I put that code in
+BeginPlay(), they can put on the armor immediately after spawning, but then user_armor doesn't work.*/
+Class MVP_DamageOnExit : Inventory
+{
+	Override Void DoEffect ()
+	{
+		Super.DoEffect();
+		
+		If (GetAge() >= 1 && Owner)
+		{
+			Owner.DamageMobj (Target,Target,Health,DeathType,Threshold);
+			GoAwayAndDie();
+		}
+	}
+}
