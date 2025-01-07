@@ -48,6 +48,7 @@ Bullet ricochet sounds are from Call of Duty United Offensive.
 Bullet flying by sound (Whizzby.ogg) is from the GDC 2020 sound library, "PMSFX - Bullet Bys &Impacts"
 Casing drop sounds (CaseFall1-5.ogg) is from the GDC 2018 sound library, "Watson Wu - Battle Rifles & Pistols"
 Metal crashing sound (MetalCrash.ogg) is from Half-Life 2.
+Flesh impact sound (FleshHit.ogg) made by EFlexMusic https://freesound.org/people/EFlexMusic/sounds/369594/
 
 Vehicles:
 Army car idle sound (CarIdle.ogg) is from the 2018 GDC sound library, "Pole Position - M5 High Speed Tractor"

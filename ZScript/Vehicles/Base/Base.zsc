@@ -23,6 +23,7 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		Tag "Military Vehicle Base (You really shouldn't be seeing this in-game)";
 		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
 		MVP_BaseVehicle.SmokeDelay 12;
+		KAI_BaseVehicle.SurfaceImpactThreshold 4;
 		
 		//Damage factors that act as the vehicles "armor".
 		DamageFactor 0.9; //Generic damage factor for all damage.

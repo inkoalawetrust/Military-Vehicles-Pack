@@ -25,6 +25,7 @@ SFX/CaseFall3 "Sounds/SFX/CaseFall3.ogg"
 SFX/CaseFall4 "Sounds/SFX/CaseFall4.ogg"
 SFX/CaseFall5 "Sounds/SFX/CaseFall5.ogg"
 //SFX/BulletRicochet5 "Sounds/SFX/BulletRicochet5.ogg"
+SFX/FleshHit "Sounds/SFX/FleshHit.ogg"
 Weapon/RadioCall "Sounds/SFX/RadioCall.ogg"
 Weapon/DebugFire "Sounds/SFX/DebugGunFire.ogg"
 

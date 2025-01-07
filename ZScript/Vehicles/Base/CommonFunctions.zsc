@@ -190,6 +190,57 @@ Mixin Class MVP_SharedFunctions
 		}
 	}
 	
+	Override Void OnGroundImpact (Double ImpactVel, Array<Actor> InTheWay)
+	{
+		Super.OnGroundImpact(ImpactVel,InTheWay);
+		
+		//Get the total mass of the vehicle plus the next 3 turrets.
+		Int TotalMass = Mass;
+		If (Turret) TotalMass += Turret.Mass;
+		If (Turret && Turret.Turret) TotalMass += Turret.Turret.Mass;
+		If (Turret && Turret.Turret && Turret.Turret.Turret) TotalMass += Turret.Turret.Turret.Mass;
+		
+		//No actors that we were stopped by, so we probably hit level geometry.
+		If (!InTheWay.Size())
+		{
+			Double Force = TotalMass * ImpactVel;
+			//Impact sound
+			A_StartSound ("SFX/MetalCrash",CHAN_AUTO,0,KAI_Math.LinearMap(Force,2500,2500000,0.075,1.0),0.65);
+			//Impact quake
+			Double QuakeForce = KAI_Math.LinearMap(Force,50000,2500000,0.1,4.0);
+			Double QuakeRange = KAI_Math.LinearMap(Force,50000,2500000,256,1024);
+			Double QuakeThrust = KAI_Math.LinearMap(Force,50000,2500000,0.01,0.5);
+			A_QuakeEx (QuakeForce/4,QuakeForce/4,QuakeForce/1,50,QuakeRange,QuakeRange,flags:QF_SCALEDOWN|QF_GROUNDONLY|QF_AFFECTACTORS|QF_SHAKEONLY,
+			rollintensity:QuakeForce,thrustmultiplier:QuakeThrust);
+			//Impact dust
+			Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+			//Pass parameters to spawner.
+			Duster.RadiusDamageFactor = 0;
+			Duster.ReactionTime = KAI_Math.LinearMap(Force,100,2500000,1,256);
+			Duster.Threshold = Radius*1.55;
+		}
+		//We hit some actors, crush them and lose some fall speed in exchange (Very realistic and sophisticated physics simulation).
+		Else
+		{
+			Double PostCrushVel = ImpactVel;
+			//Squish
+			Double VelReduction = KAI_Math.LinearMap (TotalMass,10,25000,10,0.25);
+			VelReduction = Clamp (VelReduction,0.25,INT.MAX);
+			ForEach (Bug : InTheWay)
+			{
+				Double Force = TotalMass * PostCrushVel;
+				Int ImpactDamage = Force/300;
+				Bug.DamageMobj (Self,Self,ImpactDamage,'Crush');
+				PostCrushVel -= VelReduction*(Bug.Mass/100); //Reduce fall speed for every bug squashed before applying it back in.
+				PostCrushVel = Clamp (PostCrushVel,0,INT.MAX);
+				//Play impact sound on each victim based on impact velocity.
+				Bug.A_StartSound (Bug.bNoBlood ? "SFX/MetalHit" : "SFX/FleshHit",CHAN_AUTO,CHANF_OVERLAP,KAI_Math.LinearMap(Force,100,2500000,0.075,1.0),0.65);
+			}
+			
+			Vel.Z = -PostCrushVel;
+		}
+	}
+	
 	//=====|Other functions|=====\\
 	//Pass the vehicles' user variables as properties.
 	Void UpdateUserVariables()
