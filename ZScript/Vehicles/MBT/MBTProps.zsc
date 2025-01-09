@@ -41,6 +41,11 @@ Class MVP_MBTProp : MVP_BaseProp
 		DamageFactor "SmallRifleBullet", 0.1;
 		DamageFactor "Missile", 0.7;
 		DamageFactor "AntiAir", 0.3;
+		//Deflection
+		KAI_Actor.DeflectionChance 252;
+		KAI_Actor.DeflectDamageFactor 0.6;
+		KAI_Actor.DeflectSlowDownFactor 0.7;
+		KAI_Actor.DeflectionFunnel (20,-20,20,-20);
 		+DontSquash;
 		+DontBlast;
 	}
@@ -160,6 +165,7 @@ Class MVP_MBTProp : MVP_BaseProp
 	Bool User_Lowered; //Used by the SPAAG variant. Spawns the anti air turret with its' radar lowered.
 	
 	Mixin MVP_MBT_SmokeHandling;
+	Mixin MVP_MBT_Deflection;
 	Bool HasAltHull; //Skirtless hull.
 	DynamicLight DeathLight;
 	Sound IdleSound;
@@ -540,6 +546,11 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 		DamageFactor "Autocannon", 0.5;
 		DamageFactor "RifleBullet", 0.6;
 		DamageFactor "Missile", 0.7;
+		//Deflection
+		KAI_Actor.DeflectionChance 252;
+		KAI_Actor.DeflectDamageFactor 0.6;
+		KAI_Actor.DeflectSlowDownFactor 0.7;
+		KAI_Actor.DeflectionFunnel (20,-20,20,-20);
 	}
 	
 	Int UpdateTankElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
@@ -610,6 +621,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 	Bool MetalCoffin; //Ejection seat system.
 	Actor WarningZone;
 	Mixin MVP_MBTTurret_SmokeHandling;
+	Mixin MVP_MBT_Deflection;
 	
 	Double RWSAngle, RWSPitch;
 	States
@@ -705,6 +717,11 @@ Class MVP_MBTMissileTurretProp : MVP_MBTTurretProp
 	{
 		Height 72;
 		Tag "M6-MLRS Turret";
+		//Deflection
+		KAI_Actor.DeflectionChance 240;
+		KAI_Actor.DeflectDamageFactor 0.75;
+		KAI_Actor.DeflectSlowDownFactor 0.8;
+		KAI_Actor.DeflectionFunnel (15,-15,15,-15);
 	}
 	//TODO: Since the MLRS can actually rise up and down in addition to the aiming elevations, it'll also have a User_Elevation variable.
 	//Int User_Elevation;
@@ -787,6 +804,11 @@ Class MVP_MBTSPAAGTurretProp : MVP_MBTTurretProp
 		KAI_BaseVehicle.VehicleTurret "MVP_SPAAGRadarProp";
 		Tag "M6-SPAAG Turret (Prop)";
 		Mass 20000;
+		//Deflection
+		KAI_Actor.DeflectionChance 240;
+		KAI_Actor.DeflectDamageFactor 0.75;
+		KAI_Actor.DeflectSlowDownFactor 0.8;
+		KAI_Actor.DeflectionFunnel (15,-15,15,-15);
 	}
 	
 	Override Void PostBeginPlay ()

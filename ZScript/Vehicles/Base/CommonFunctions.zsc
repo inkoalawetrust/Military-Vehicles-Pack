@@ -241,6 +241,43 @@ Mixin Class MVP_SharedFunctions
 		}
 	}
 	
+	//MVP projectile deflections add slight variation to the parameters. Alongside playing deflection sounds and sparks.
+	Override Vector4 OnProjectileDeflect (Actor Projectile, Vector3 ImpactVel, Int &Chance, Double &DamFac, Double &VelFac, Vector4 Funnel)
+	{
+		Vector4 Ret = Super.OnProjectileDeflect (Projectile, ImpactVel, Chance, DamFac, VelFac, Funnel);
+		If (Chance >= DeflectionChance) //Not happening.
+			Return Ret;
+		
+		VelFac *= FRandom (0.8,1.0);
+		DamFac *= FRandom (0.8,1.0);
+		Ret.XY *= FRandom (0.8,1.2);
+		Double VertRNG = FRandom (0.8,1.2);
+		Ret.Z *= VertRNG; Ret.W = VertRNG;
+		console.printf ("onprojectiledeflect(): deflecting %s from %s| chance threshold%d | %f %f",projectile.getclassname(),getclassname(),chance,damfac,velfac);
+		//MVP Specific effects.
+		TextureID NullTex;
+		For (Int I = 0; I < 24; I++)
+		{
+			Projectile.A_SpawnParticleEx (
+			"yellow",
+			NullTex,
+			STYLE_Add,
+			lifetime:23,
+			size:3,
+			xoff:FRandom (6,-6),
+			yoff:FRandom (6,-6),
+			zoff:FRandom (6,-6),
+			velx:FRandom (1,-1),
+			vely:FRandom (1,-1),
+			velz:FRandom (1,3),
+			accelz: FRandom (-0.1,-0.25)
+			);
+		}
+		A_StartSound (Projectile.BounceSound,flags:CHANF_OVERLAP,1,0.9); //Ricochet sound, uses the BounceSound property, naturally.
+		
+		Return Ret;
+	}
+	
 	//=====|Other functions|=====\\
 	//Pass the vehicles' user variables as properties.
 	Void UpdateUserVariables()

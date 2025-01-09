@@ -2,9 +2,6 @@
 //General
 //A TOS-1
 	//The hull should have similar, if not identical, stats to the SPAAG hull. Health, mass, rip level, etc.
-
-//TODO
-//Probably move the APCs' bullets and shells, and the tanks' ATGM, into a generic projectiles file for reused projectile types.
 Class MVP_MBT : MVP_BaseVehicle
 {
 	Default
@@ -67,6 +64,11 @@ Class MVP_MBT : MVP_BaseVehicle
 		DamageFactor "SmallRifleBullet", 0.1;
 		DamageFactor "Missile", 0.7;
 		DamageFactor "AntiAir", 0.3;
+		//Deflection stats
+		KAI_Actor.DeflectionChance 252;
+		KAI_Actor.DeflectDamageFactor 0.6;
+		KAI_Actor.DeflectSlowDownFactor 0.7;
+		KAI_Actor.DeflectionFunnel (20,-20,20,-20);
 		+DontSquash;
 		+DontBlast;
 	}
@@ -154,6 +156,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	}
 	
 	Mixin MVP_MBT_SmokeHandling;
+	Mixin MVP_MBT_Deflection;
 	
 	Override Void SpawnHeadlights ()
 	{
@@ -888,6 +891,11 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		DamageFactor "RifleBullet", 0.1;
 		DamageFactor "Missile", 0.7;
 		DamageFactor "AntiAir", 0.3;
+		//Deflection
+		KAI_Actor.DeflectionChance 252;
+		KAI_Actor.DeflectDamageFactor 0.6;
+		KAI_Actor.DeflectSlowDownFactor 0.7;
+		KAI_Actor.DeflectionFunnel (20,-20,20,-20);
 	}
 	
 	Int UpdateTankElevation (Int FaceDown, Int FaceStraight, Int FaceUp, Int FaceUp2)
@@ -1551,6 +1559,8 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	Int AltAPSCooldown; //Cooldown for the Shtora-1 system that throws off homing projectiles in front of it by making them follow wandering points.
 	Int APSDelay; //The tick delay to set to the APS before it can search and shoot down projectiles again.
 	Int AltAPSDelay; //Same, but for the alt APS.
+	
+	Mixin MVP_MBT_Deflection;
 	
 	States
 	{
@@ -2335,5 +2345,20 @@ Mixin Class MVP_MBTTurret_SmokeHandling
 		}
 		SmokeCounter++;
 		Return True;
+	}
+}
+
+Mixin Class MVP_MBT_Deflection
+{
+	Override Vector4 OnProjectileDeflect (Actor Projectile, Vector3 ImpactVel, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
+	{
+		If (Projectile.DamageType == 'LargeRifleBullet')
+		{
+			FailChance += 104;
+			Funnel.X = 10; Funnel.Y = -10;
+			Funnel.Z = 10; Funnel.W = -10;
+		}
+		
+		Return Super.OnProjectileDeflect (Projectile, ImpactVel, FailChance, DamFac, VelFac, Funnel);
 	}
 }

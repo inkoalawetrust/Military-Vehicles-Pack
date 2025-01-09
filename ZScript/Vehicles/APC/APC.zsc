@@ -45,6 +45,11 @@ Class MVP_APC : MVP_BaseVehicle
 		DamageFactor "SmallRifleBullet", 0.5;
 		DamageFactor "Missile", 0.9;
 		DamageFactor "AntiAir", 0.6;
+		//Deflection
+		KAI_Actor.DeflectionChance 88; //NOTE: IT KEEPS FUCKING GETTING CHANCES JUUUUUUST BELOW THE THRESHOLD FOR FAILING TO DEFLECT 12.7MM ROUNDS!!!!!
+		KAI_Actor.DeflectDamageFactor 0.75;
+		KAI_Actor.DeflectSlowDownFactor 0.8;
+		KAI_Actor.DeflectionFunnel (10,-10,10,-10);
 		
 		+KAI_BaseVehicle.Transport;
 	}
@@ -61,6 +66,7 @@ Class MVP_APC : MVP_BaseVehicle
 	}
 	
 	Mixin MVP_APC_Smoke;
+	Mixin MVP_APC_Deflection;
 	
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
@@ -472,5 +478,26 @@ Mixin Class MVP_APC_Smoke
 		Smoke.Vel.Y = Smoke.Vel.X * Sin (CardAng) - FRandom (-1,-2) * Cos (CardAng);
 		Smoke.Vel.Z = FRandom (1.5,6);
 		Return True;
+	}
+}
+
+Mixin Class MVP_APC_Deflection
+{
+	Override Vector4 OnProjectileDeflect (Actor Projectile, Vector3 ImpactVel, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
+	{
+		If (Projectile.DamageType == 'SmallRifleBullet')
+		{console.printf ("deflecting small rifle bullet");
+			FailChance -= 56;
+			DamFac = FRandom (0.4,0.6);
+			Funnel.X = 10; Funnel.Y = -10;
+			Funnel.Z = 10; Funnel.W = -10;
+		}
+		If (Projectile.DamageType == 'LargeRifleBullet')
+		{
+			FailChance += 64;
+			DamFac = FRandom (0.85f,0.9f);
+		}
+		console.printf ("deflecting %s from %s| %d %f %f",projectile.getclassname(),getclassname(),failchance, damfac,velfac);
+		Return Super.OnProjectileDeflect (Projectile, ImpactVel, FailChance, DamFac, VelFac, Funnel);
 	}
 }

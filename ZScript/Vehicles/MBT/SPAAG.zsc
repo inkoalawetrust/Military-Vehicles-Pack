@@ -22,6 +22,11 @@ Class MVP_SPAAG : MVP_MBT
 		KAI_BaseVehicle.MaxPushRadius 128;
 		KAI_BaseVehicle.MaxPushHeight 128;
 		Tag "M6-SPAAG";
+		//Deflection
+		KAI_Actor.DeflectionChance 240;
+		KAI_Actor.DeflectDamageFactor 0.75;
+		KAI_Actor.DeflectSlowDownFactor 0.8;
+		KAI_Actor.DeflectionFunnel (15,-15,15,-15);
 	}
 	Override Void UserVariableDefaults ()
 	{

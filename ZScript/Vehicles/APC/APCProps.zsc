@@ -44,6 +44,7 @@ Class MVP_APCProp : MVP_BaseProp
 	}
 	
 	Mixin MVP_APC_Smoke;
+	Mixin MVP_APC_Deflection;
 	
 	//Handle spawning either the autocannon or MG turret prop.
 	Override Void SpawnVehicleTurret ()
