@@ -2350,7 +2350,7 @@ Mixin Class MVP_MBTTurret_SmokeHandling
 
 Mixin Class MVP_MBT_Deflection
 {
-	Override Vector4 OnProjectileDeflect (Actor Projectile, Vector3 ImpactVel, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
+	Override Vector4 OnProjectileDeflect (Actor Projectile, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
 	{
 		If (Projectile.DamageType == 'LargeRifleBullet')
 		{
@@ -2359,6 +2359,6 @@ Mixin Class MVP_MBT_Deflection
 			Funnel.Z = 10; Funnel.W = -10;
 		}
 		
-		Return Super.OnProjectileDeflect (Projectile, ImpactVel, FailChance, DamFac, VelFac, Funnel);
+		Return Super.OnProjectileDeflect (Projectile, FailChance, DamFac, VelFac, Funnel);
 	}
 }

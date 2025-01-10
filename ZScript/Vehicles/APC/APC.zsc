@@ -483,7 +483,7 @@ Mixin Class MVP_APC_Smoke
 
 Mixin Class MVP_APC_Deflection
 {
-	Override Vector4 OnProjectileDeflect (Actor Projectile, Vector3 ImpactVel, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
+	Override Vector4 OnProjectileDeflect (Actor Projectile, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
 	{
 		If (Projectile.DamageType == 'SmallRifleBullet')
 		{console.printf ("deflecting small rifle bullet");
@@ -497,7 +497,6 @@ Mixin Class MVP_APC_Deflection
 			FailChance += 64;
 			DamFac = FRandom (0.85f,0.9f);
 		}
-		console.printf ("deflecting %s from %s| %d %f %f",projectile.getclassname(),getclassname(),failchance, damfac,velfac);
-		Return Super.OnProjectileDeflect (Projectile, ImpactVel, FailChance, DamFac, VelFac, Funnel);
+		Return Super.OnProjectileDeflect (Projectile, FailChance, DamFac, VelFac, Funnel);
 	}
 }

@@ -242,10 +242,10 @@ Mixin Class MVP_SharedFunctions
 	}
 	
 	//MVP projectile deflections add slight variation to the parameters. Alongside playing deflection sounds and sparks.
-	Override Vector4 OnProjectileDeflect (Actor Projectile, Vector3 ImpactVel, Int &Chance, Double &DamFac, Double &VelFac, Vector4 Funnel)
+	Override Vector4 OnProjectileDeflect (Actor Projectile, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
 	{
-		Vector4 Ret = Super.OnProjectileDeflect (Projectile, ImpactVel, Chance, DamFac, VelFac, Funnel);
-		If (Chance >= DeflectionChance) //Not happening.
+		Vector4 Ret = Super.OnProjectileDeflect (Projectile, FailChance, DamFac, VelFac, Funnel);
+		If (FailChance >= DeflectionChance) //Not happening.
 			Return Ret;
 		
 		VelFac *= FRandom (0.8,1.0);
@@ -253,7 +253,6 @@ Mixin Class MVP_SharedFunctions
 		Ret.XY *= FRandom (0.8,1.2);
 		Double VertRNG = FRandom (0.8,1.2);
 		Ret.Z *= VertRNG; Ret.W = VertRNG;
-		console.printf ("onprojectiledeflect(): deflecting %s from %s| chance threshold%d | %f %f",projectile.getclassname(),getclassname(),chance,damfac,velfac);
 		//MVP Specific effects.
 		TextureID NullTex;
 		For (Int I = 0; I < 24; I++)
