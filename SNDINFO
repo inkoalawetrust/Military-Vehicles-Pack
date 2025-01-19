@@ -1,3 +1,32 @@
+//MBT voicelines
+//Loading lines
+MBT/Voice/HEAT "Sounds/Voices/MBT/Loading/HEAT.ogg"
+MBT/Voice/APFSDS "Sounds/Voices/MBT/Loading/APFSDS.ogg"
+MBT/Voice/Load1 "Sounds/Voices/MBT/Loading/Load1.ogg"
+MBT/Voice/Load2 "Sounds/Voices/MBT/Loading/Load2.ogg"
+MBT/Voice/Load3 "Sounds/Voices/MBT/Loading/Load3.ogg"
+//Smoke lines
+MBT/Voice/Smoke1 "Sounds/Voices/MBT/Smoke/Smoke1.wav"
+MBT/Voice/Smoke2 "Sounds/Voices/MBT/Smoke/Smoke2.wav"
+MBT/Voice/Smoke3 "Sounds/Voices/MBT/Smoke/Smoke3.wav"
+MBT/Voice/Smoke4 "Sounds/Voices/MBT/Smoke/Smoke4.wav"
+MBT/Voice/Smoke5 "Sounds/Voices/MBT/Smoke/Smoke5.wav"
+MBT/Voice/Smoke6 "Sounds/Voices/MBT/Smoke/Smoke6.wav"
+//Ding dong ditch
+MBT/Voice/Escape "Sounds/Voices/MBT/Ditch/Ditch1.ogg"
+//Taking damage
+MBT/Voice/Engine "Sounds/Voices/MBT/Damage/Engine.ogg"
+MBT/Voice/Damage1 "Sounds/Voices/MBT/Damage/Damage1.ogg"
+MBT/Voice/Damage2 "Sounds/Voices/MBT/Damage/Damage2.ogg"
+MBT/Voice/Damage3 "Sounds/Voices/MBT/Damage/Damage3.ogg"
+MBT/Voice/Damage4 "Sounds/Voices/MBT/Damage/Damage4.ogg"
+MBT/Voice/Damage5 "Sounds/Voices/MBT/Damage/Damage5.ogg"
+MBT/Voice/Damage6 "Sounds/Voices/MBT/Damage/Damage6.ogg"
+MBT/Voice/Damage7 "Sounds/Voices/MBT/Damage/Damage7.ogg"
+MBT/Voice/Damage8 "Sounds/Voices/MBT/Damage/Damage8.ogg"
+MBT/Voice/Damage9 "Sounds/Voices/MBT/Damage/Damage9.ogg"
+MBT/Voice/Damage10 "Sounds/Voices/MBT/Damage/Damage10.ogg"
+
 //Generic sound effects
 
 SFX/MSExplosion1 "Sounds/Vehicles/Di-Cokka/MSExplosion1.ogg"

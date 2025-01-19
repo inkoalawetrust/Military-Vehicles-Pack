@@ -532,7 +532,9 @@ Class MVP_DamageOnExit : Inventory
 		
 		If (GetAge() >= 1 && Owner)
 		{
-			Owner.DamageMobj (Target,Target,Health,DeathType,Threshold);
+			//No inflictor if said inflictor is friendly. Mainly so the friendly fire factor in the marine addon, doesn't affect this logic.
+			Actor Sorse = !Owner.IsHostile(Target) ? Null : Target;
+			Owner.DamageMobj (Sorse,Sorse,Health,DeathType,Threshold);
 			GoAwayAndDie();
 		}
 	}

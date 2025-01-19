@@ -1,0 +1,18 @@
+//Built-in tank voice.
+//The tank basically only uses custom voice types.
+Voice M6V3
+{
+	//Damage voicelines
+	Custom EngineSmoke = "MBT/Voice/Engine" //Health just got below the threshold for the engine to start smoking.
+	Custom Hit = "MBT/Voice/Damage1", "MBT/Voice/Damage2", "MBT/Voice/Damage3", "MBT/Voice/Damage4", "MBT/Voice/Damage5", "MBT/Voice/Damage6", "MBT/Voice/Damage7", "MBT/Voice/Damage8", "MBT/Voice/Damage9", "MBT/Voice/Damage10"  //Took over (Insert whatever damage threshold I use) damage
+	Custom Ditch = "MBT/Voice/Escape" //Tank is destroyed but the crew lived.
+	
+	//Load different ammo types
+	//Custom LoadATGM = "" //No ATGM voice lines in War Thunder, or any game I can find ripped voices from, lol.
+	Custom LoadAPFSDS = "MBT/Voice/APFSDS"
+	Custom LoadHEAT = "MBT/Voice/HEAT"
+	Custom Load = "MBT/Voice/Load1", "MBT/Voice/Load2", "MBT/Voice/Load3" //Generic fallback for load types with no audio attached in the pack.
+	
+	//Custom TakeAim = "" //Just started aiming towards an enemy. DUD, DOES NOTHING ON THE MBT, NO SOUNDS TO IMPLEMENT WITH!
+	Custom Smoke = "MBT/Voice/Smoke1", "MBT/Voice/Smoke2", "MBT/Voice/Smoke3", "MBT/Voice/Smoke4", "MBT/Voice/Smoke5", "MBT/Voice/Smoke6"  //Tank deploying smokescreen.
+}

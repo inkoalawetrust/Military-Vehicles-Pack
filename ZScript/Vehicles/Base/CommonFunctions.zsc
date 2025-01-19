@@ -160,7 +160,7 @@ Mixin Class MVP_SharedFunctions
 	
 	Override Bool IsActorHostile (Actor Other)
 	{
-		Return (Other && (IsHostile (Other) || IsTargetingAllies (Self, Other)));
+		Return (Other && (IsHostile (Other) || !IsDead(Other) && IsTargetingAllies (Self, Other)));
 	}
 	
 	//High quality marine code rip.
@@ -615,7 +615,7 @@ Mixin Class MVP_MarineFunctions
 	}
 	
 	//HACK: Damage the actor drop with the specified parameters after one tic.
-	Bool MVP_NPCDamageAfterExit (Actor Who, Actor Inflictor, Int Damage, Name DamageType, Int DmgFlags = DMG_NO_PAIN|DMG_THRUSTLESS)
+	Bool MVP_NPCDamageAfterExit (Actor Who, Actor Inflictor, Int ExitDamage, Name DamageType, Int DmgFlags = DMG_NO_PAIN|DMG_THRUSTLESS)
 	{
 		If (!Who)
 			Return False;
@@ -623,9 +623,9 @@ Mixin Class MVP_MarineFunctions
 		Let Harm = Who.GiveInventoryType("MVP_DamageOnExit");
 		
 		If (Harm)
-		{console.printf ("passed damage token");
+		{
 			Harm.Target = Inflictor;
-			Harm.Health = Damage;
+			Harm.Health = ExitDamage;
 			Harm.DeathType = DamageType;
 			Harm.Threshold = DmgFlags;
 			Return True;

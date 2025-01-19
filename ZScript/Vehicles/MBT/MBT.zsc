@@ -95,10 +95,22 @@ Class MVP_MBT : MVP_BaseVehicle
 		WarningZone = WarnNPCs (WRN_WARP|WRN_ALLIESTOO|WRN_CRUSHING,192,Self,(96,0,Height/2));
 	}
 	
+	Bool HealthNowLow; //Health is below the SMOKIN' threshold, the absence of this despite the health being under the threshold triggers the "Smoke" voice lines.
+	
 	Override Void Tick ()
 	{
 		Super.Tick();
 		If (IsFrozen() || !WarningZone) Return;
+		
+		If (!HealthNowLow && Health <= WoundHealth)
+		{
+			SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(User_Voice),"EngineSmoke",1.0,0.7);
+			HealthNowLow = True;
+		}
+		If (Health >= WoundHealth) //Health recovered.
+			HealthNowLow = False;
+		
+		If (Turret && Turret Is "MVP_MBTTurret") MVP_MBTTurret(Turret).Voice = User_Voice; 
 		//Disable the warning zone if crushing is disabled or the tank isn't moving in the first place.
 		WarningZone.bDormant = (bNoCrushing || IsInState (Self,"Spawn"));
 	}
@@ -173,6 +185,19 @@ Class MVP_MBT : MVP_BaseVehicle
 		Super.Die (Source, Inflictor, DmgFlags, MeansOfDeath);
 	}
 	
+	Override Int TakeSpecialDamage (Actor Inflictor, Actor Source, Int Damage, Name DamageType)
+	{
+		//Don't whine about tiny amounts of damage.
+		If (Damage < 70) //NOTE: Was 100 originally, but the damage factors of the MBT mean that the vanilla rocket juuust barely does 70 or more damage sometimes.
+			Return Super.TakeSpecialDamage (Inflictor, Source, Damage, DamageType);
+		
+		//Complain about damage randomly, the threshold to decide to do so lowers the higher the damage was.
+		If (Random (0,255) < KAI_Math.LinearMap (Damage,5,1800,8,255))
+			SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(User_Voice),"Hit",1.0,0.7);
+		
+		Return Super.TakeSpecialDamage (Inflictor, Source, Damage, DamageType);
+	}
+	
 	Override Void OnDestroy()
 	{
 		Super.OnDestroy();
@@ -228,6 +253,7 @@ Class MVP_MBT : MVP_BaseVehicle
 				Return False;
 			}
 			EndRetreat();
+			SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(User_Voice),"Smoke",1.0,0.7);
 			SetStateLabel ("StickAround.SmokeScreen"); //Stay still and deploy a smoke screen.
 			Return True;
 		}
@@ -456,6 +482,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	Int User_AltAPSDelay; //Shtora-1 cooldown.
 	Bool User_NoSmokescreen; //The tank will not deploy smokescreens.
 	Bool User_NoHullDown; //The tank will not attempt to enter hull down positions.
+	String User_Voice; //Yes, the tank can say things using custom KAI voice packs, lmao.
 	States
 	{
 		Sprites:
@@ -1104,6 +1131,26 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Return Check.Results.HitPos;
 	}
 	
+	//Custom voice line logic handling.
+	Override Bool SayVoiceLine (VoiceTypes Type, KAI_Voice Voice, String CustomType, Double Volume, Double Attenuation, Int Channel)
+	{
+		If (!Voice)
+			Return False; //🤐
+		
+		//If it's one of the "Load*" types we're playing, but it doesn't exist in the pack, fall back to the generic load sound.
+		If (CustomType.Left(4) ~== "Load" && !Voice.GetCustomType(CustomType))
+			CustomType = "Load";
+		
+		//By default, we just care about playing a random sound of that particular type.
+		Array <Sound> Yapping;
+		KAIHandler.GetNPCVoiceList (Yapping, Type, Voice, CustomType);
+		If (!Yapping.Size()) //Don't have any sounds to use.
+			Return False;
+		Int RNG = Random(0,Yapping.Size()-1);
+		Sound Snd = Yapping[RNG];
+		A_StartSound (Snd,Channel,CHANF_OVERLAP,Volume,Attenuation);
+		Return IsActorPlayingSound (Channel,Yapping[RNG]);
+	}	
 	Override Void Tick()
 	{
 		If (IsFrozen()) Return;
@@ -1124,7 +1171,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			//Decide an attack type every half a second.
 			If (ReadyToDecide && GetAge() % GameTicRate/2 == 0)
 			{
-				ShellType = DecideAmmoType();
+				If (!HasUniqueFireLines()) ShellType = DecideAmmoType(); //HACK: UH OH, HACK ALERT! DON'T CHANGE TYPES AFTER ANNOUNCING WHAT YOU'LL FIRE.
 				//NOTE: I may add HESH in the future, so this will need changing. Like making it so if the code above decides to use it, this check is ignored.
 				If (/*ShellType != TYPE_HESH && */Target && !CheckSight (Target,SF_IGNOREWATERBOUNDARY))
 					ReadyToDecide = False; //You can no longer see the target, so you cannot fire at them.
@@ -1141,6 +1188,30 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		}
 			
 		//console.printf ("reload time %d",reloadtime);
+	}
+	
+	//Has lines announcing specific ammo types to fire.
+	Bool HasUniqueFireLines()
+	{
+		
+		If (Voice ~== "")
+			Return False;
+		
+		KAI_Voice Bespoke/*™*/ = KAIHandler.GetNPCVoice(Voice);
+		
+		If (!Bespoke)
+			Return False;
+		
+		If (Bespoke.GetCustomType("LoadHEAT"))
+			Return True;
+		
+		If (Bespoke.GetCustomType("LoadAPFSDS"))
+			Return True;
+		
+		If (Bespoke.GetCustomType("LoadATGM"))
+			Return True;
+		
+		Return False;
 	}
 	
 	Const TrophyRange = 640;
@@ -1360,7 +1431,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	}
 	
 	//Decide and return what ammunition type to use for the tank. And also change the target prediction speeds appropriately.
-	Int DecideAmmoType()
+	Int DecideAmmoType ()
 	{
 		If (!Target) Return ShellType;
 		Int Threat = AssessThreatLevel (Target);
@@ -1372,9 +1443,11 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			If (Random (0,255) < 4)
 			{
 				TurretAttackSpeed = GetDefaultByType("MVP_ATGM").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_ATGM").FastSpeed;
+				SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(Voice),"LoadATGM",1.0,0.7);
 				Return TYPE_ATGM;
 			}
 			TurretAttackSpeed = GetDefaultByType("MVP_APFSDSShell").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_APFSDSShell").FastSpeed;
+			SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(Voice),"LoadAPFSDS",1.0,0.7);
 			Return TYPE_APFSDS;
 		}
 		
@@ -1389,6 +1462,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		&& KAI_TurretCheckLOF (Target,0,512,(0,0,LOFHeight)))
 		{
 			TurretAttackSpeed = GetDefaultByType("MVP_ATGM").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_ATGM").FastSpeed;
+			SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(Voice),"LoadATGM",1.0,0.7);
 			Return TYPE_ATGM;
 		}
 		
@@ -1399,9 +1473,11 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			If (Random (0,255) < 6)
 			{
 				TurretAttackSpeed = GetDefaultByType("MVP_ATGM").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_ATGM").FastSpeed;
+				SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(Voice),"LoadATGM",1.0,0.7);
 				Return TYPE_ATGM;
 			}
 			TurretAttackSpeed = GetDefaultByType("MVP_HEATShell").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_HEATShell").FastSpeed;
+			SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(Voice),"LoadHEAT",1.0,0.7);
 			Return TYPE_HEAT;
 		}
 		//Otherwise get the coaxial gun to fire a few shots at it.
@@ -1554,6 +1630,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	Int CoaxialShots; //How many shots to fire in the coaxial state before stopping.
 	Bool MetalCoffin; //T-72 mode
 	Bool GunLoaded; //Stop spamming the load sound.
+	String Voice; //Name of the voice pack used by the tank when loading and stuff.
 	
 	Int APSCooldown; //Cooldown on the Trophy-like system that actively shoots incoming projectiles down.
 	Int AltAPSCooldown; //Cooldown for the Shtora-1 system that throws off homing projectiles in front of it by making them follow wandering points.
@@ -1608,7 +1685,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 						Hazard.CustomTags.Push ("Explosive");
 					}
 				}
-				DecideAmmoType();
+				ShellType = DecideAmmoType();
 				If (!(Target Is "KAI_BaseVehicle"))
 				{
 					Actor New = A_FindEnemyVehicle();
@@ -1739,7 +1816,9 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			}
 			MBTD CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC 1 RotateToVehicle (RTVF_NOTARGETCHECK); //Wait for it.
 			MBTD C 0 A_StartSound ("Vehicle/ArmyTruck/BackOpen",flags:CHANF_OVERLAP,attenuation:0.75);
-			MBTD DDDDDDDDEEEEEEEE 1 RotateToVehicle (RTVF_NOTARGETCHECK);
+			MBTD DDDDDDDD 1;
+			MBTD D 0 SayVoiceLine (VOICE_NONE,KAIHandler.GetNPCVoice(Voice),"Ditch",1.0,0.7);
+			MBTD EEEEEEEE 1 RotateToVehicle (RTVF_NOTARGETCHECK);
 			MBTD E Random (4,8) A_StartSound ("Vehicle/ArmyTruck/BackSlam",flags:CHANF_OVERLAP,attenuation:0.8);
 			MBTD E 3 //Gunner and commandeder escape.
 			{

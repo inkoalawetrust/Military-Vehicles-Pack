@@ -36,6 +36,10 @@ Radio/Walkie-talkie sprites (RADI*) made by Doom Nukem. World sprite (RADIZ0) by
 
 
 |==============|Sounds|==============|
+Voices:
+Tank smokescreen voices, and some tank damage voices, are from Company of Heroes.
+Rest of the tank voicelines are from War Thunder.
+
 SFX:
 Generic large explosion sound (BigExplosion.ogg) is from the GDC 2018 sound library, "Olivier Girardot - Guns & Explosions"
 Generic fire sound (Fire.ogg) is from the GDC 2018 sound library, "Gregor Quendel – Designed Fire"
