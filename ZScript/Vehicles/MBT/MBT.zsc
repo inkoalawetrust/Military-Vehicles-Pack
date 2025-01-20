@@ -1193,7 +1193,6 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	//Has lines announcing specific ammo types to fire.
 	Bool HasUniqueFireLines()
 	{
-		
 		If (Voice ~== "")
 			Return False;
 		

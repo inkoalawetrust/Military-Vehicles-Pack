@@ -486,7 +486,7 @@ Mixin Class MVP_APC_Deflection
 	Override Vector4 OnProjectileDeflect (Actor Projectile, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
 	{
 		If (Projectile.DamageType == 'SmallRifleBullet')
-		{console.printf ("deflecting small rifle bullet");
+		{
 			FailChance -= 56;
 			DamFac = FRandom (0.4,0.6);
 			Funnel.X = 10; Funnel.Y = -10;
