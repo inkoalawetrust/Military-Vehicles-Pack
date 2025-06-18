@@ -35,4 +35,6 @@ DoomEdNums
 		17021 = MVP_SPAAG
 		17022 = MVP_BMPT //BMPT
 		//17023 = MVP_MLRS //TOS-1
+	//Panopticon drones
+		17024 = MVP_KamikazeDrone
 }

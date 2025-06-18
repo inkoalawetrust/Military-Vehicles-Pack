@@ -1,0 +1,140 @@
+//TODO:
+//Add A_SprayDecal() when it hits something and explodes.
+//Add a landed mode where it takes off first. And maybe also idles by landing again.
+//Make them unable to harm each other so they don't explode in chain reactions?
+//Add code for switching their sprites based on their XY speed.
+
+Class MVP_KamikazeDrone : MVP_BaseFlyer
+{
+	Default
+	{
+		//$Title Loitering Munition
+		//$Category Vehicles/Panopticon
+		//$Sprite PND1E1
+		
+		+KAI_Actor.NoTargetPrediction; //It's a flying bomb.
+		Tag "Loitering Munition";
+		KAI_Actor.ThreatLevelThreshold THREAT_ASSESS; //We don't care.
+		+WindThrust;
+		+Pushable;
+		+SlidesOnWalls;
+		-AvoidHazards; //You stupid.
+		+SeeInvisible; //Fuck
+		+FloatBob; //Scales with speed
+		+LookAllAround; //Fuck x2
+		
+		Health 15;
+		XScale 0.3;
+		YScale 0.25; //0.3/1.2
+		//WoundHealth 8; IDEA: Make weaked drones A_Weave() around or whatever?
+		ExplosionRadius 128;
+		ExplosionDamage 88;
+		FloatSpeed 2;
+		FloatBobStrength 0.5;
+		Mass 16; //Going by the convention that each integer is a kilo, this thing shouldn't be 16 kilos, but you know how Jazzy Doom is.
+		Height 12;
+		Radius 10;
+		CameraHeight 5;
+		Obituary "%o didn't hear the buzzing in time";
+		ActiveSound "Vehicle/Drone/Buzz";
+		DamageType "Explosive";
+		MeleeRange 64; //Explosion radius
+		Speed 10;
+		
+		//The loitering munition is incredibly fragile to everything vehicles are normally protected against.
+		RipLevelMin 0;
+		DamageFactor "Melee", 0.8; //May change this to have melee damage do nothing to the vehicles, unless it exceeds a certain ammount.
+		DamageFactor "Electric", 0.8;
+		DamageFactor "ExplosiveImpact", 1.5;
+		DamageFactor "Explosion", 1.5;
+		DamageFactor "Explosive", 1.5;
+		DamageFactor "Grenade", 1;
+		DamageFactor "HitScan", 1; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.8;
+		DamageFactor "Fire", 1;
+		DamageFactor "Crush", 1.5;
+		DamageFactor "Disintegrate", 1.5;
+		DamageFactor "Railgun", 2.0;
+		DamageFactor "Falling", 1.25;
+		DamageFactor "MarineHMG", 1;
+		DamageFactor "LargeRifleBullet", 1; //Replaces MarineHMG.
+		DamageFactor "MarineGrenade", 1;
+		DamageFactor "MarineRifle", 1;
+		DamageFactor "Autocannon", 1;
+		DamageFactor "RifleBullet", 1;
+		DamageFactor "SmallRifleBullet", 1;
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		A_StartSound (ActiveSound,flags:CHANF_LOOPING,attenuation:1.5);
+	}
+	
+	Override Void Tick()
+	{
+		KAI_Actor.Tick(); //It's a VERY basic vehicle.
+		If (IsFrozen())
+			Return;
+		
+		//Scale visual bobbing with speed.
+		FloatBobStrength = KAI_Math.LinearMap (Vel.Length(),0,6,Default.FloatBobStrength,0.05);
+		FloatBobStrength = Clamp (FloatBobStrength,0,Default.FloatBobStrength);
+		//Console.Printf ("Bob strength %.2f",FloatBobStrength);
+		
+		//Replace sprites to make it visually lean based on how high its' velocity is and where it's heading relative to its' current angle.
+		If (CurState)
+		{
+			//HACK: Frames are offset by -1 to stop the states from flickering to the default state sprite for one tick on every state change.
+			//KLUDGE: Oh also do NOT shift them by +1 instead, as that makes them basically switch every tick regardless of the state machine!
+			Switch (Frame)
+			{
+				Case 3: //A
+					Frame = LeanFlyerAround (4,8,0); // E, I, A
+					Break;
+				Case 0: //B
+					Frame = LeanFlyerAround (5,9,1); // F, J, B
+					Break;
+				Case 1: //C
+					Frame = LeanFlyerAround (6,10,2); // G, K, C
+					Break;
+				Case 2: //D
+					Frame = LeanFlyerAround (7,11,3); // H, L, D
+					Break;
+				Default:
+					Break;
+			}
+		}
+	}
+	
+	//IDEA: I will probably make this generic to share it with any future flying NPCs like the larger quadcopter.
+	//Forward: The frame to switch to when the actor is sufficiently propelling towards' its facing angle.
+	//Back: Ditto, but when facing too far back.
+	//Straight: The fallback frame to use when it's not moving too strongly either way.
+	//Threshold: If the horizontal velocity of the actor is below this value, just make it face straight.
+	//Diff: Using a dot product of the front of the actor and the actual XY direction. If the difference is at above this threshold, the actor is moving backwards.
+	Int LeanFlyerAround (Int Forward, Int Back, Int Straight, Double Threshold = 3, Double Diff = -0.6)
+	{
+		Double Dir = Vel.XY Dot AngleToVector (Angle,Speed);
+		
+		If (Vel.XY.Length() < Threshold || (Abs(Dir)-Abs(Diff) <= Abs(Diff))) //Too slow, or facing more sideways than either the back or front, just face straight up.
+			Return Straight;
+		
+		//The difference between the front and back is large enough that we are clearly going AWAY from where we're facing.
+		If (Dir <= Diff)
+			Return Back;
+		//No it's not, we are moving forwards yippie.
+		Else
+			Return Forward;
+		
+		Return Straight; //Fallback
+	}
+	
+	States
+	{
+		Spawn:
+			PND1 ABCD 2 KAI_Look (KAIL_CHASETARGET|KAIL_NOTEMPSTAND);
+			Loop;
+	}
+}

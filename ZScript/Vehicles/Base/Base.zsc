@@ -65,6 +65,19 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 	Mixin MVP_DamageSmokeHandling;
 }
 
+Class MVP_BaseFlyer : MVP_BaseVehicle
+{
+	Default
+	{
+		+NOLIFTDROP;
+		+FLOAT;
+		+NOGRAVITY;
+		+INFLOAT; //HACK: So the flyers don't automatically adjust their height to match the target, because GZDoom cakes that into the PHYSICS CODE FOR SOME REASON.
+		+KAI_Actor.IsFlyer;
+		+KAI_Actor.MovesWithVelocity;
+	}
+}
+
 Class MVP_BaseTurret : KAI_BaseTurret
 {
 	Default

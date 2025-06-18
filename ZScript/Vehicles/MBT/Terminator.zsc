@@ -20,7 +20,6 @@ Class MVP_BMPT : MVP_MBT
 	}
 }
 
-
 Class MVP_BMPTTurret : MVP_MBTTurret
 {
 	Default

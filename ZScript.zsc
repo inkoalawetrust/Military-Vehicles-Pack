@@ -27,7 +27,9 @@ Version "4.12.0"
 	#Include "ZScript/Vehicles/MBT/OtherActors.zsc"
 	#Include "ZScript/Vehicles/MBT/SPAAG.zsc"
 	#Include "ZScript/Vehicles/MBT/Terminator.zsc"
-	//#Include "ZScript/Vehicles/MBT/MLRS.zsc"
+	//#Include "ZScript/Vehicles/MBT/MLRS.zsc" //Development hell.
+	//Homicidal robots
+	#Include "ZScript/Vehicles/Panopticon/Kamikaze.zsc"
 	//MISSION 01 START
 	#Include "ZScript/Vehicles/Di-Cokka/Di-Cokka.zsc"
 	#Include "ZScript/Vehicles/Di-Cokka/OtherActors.zsc"

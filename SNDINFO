@@ -288,3 +288,8 @@ $Random MVPMarine/Death
 	$Limit Vehicle/Tank/Artillery1 0
 	$Limit Vehicle/Tank/Artillery2 0
 	$Limit Vehicle/Tank/Artillery3 0
+	
+	//Drones
+	Vehicle/Drone/Buzz "Sounds/Vehicles/Drones/DroneBuzz.ogg"
+	
+	$Limit Vehicle/Drone/Buzz 5
