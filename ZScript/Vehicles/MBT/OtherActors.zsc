@@ -76,6 +76,7 @@ Class MVP_GroundDustSpawner : Actor
 		RadiusDamageFactor 0.35; //How much distance off the ground affects the firing effect. 1 is a direct conversion of: 1 MU of the ground = 1 less dust cloud
 		ReactionTime 64; //How much smoke to spawn.
 		Threshold 256; //How far to spawn dust.
+		Scale 1.0; //Scale.X can increase or decrease the dust particle scale.
 	}
 	Override Void PostBeginPlay ()
 	{
@@ -94,7 +95,7 @@ Class MVP_GroundDustSpawner : Actor
 			If (!Level.IsPointInLevel (Dust.Pos) || (FloorZ - Dust.Pos.Z) > 64 || Dust.Pos.Z > Pos.Z+16|| Distance2DSquared (Dust) > Threshold*Threshold)
 				Dust.Destroy();
 			
-			Dust.Scale *= FRandom (0.6,1.25);
+			Dust.Scale *= FRandom (0.6,1.25)*Scale.X;
 			Dust.Speed *= FRandom (0.75,1.25); //Set roll speed, doesn't work for MVP_GroundDust3 though, which doesn't use it.
 			If (Random (0,255) < 255/2-16 && !(Dust Is "MVP_GroundDust3")) Dust.Vel.Z = FRandom(0.5,2);
 			If (Random (0,255) < 64) Dust.A_SetRenderStyle (1,STYLE_ADD);
