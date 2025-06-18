@@ -118,6 +118,30 @@ Class MVP_MBTProp : MVP_BaseProp
 			Turret.TurnSound = "Vehicle/Tank/TurretTurnOriginal";
 			Turret.bTurnSoundNoStop = False;
 		}
+		
+		//Copied from how the Smart Marines' color variable is handled.
+		If (!User_Color || User_Color ~== ""){} //Don't run the code if User_Color is empty.
+		Else
+		{
+			//Handles the random color choice that is performed if the color name given is "Random".
+			If (User_Color ~== "Random")
+			{
+				Static Const String ColorArray[] = {"White","Black","Yellow","Orange","Red","Blue","Olive","Default"}; //Contains all the valid color names.
+				
+				User_Color = ColorArray[Random(0,ColorArray.Size()-1)]; //Randomly picks a color string.
+			}
+			
+			If (!(User_Color ~== "Default"))
+			{
+				A_SetTranslation (String.Format("Tank_%s", User_Color));
+				If (Turret) Turret.A_SetTranslation (String.Format("Tank_%s", User_Color));
+			}
+			Else
+			{
+				A_SetTranslation ('');
+				If (Turret) Turret.A_SetTranslation ('');
+			}
+		}
 	}
 	
 	Override Void SpawnVehicleTurret ()
@@ -161,6 +185,7 @@ Class MVP_MBTProp : MVP_BaseProp
 	Double User_TurretAngle, User_TurretPitch; //Main turret direction offset.
 	Double User_RWSAngle, User_RWSPitch; //RWS direction offset.
 	Bool User_T72Mode;
+	String User_Color;
 	
 	Bool User_Lowered; //Used by the SPAAG variant. Spawns the anti air turret with its' radar lowered.
 	
@@ -586,6 +611,8 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 			Turret.TurretRotationOffset = RWSAngle;
 			Turret.Angle = RWSAngle;
 			Turret.Pitch = RWSPitch;
+			If (Master && Master Is "MVP_MBTProp")
+				Turret.A_SetTranslation (String.Format("Tank_%s",MVP_MBTProp(Master).User_Color));
 		}
 	}
 	
@@ -710,7 +737,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 	Bool InFlight;
 }
 
-//TODO: Once I begin coding the actual NPC versions of these turrets, put their settings like damage factors and obituaries here, these are basically placeholders.
+//TODO: Once I begin coding the actual NPC versions of this turrets, put its settings like damage factors and obituaries here, these are basically placeholders.
 Class MVP_MBTMissileTurretProp : MVP_MBTTurretProp
 {
 	Default

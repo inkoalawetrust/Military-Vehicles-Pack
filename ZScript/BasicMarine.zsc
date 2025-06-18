@@ -43,7 +43,7 @@ Class MVP_CrapMarine : KAI_Humanoid
 		+NoInfightSpecies;
 		+FloorClip;
 		+AvoidMelee;
-		+AvoidHazards; //This ONLY works for crushing ceilings and NOTHING ELSE. So it's largely useless but I'm still adding it.
+		+AvoidHazards;
 		+SeeFriendlyMonsters; //No more ZScript code hacks.
 		+DoShadowBlock;
 		//+DropOff;

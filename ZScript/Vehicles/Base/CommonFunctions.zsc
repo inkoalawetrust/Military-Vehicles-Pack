@@ -402,14 +402,14 @@ Mixin Class MVP_SharedFunctions
 	
 	//Death flame handling.
 	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
-	Enum KAIFlameFlags
+	Enum MVPFlameFlags
 	{
 		FSP_WARNMARINES = 1 << 0, //If any flames are succesfully created around the vehicle, should a marine warning zone be made ?
 		FSP_VEHICLEDEATH = 1 << 1 //Mark the warning zone as needing to vanish once all of the flames have evaporated.
 	}
 	
 	//Creates multiple flames within the bounding box of the vehicle. Used to create flaming wrecks when vehicles are gibbed.
-	//Flags: The flags that control the spawning behavior, look at KAIFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
+	//Flags: The flags that control the spawning behavior, look at MVPFlameFlags for more info. Default flags are FSP_WARNMARINES and FSP_VEHICLEDEATH.
 	//Amount: The random amount of flames that will be created, the X component is the minimum amount of flames, and Y is the maximum.
 	//Lifespan: The random lifespan each flame has in tics, the default is 35*30 (30 seconds). The X component is the minimum lifespan a flame can have, and Y is the maximum.
 	//RadMul: How much should the random flame position be multiplied by the vehicles' radius.

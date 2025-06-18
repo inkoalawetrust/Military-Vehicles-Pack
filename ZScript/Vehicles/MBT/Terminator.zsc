@@ -174,7 +174,7 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		If (ATGMPosition > ATGM_POD4) //If the position is overflowed, set it back to 0.
 			ATGMPosition = ATGM_POD1;
 		
-		ATGMCooldown = GameTicRate*Random (6,8);
+		ATGMCooldown = GameTicRate*Random (4,6);
 	}
 	
 	Int MGDelay; //Delay firing the machinegun a bit right after firing a rocket.

@@ -93,6 +93,30 @@ Class MVP_MBT : MVP_BaseVehicle
 			Turret.bTurnSoundNoStop = False;
 		}
 		WarningZone = WarnNPCs (WRN_WARP|WRN_ALLIESTOO|WRN_CRUSHING,192,Self,(96,0,Height/2));
+		
+		//Copied from how the Smart Marines' color variable is handled.
+		If (!User_Color || User_Color ~== ""){} //Don't run the code if User_Color is empty.
+		Else
+		{
+			//Handles the random color choice that is performed if the color name given is "Random".
+			If (User_Color ~== "Random")
+			{
+				Static Const String ColorArray[] = {"White","Black","Yellow","Orange","Red","Blue","Olive","Default"}; //Contains all the valid color names.
+				
+				User_Color = ColorArray[Random(0,ColorArray.Size()-1)]; //Randomly picks a color string.
+			}
+			
+			If (!(User_Color ~== "Default"))
+			{
+				A_SetTranslation (String.Format("Tank_%s", User_Color));
+				If (Turret) Turret.A_SetTranslation (String.Format("Tank_%s", User_Color));
+			}
+			Else
+			{
+				A_SetTranslation ('');
+				If (Turret) Turret.A_SetTranslation ('');
+			}
+		}
 	}
 	
 	Bool HealthNowLow; //Health is below the SMOKIN' threshold, the absence of this despite the health being under the threshold triggers the "Smoke" voice lines.
@@ -483,6 +507,7 @@ Class MVP_MBT : MVP_BaseVehicle
 	Bool User_NoSmokescreen; //The tank will not deploy smokescreens.
 	Bool User_NoHullDown; //The tank will not attempt to enter hull down positions.
 	String User_Voice; //Yes, the tank can say things using custom KAI voice packs, lmao.
+	String User_Color;
 	States
 	{
 		Sprites:
@@ -937,6 +962,15 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			Return FaceUp2;
 		
 		Return FaceStraight;
+	}
+	
+	Override Void SpawnVehicleTurret ()
+	{
+		Super.SpawnVehicleTurret();
+		
+		//Check if we have a RWS, and attached to a tank.
+		If (Turret && Master && Master Is "MVP_MBT")
+			Turret.A_SetTranslation (String.Format("Tank_%s",MVP_MBT(Master).User_Color));
 	}
 	
 	Override Void OnDestroy()

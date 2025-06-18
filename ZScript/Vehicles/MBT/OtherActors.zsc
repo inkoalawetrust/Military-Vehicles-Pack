@@ -89,7 +89,7 @@ Class MVP_GroundDustSpawner : Actor
 		For (Int I = DustCount; 0 <= I; I--)
 		{
 			Dust = Spawn (DustClasses[Random(0,DustClasses.Size()-1)],Vec3Offset (FRandom (Threshold,-Threshold),FRandom(Threshold,-Threshold),0));
-			Dust.SetOrigin ((Dust.Pos.XY,GetZAt (Dust.Pos.X,Dust.Pos.Y,flags:GZF_ABSOLUTEPOS)),False);
+			Dust.SetOrigin ((Dust.Pos.XY,GetZAt (Dust.Pos.X,Dust.Pos.Y,flags:GZF_ABSOLUTEPOS)+0.05),False);
 			//If the dust is out of bounds, or the height difference from the explosions' ground level is too high, remove it.
 			If (!Level.IsPointInLevel (Dust.Pos) || (FloorZ - Dust.Pos.Z) > 64 || Dust.Pos.Z > Pos.Z+16|| Distance2DSquared (Dust) > Threshold*Threshold)
 				Dust.Destroy();
@@ -103,6 +103,7 @@ Class MVP_GroundDustSpawner : Actor
 	}
 }
 
+//MAYDO: Make these actors visual thinkers, using ANIMDEFS defined smoke clouds.
 //Gray circular cloud.
 Class MVP_GroundDust : Actor
 {
@@ -114,6 +115,7 @@ Class MVP_GroundDust : Actor
 		+NoInteraction;
 		+NoGravity;
 		+RollSprite;
+		+ForceXYBillboard;
 	}
 	
 	Override Void PostBeginPlay ()
