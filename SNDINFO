@@ -293,5 +293,5 @@ $Random MVPMarine/Death
 	Vehicle/Drone/Buzz "Sounds/Vehicles/Drones/DroneBuzz.ogg"
 	Vehicle/Drone/Beep "Sounds/Vehicles/Drones/DroneBeep.ogg"
 	
-	$Limit Vehicle/Drone/Buzz 5
+	$Limit Vehicle/Drone/Buzz 0
 	$Limit Vehicle/Drone/Beep 8

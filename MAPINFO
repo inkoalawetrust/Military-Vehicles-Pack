@@ -6,6 +6,8 @@ GameInfo
 DoomEdNums
 {
 	18000 = MVP_Radio
+	18001 = MVP_DroneGlobSpawner
+	
 	//Army car
 		17000 = MVP_ArmyCar
 		17001 = MVP_ArmyCarProp
