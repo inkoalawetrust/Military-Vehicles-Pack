@@ -1,8 +1,5 @@
 //IDEA:
 //Add swarm behavior? Like moving in groups and unique behavior for following other actors, like escorting other NPCs. Also especially, preventing them from dogpiling.
-//Using LookForEnemiesEx() instead of A_Look(), such as for targeting the closest or weakest enemies? Would also need me to replicate A_Look() patrol code I think.
-
-//BUG: I fucking punched the air with one of them flying towards me and it triggered a stack overflow. And I haven't been able to replicate that since.
 
 Class MVP_KamikazeDrone : MVP_BaseFlyer
 {
@@ -207,45 +204,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		If (GetAge() % 4 == 0)
 			HazardInfo.EmitHazard (Self,ExplosionRadius*2,HazardInfo.HAZARD_ACTOR,HazardInfo.HAZARD_MEDIUM,tags:HazardTags);
 		
-		If (Health <= WoundHealth)
-		{
-			bSkyExplode = True;
-			//FlightAcceleration = 0.5;
-			Speed = GetDefaultSpeed(GetClass())*1.5; //Fly faster.
-			
-			A_Weave(4,4,2,2);
-			Vector3 Front = Level.Vec3Offset(Pos,KAI_Math.AngleToVector3D(Angle,Pitch,Speed));
-			KAI_MoveTowards (Front,1,TurnHorz,flags:KMTFlags,TurnVert);
-			If (MovementBlockingLine || BlockingFloor || BlockingCeiling || Blocking3DFloor || BlockingMObj) //Explode on impact with anything.
-				ExplodeMissile (BlockingLine,BlockingMobj,True);
-			MovedAlready = True;
-			
-			If (!IsActorPlayingSound(CHAN_VOICE))
-				A_StartSound ("Vehicle/Drone/Beep",CHAN_VOICE,attenuation:ATTN_STATIC);
-			
-			SpriteRotation += 10; //Visually spiralling out of control.
-			
-			//Smoke occasionally
-			Actor Smoke = Random (0,255) < 64 ? Spawn ("MVP_DamageSmoke",Pos) : Null;
-			If (Smoke)
-			{
-				Smoke.Alpha = 0.8;
-				Smoke.Roll = FRandom(-180,180);
-				Smoke.A_SetScale (FRandom(0.2,0.6));
-			}
-			
-			//Spark randomly
-			If (Random (0,255) < 6)
-			{
-				Vector3 Sparkle = (Random(Radius,-Radius),Random(Radius,-Radius),Random (0,Height));
-				Actor Spark = Spawn ("MVP_Spark",Level.Vec3Offset(Pos,Sparkle));
-				If (Spark)
-				{
-					Spark.Master = Self;
-					MVP_Spark(Spark).Rel = Sparkle;
-				}
-			}
-		}
+		MovedAlready = MVP_KamikazeSpiral();
 		/*Else //This is supposed to be a "cheap" NPC to run, why do I even care if other code heals it back up before it crashes?
 		{
 			FlightAcceleration = Default.FlightAcceleration;
@@ -286,6 +245,99 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		}
 	}
 	
+	Bool MVP_KamikazeSpiral()
+	{
+		If (Health <= WoundHealth)
+		{
+			bSkyExplode = True;
+			//FlightAcceleration = 0.5;
+			Speed = GetDefaultSpeed(GetClass())*1.5; //Fly faster.
+			
+			A_Weave(4,4,2,2);
+			Vector3 Front = Level.Vec3Offset(Pos,KAI_Math.AngleToVector3D(Angle,Pitch,Speed));
+			KAI_MoveTowards (Front,1,TurnHorz,flags:KMT_3D,TurnVert);
+			If (MovementBlockingLine || BlockingFloor || BlockingCeiling || Blocking3DFloor || BlockingMObj) //Explode on impact with anything.
+				ExplodeMissile (BlockingLine,BlockingMobj,True);
+			
+			If (!IsActorPlayingSound(CHAN_VOICE))
+				A_StartSound ("Vehicle/Drone/Beep",CHAN_VOICE,attenuation:ATTN_STATIC);
+			
+			SpriteRotation += 10; //Visually spiralling out of control.
+			
+			//Smoke occasionally
+			Actor Smoke = Random (0,255) < 64 ? Spawn ("MVP_DamageSmoke",Pos) : Null;
+			If (Smoke)
+			{
+				Smoke.Alpha = 0.8;
+				Smoke.Roll = FRandom(-180,180);
+				Smoke.A_SetScale (FRandom(0.2,0.6));
+			}
+			
+			//Spark randomly
+			If (Random (0,255) < 6)
+			{
+				Vector3 Sparkle = (Random(Radius,-Radius),Random(Radius,-Radius),Random (0,Height));
+				Actor Spark = Spawn ("MVP_Spark",Level.Vec3Offset(Pos,Sparkle));
+				If (Spark)
+				{
+					Spark.Master = Self;
+					MVP_Spark(Spark).Rel = Sparkle;
+				}
+			}
+			Return True;
+		}
+		Return False;
+	}
+	
+	Void MVP_KamikazeLook (Int Flags = 0)
+	{
+		If (!User_RandomTarget)
+			KAI_Look (Flags,extraflags:KAIL_NOTEMPSTAND);
+		Else
+		{
+			//KAI_Look (Flags|LOF_NOSIGHTCHECK|LOF_NOSOUNDCHECK,extraflags:KAIL_NOTEMPSTAND); //Only run patrolling logic in random target mode.
+			
+			//Port of some of the A_Look() logic for beginning to chase a patrol route.
+			if (special == Thing_SetGoal && args[0] == 0) 
+			{
+				let iterator = Level.CreateActorIterator(args[1], "PatrolPoint");
+				special = 0;
+				goal = iterator.Next ();
+				reactiontime = args[2] * TICRATE + Level.maptime;
+				if (args[3] == 0)
+					bChaseGoal = False;
+				else
+					bChaseGoal = True;
+				
+				target = goal; //Just go to the goal. Very simple.
+			}
+		
+			If (!Target) //Pick random target in sight.
+			{
+				Array <Actor> Targs;
+				LookForEnemiesEx (Targs, -1, False, True);
+				For (Int I = Targs.Size()-1; I > 0; I--)
+				{
+					//HACK: Yes, the internal monster sight logic apparently doesn't exclude dead monsters despite the health check in ValidEnemyInBlock().
+					//So we have to double check here to prevent fun problems like infinite recursions!
+					If (IsDead(Targs[I]))
+						Targs.Delete(I);
+					//if (targs[i])
+					//	console.printf ("i see %s",Targs[I].getclassname());
+				}
+				If (Targs.Size() == 1 && !IsDead(Targs[0]))
+					Target = Targs[0];
+				Else If (Targs.Size())
+					Target = Targs[Random(0,Targs.Size()-1)]; //Pick random target in sight.
+			}
+			If (IsDead (Target)) //Prevents infinite recursions.
+				Target = Null;
+			
+			If (Target && !(Flags & LOF_NOJUMP))
+				{console.printf ("going to seestate for %p (%s)",target,target.getclassname());SetState(SeeState);}
+		}
+	}
+	
 	Void StopFlight()
 	{
 		A_StopSound (CHAN_BODY);
@@ -312,6 +364,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 	
 	Bool User_DroneClip; //Drones clip through each other when on the same side.
 	Bool User_Landed; //Drone spawns in landed on the ground, and also idles by landing again. Kinda like a mobile mine.
+	Bool User_RandomTarget; //Pick a random target in sight instead of the first one found. Useful for somewhat preventing drones from chasing the same thing.
 	
 	States
 	{
@@ -319,15 +372,18 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 			PND1 A 0 NoDelay A_JumpIf (User_Landed,"Landed");
 			PND1 ABCD 2
 			{
-				KAI_Look (extraflags:KAIL_NOTEMPSTAND);
-				Vel *= 0.9;
+				If (!MVP_KamikazeSpiral())
+				{
+					MVP_KamikazeLook ();
+					Vel *= 0.9;
+				}
 			}
 			Goto Spawn+1;
 		Landed:
 			PND1 P 0 StopFlight();
 			PND1 P 2
 			{
-				KAI_Look (LOF_NOJUMP,extraflags:KAIL_NOTEMPSTAND);
+				MVP_KamikazeLook (LOF_NOJUMP);
 				If (Target)
 					Return FindState ("Landed.LiftOff",True);
 				Return State(Null);
@@ -344,7 +400,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		Landed.Landing: //Move down until we are sitting on top of something first.
 			PND1 AABBCCDD 1
 			{
-				KAI_Look (LOF_NOJUMP,extraflags:KAIL_NOTEMPSTAND);
+				MVP_KamikazeLook (LOF_NOJUMP);
 				If (Target) //Nvm we have a target to kill.
 					Return SeeState;
 				
@@ -363,15 +419,21 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 			PND1 A 0 A_JumpIf (User_Landed,"Landed.Landing");
 			PND1 AABBCCDD 1
 			{
-				KAI_Wander(8,384,anglelimit:TurnHorz,flags:KMT_3D,pitchlimit:TurnVert);
-				KAI_Look (extraflags:KAIL_NOTEMPSTAND);
+				If (!MVP_KamikazeSpiral())
+				{
+					KAI_Wander(8,384,anglelimit:TurnHorz,flags:KMT_3D,pitchlimit:TurnVert);
+					MVP_KamikazeLook();
+				}
 			}
 			Loop;
 		Stand: //Before patrolling again
 			PND1 AABBCCDD 1
 			{
-				KAI_Look (extraflags:KAIL_NOTEMPSTAND);
-				Vel *= 0.90;
+				If (!MVP_KamikazeSpiral())
+				{
+					MVP_KamikazeLook();
+					Vel *= 0.90;
+				}
 			}
 			Loop;
 		Death:
@@ -422,7 +484,7 @@ Class MVP_DroneGlobSpawner : KAI_MixinActor
 		//$Arg3 Flags
 		//$Arg3Tooltip "Flags that modify the spawners' behavior."
 		//$Arg3Type 12
-		//$Arg3Enum {1 = "Randomize Angles"; 2 = "Randomize Pitches"; 4 = "Spawn on the floor"; 8 = "Drones don't collide with each other";}
+		//$Arg3Enum {1 = "Randomize Angles"; 2 = "Randomize Pitches"; 4 = "Spawn on the floor"; 8 = "Drones don't collide with each other"; 16 = "Drones pick unique targets";}
 	}
 	
 	Enum DArgs
@@ -439,6 +501,7 @@ Class MVP_DroneGlobSpawner : KAI_MixinActor
 		RandomPitch = 2,
 		FloorSpawn	= 4,
 		DroneClip	= 8,
+		RandomTarg	= 16,
 	}
 	
 	Override Void PostBeginPlay()
@@ -472,6 +535,7 @@ Class MVP_DroneGlobSpawner : KAI_MixinActor
 					
 					MVP_KamikazeDrone(Drone).User_DroneClip = (Args[Flags] & DroneClip);
 					MVP_KamikazeDrone(Drone).User_Landed = (Args[Flags] & FloorSpawn);
+					MVP_KamikazeDrone(Drone).User_RandomTarget = (Args[Flags] & RandomTarg);
 					Break;
 				}
 				Else
