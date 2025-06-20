@@ -229,7 +229,9 @@ Class MVP_ShrapnelPuff : KAI_MixinActor
 		+RANDOMIZE
 		+ZDOOMTRANS
 		+HITTRACER; //Store the actor the puff hit.
+		+FORCEDECAL;
 		RenderStyle "Translucent";
+		Decal "Chip";
 		Alpha 0.5;
 		VSpeed 1;
 		Mass 5;

@@ -250,6 +250,17 @@ Class MVP_Spark : Actor
 		+NoInteraction;
 		+NoGravity;
 	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (!IsFrozen() && Master)
+			SetOrigin (KAI_Math.Vec3OffsetRelative(Master,Rel,flags:KAI_Math.V3R_ANGLEONLY),True);
+	}
+	
+	Vector3 Rel;
+	
 	States
 	{
 		Spawn:

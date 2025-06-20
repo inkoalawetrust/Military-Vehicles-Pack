@@ -100,6 +100,9 @@ Missile flying sound (MissileFly.ogg) is from Battlefield 1942.
 Missile locking sound (MissileLock.ogg) made by me (inkoalawetrust).
 Original tank movement and turret turning sounds (TankMoveOriginal.ogg & TankTurnOriginal.ogg) are from Half Life 1.
 
+Kamikaze drone flying sound (DroneBuzz.ogg) is from ZapSplat (https://www.zapsplat.com/music/air-hogs-dr1-drone-fly-around-stop/)
+Kamikaze drone beeping sound (DroneBeep.ogg) made by me (inkoalawetrust).
+
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|Sounds|==============|
 
