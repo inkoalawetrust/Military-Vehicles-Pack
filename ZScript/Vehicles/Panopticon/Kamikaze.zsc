@@ -1,6 +1,8 @@
 //IDEA:
-//Add swarm behavior? Like moving in groups and unique behavior for following other actors, like escorting other NPCs.
+//Add swarm behavior? Like moving in groups and unique behavior for following other actors, like escorting other NPCs. Also especially, preventing them from dogpiling.
 //Using LookForEnemiesEx() instead of A_Look(), such as for targeting the closest or weakest enemies? Would also need me to replicate A_Look() patrol code I think.
+
+//BUG: I fucking punched the air with one of them flying towards me and it triggered a stack overflow. And I haven't been able to replicate that since.
 
 Class MVP_KamikazeDrone : MVP_BaseFlyer
 {
@@ -16,7 +18,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		KAI_Actor.FlightAcceleration 0.25;
 		KAI_Actor.FlightDeceleration 0.5;
 		KAI_Actor.FlightWrongDirFactor 2.5;
-		FriendlySeeBlocks 32; 
+		//FriendlySeeBlocks 32; 
 		+WindThrust;
 		+Pushable;
 		+SlidesOnWalls;
@@ -25,6 +27,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		+FloatBob; //Scales with speed
 		+LookAllAround; //Fuck x2
 		+DontFollowPlayers; //Only when trying to kill them.
+		-CountKill;
 		
 		Health 15;
 		XScale 0.3;
@@ -42,8 +45,8 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		ActiveSound "Vehicle/Drone/Buzz";
 		DamageType "Explosive";
 		MeleeRange 72; //Once in here, check if we will hit the target.
-		Speed 12;
-		FastSpeed 16;
+		Speed 16;
+		FastSpeed 20;
 		Friction 0.5;
 		DamageFunction (Random(16,32));
 		Decal "BulletChip"; //HACK: This isn't the explosions' decal, that's manually sprayed, nope, this is the decal of the shrapnel, not the one on the shrapnel puff!
@@ -132,10 +135,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 			
 			//Slow down the closer we are to hitting a wall so that we can climb it, kinda like crude obstalce avoidance.
 			If (Health > WoundHealth && LineTrace (Angle,Radius+144,Pitch,TRF_BLOCKSELF,Height/2,data:Front) && Front.HitLine)
-			{
 				Speed = KAI_Math.LinearMap (Front.Distance,0,Front.Distance,GetDefaultSpeed(GetClass()),2);
-				console.printf ("hit a blocking line, so we scaled the speed to %.2f",speed);
-			}
 			Else
 				Speed = GetDefaultSpeed(GetClass());
 		}
@@ -196,6 +196,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 	Void MVP_KamikazeChase ()
 	{
 		KAI_Chase_PreChecks();
+		If (IsDead (Target)) Target = Null;
 		KAI_Chase_Retarget(0,True);
 		
 		Bool MovedAlready; Bool B;
@@ -245,17 +246,18 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 				}
 			}
 		}
-		Else
+		/*Else //This is supposed to be a "cheap" NPC to run, why do I even care if other code heals it back up before it crashes?
 		{
 			FlightAcceleration = Default.FlightAcceleration;
 			Speed = GetDefaultSpeed (GetClass());
 			bSkyExplode = Default.bSkyExplode;
-		}
+		}*/
 		
 		//Move to target, and also handle patrolling but then seeing a target.
 		If (Target && Target != Goal && !MovedAlready)
 		{
-			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),1,TurnHorz,flags:KMTFlags,TurnVert);
+			Double Ofs = IsFlying(Target) ? Target.Height/2 : Target.Height;
+			KAI_MoveTowards (Target.Pos.PlusZ(Ofs),1,TurnHorz,flags:KMTFlags,TurnVert);
 			MovedAlready = True;
 		}
 		
@@ -264,7 +266,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 			MeleeRange = 32;
 			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Stand",1,TurnHorz,flags:KMTFlags,TurnVert);
 			MeleeRange = Default.MeleeRange;
-			If (b && goal) spawn ("kai_debugpoint",goal.pos);
+			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
 			//if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d",goal.pos,movedalready,b);
 		}
 		
@@ -272,12 +274,12 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		If (Target != Goal && KAI_CheckMeleeRange (Target,flags:CMR_3DDISTANCE))
 		{
 			LineTrace (Angle,Radius+MeleeRange,Pitch,TRF_BLOCKSELF,Height/2,data:Front);
-			KAI_LOFRaycast.VisualizeTracePath (Pos.PlusZ(Height/2),Front.HitLocation,Front.Distance);
+			//KAI_LOFRaycast.VisualizeTracePath (Pos.PlusZ(Height/2),Front.HitLocation,Front.Distance);
 			
 			//If we are on a collision course with the target or some other hostile, then we exploded and hit them.
 			//NOTE: Kinda funny how a direct trace-based hit means that, without even having it in mind. I made the drone function like a shaped charge.
 			If (Front.HitActor && (Front.HitActor == Target || !IsInanimateObject(Front.HitActor) && IsActorHostile (Front.HitActor)))
-				{console.printf ("direct hit");ExplodeMissile (Null,Front.HitActor);}
+				ExplodeMissile (Null,Front.HitActor);
 			//Not on a direct course to the target or an enemy, do an airburst.
 			Else
 				ExplodeMissile();
@@ -349,10 +351,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 				Vel *= 0.9;
 				SetZ (Pos.Z-FloatSpeed);
 				If (!TestMobjZ(True) || GetZAt ()+1 >= Pos.Z)
-				{
-					console.printf ("eagle has landed");
 					Return FindState ("Landed.Land",True);
-				}
 				
 				Return State(Null);
 			}
@@ -397,7 +396,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 				Duster.Scale.X = 0.4;
 				Duster.RadiusDamageFactor = 1.5;
 			}
-			GAXP ABCDEFGHIJ 4 Bright;
+			GAXP ABCDEFGHIJ 4 Bright A_Stop();
 			Stop;
 	}
 }
@@ -444,6 +443,7 @@ Class MVP_DroneGlobSpawner : KAI_MixinActor
 	
 	Override Void PostBeginPlay()
 	{
+		A_ChangeCountFlags(False,False,False);
 		For (Int I = 0; I < Args[Amount]; I++)
 		{
 			//Try to spawn a drone at a random valid position up to 32 times.
