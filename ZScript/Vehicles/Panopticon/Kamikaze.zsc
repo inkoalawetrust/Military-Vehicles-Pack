@@ -173,7 +173,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 	//Straight: The fallback frame to use when it's not moving too strongly either way.
 	//Threshold: If the horizontal velocity of the actor is below this value, just make it face straight.
 	//Diff: Using a dot product of the front of the actor and the actual XY direction. If the difference is at above this threshold, the actor is moving backwards.
-	Int LeanFlyerAround (Int Forward, Int Back, Int Straight, Double Threshold = 3, Double Diff = -0.6)
+	Int LeanFlyerAround (Int Forward, Int Back, Int Straight, Double Threshold = 7, Double Diff = -0.6)
 	{
 		Double Dir = Vel.XY Dot AngleToVector (Angle,Speed);
 		
@@ -217,6 +217,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		{
 			Double Ofs = IsFlying(Target) ? Target.Height/2 : Target.Height;
 			KAI_MoveTowards (Target.Pos.PlusZ(Ofs),1,TurnHorz,flags:KMTFlags,TurnVert);
+			//If (Random (0,255) < 1) KAI_Chase_HandleStrafing(Target,0,True,MaxTargetRange);
 			MovedAlready = True;
 		}
 		
@@ -467,7 +468,7 @@ Class MVP_DroneGlobSpawner : KAI_MixinActor
 {
 	Default
 	{
-		//$Title Loitering Swarm Spawner
+		//$Title Loitering Swarm
 		//$Category Vehicles/Panopticon
 		//$Sprite MVPEE0
 		//$Arg0 Amount
@@ -532,6 +533,7 @@ Class MVP_DroneGlobSpawner : KAI_MixinActor
 					Drone.Angle = Args[Flags] & RandomAngle ? Random(0,360) : Angle;
 					Drone.Pitch = Args[Flags] & RandomPitch ? Random(-90,90) : Pitch;
 					Drone.CopyFriendliness (Self,True);
+					Drone.ChangeTID(TID);
 					
 					MVP_KamikazeDrone(Drone).User_DroneClip = (Args[Flags] & DroneClip);
 					MVP_KamikazeDrone(Drone).User_Landed = (Args[Flags] & FloorSpawn);
