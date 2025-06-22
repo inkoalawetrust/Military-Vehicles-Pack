@@ -205,7 +205,10 @@ Mixin Class MVP_SharedFunctions
 		{
 			Double Force = TotalMass * ImpactVel;
 			//Impact sound
-			A_StartSound ("SFX/MetalCrash",CHAN_AUTO,0,KAI_Math.LinearMap(Force,2500,2500000,0.075,1.0),0.65);
+			If (TotalMass >= 100)
+				A_StartSound ("SFX/MetalCrash",CHAN_AUTO,0,KAI_Math.LinearMap(Force,2500,2500000,0.075,1.0),0.65);
+			Else
+				A_StartSound ("SFX/MetalHit",CHAN_AUTO,volume:KAI_Math.LinearMap(Force,25,600,0.05,1));
 			//Impact quake
 			Double QuakeForce = KAI_Math.LinearMap(Force,50000,2500000,0.1,4.0);
 			Double QuakeRange = KAI_Math.LinearMap(Force,50000,2500000,256,1024);

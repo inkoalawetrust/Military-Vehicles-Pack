@@ -76,6 +76,28 @@ Class MVP_BaseFlyer : MVP_BaseVehicle
 		+KAI_Actor.IsFlyer;
 		+KAI_Actor.MovesWithVelocity;
 	}
+	
+	//Forward: The frame to switch to when the actor is sufficiently propelling towards' its facing angle.
+	//Back: Ditto, but when facing too far back.
+	//Straight: The fallback frame to use when it's not moving too strongly either way.
+	//Threshold: If the horizontal velocity of the actor is below this value, just make it face straight.
+	//Diff: Using a dot product of the front of the actor and the actual XY direction. If the difference is at above this threshold, the actor is moving backwards.
+	Int LeanFlyerAround (Int Forward, Int Back, Int Straight, Double Threshold = 7, Double Diff = -0.6)
+	{
+		Double Dir = Vel.XY Dot AngleToVector (Angle,Speed);
+		
+		If (Vel.XY.Length() < Threshold || (Abs(Dir)-Abs(Diff) <= Abs(Diff))) //Too slow, or facing more sideways than either the back or front, just face straight up.
+			Return Straight;
+		
+		//The difference between the front and back is large enough that we are clearly going AWAY from where we're facing.
+		If (Dir <= Diff)
+			Return Back;
+		//No it's not, we are moving forwards yippie.
+		Else
+			Return Forward;
+		
+		Return Straight; //Fallback
+	}
 }
 
 Class MVP_BaseTurret : KAI_BaseTurret

@@ -39,4 +39,5 @@ DoomEdNums
 		//17023 = MVP_MLRS //TOS-1
 	//Panopticon drones
 		17024 = MVP_KamikazeDrone
+		17025 = MVP_Quadcopter
 }

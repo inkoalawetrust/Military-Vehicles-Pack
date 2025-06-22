@@ -1,0 +1,213 @@
+//TODO:
+//Also make a recolored (Orange?) gyrojet variant, which is THREAT_ABOVENORMAL.
+//Override the default vehicle fall impact logic, right now it's using the normal code that's for big vehicles.
+
+Class MVP_Quadcopter : MVP_BaseFlyer
+{
+	Default
+	{
+		//$Title Quadcopter
+		//$Category Vehicles/Panopticon
+		//$Sprite PND2B1
+		
+		Tag "Quadcopter Drone";
+		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
+		KAI_Actor.ThreatLevel THREAT_NORMAL;
+		KAI_Actor.FlightAcceleration 0.25;
+		KAI_Actor.FlightDeceleration 0.5;
+		KAI_Actor.FlightWrongDirFactor 1.5;
+		+WindThrust;
+		+Pushable;
+		+SlidesOnWalls;
+		+FloatBob; //Scales with speed
+		+LookAllAround;
+		
+		Health 50;
+		GibHealth 30;
+		XScale 0.3;
+		YScale 0.25; //0.3/1.2
+		FloatSpeed 3;
+		FloatBobStrength 0.5;
+		Mass 35;
+		Height 14;
+		DeathHeight 8;
+		Radius 16;
+		CameraHeight 5;
+		Obituary "%o died from a drone strike";
+		ActiveSound "Vehicle/Drone/Fly";
+		Speed 16;
+		FastSpeed 20;
+		//Friction 0.5;
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		A_StartSound (ActiveSound,flags:CHANF_LOOPING,attenuation:1.5);
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (IsFrozen())
+			Return;
+		
+		//Scale visual bobbing with speed.
+		If (!IsDead(Self))
+		{
+			FloatBobStrength = KAI_Math.LinearMap (Vel.Length(),0,6,Default.FloatBobStrength,0.05);
+			FloatBobStrength = Clamp (FloatBobStrength,0,Default.FloatBobStrength);
+		}
+		//Console.Printf ("Bob strength %.2f",FloatBobStrength);
+		
+		//Replace sprites to make it visually lean based on how high its' velocity is and where it's heading relative to its' current angle.
+		//TODO: This is obviously copied from the kamikaze drone, but this drone should also visually lean when destroyed! Until it hits the ground.
+		If (!IsInState (Self,"Death"))
+		{
+			//HACK: Frames are offset by -1 to stop the states from flickering to the default state sprite for one tick on every state change.
+			//KLUDGE: Oh also do NOT shift them by +1 instead, as that makes them basically switch every tick regardless of the state machine!
+			Switch (Frame)
+			{
+				Case 2: //A
+					Frame = LeanFlyerAround (1,4,0,6); // B, E, A
+					Break;
+				Case 0: //B
+					Frame = LeanFlyerAround (2,5,0,6); // C, F, A
+					Break;
+				Case 1: //C
+					Frame = LeanFlyerAround (3,6,0,6); // D, G, A
+					Break;
+				Default:
+					Break;
+			}
+		}
+		Else If (Frame == 24) //We only care about frame Y.
+			Frame = LeanFlyerAround (22,23,24); //W, X, Y
+	}
+	
+	//Added more obituaries (And gyrojet ones) later.
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+	
+	States
+	{
+		Spawn:
+			PND2 ABC 1 KAI_Look(extraflags:KAIL_CHASETARGET); //NOTE: The ABCD frames are replaced dynamically.
+			Loop;
+		See:
+			PND2 ABC 1;
+			Loop;
+		Death:
+			TNT1 A 0
+			{
+				//A_Explode (32,72);
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 0.75;
+				Boom.SetDamage (32);
+				Boom.MaxTargetRange = 72;
+				Boom.MeleeRange = 0;
+				Boom.bNoGravity = True;
+				Boom.bGetOwner = True;
+				Boom.Target = Self; //We exploded, this explosion is ours.
+				bFloatBob = False;
+				A_StopSound (CHAN_BODY);
+			}
+			PND2 Y 1 //Falling loop.
+			{
+				If (!TestMobjZ(True) || GetZAt ()+1 >= Pos.Z)
+					Return A_JumpIf (True == True, 1); //Hit the floor.
+				
+				Return State(Null);
+			}
+			Goto Death+1;
+			PND2 UV 4;
+			PND2 V -1;
+			Stop;
+		XDeath:
+			TNT1 A 0
+			{
+				Actor Boom = Spawn ("MVP_Explosion",Pos);
+				Boom.Scale *= 1.25;
+				Boom.SetDamage (64);
+				Boom.MaxTargetRange = 144;
+				Boom.MeleeRange = Radius+24;
+				Boom.bNoGravity = True;
+				Boom.bGetOwner = True;
+				Boom.Target = Self; //Does it even matter if we're gone? Very philosophical.
+				
+				SmokeCounter = Random (8,16);
+				Bool B; Actor Debris;
+				For (Int I; I <= SmokeCounter; I++)
+				{
+					[B, Debris] = A_SpawnItemEx ("MVP_DiCokkaDebris",FRandom (Radius,-Radius),FRandom(Radius,-Radius),FRandom (0,Height),FRandom (-6,6),FRandom (-6,6),FRandom (2,8));
+					If (Debris)
+					{
+						Debris.Scale *= FRandom (0.1,0.4);
+						Debris.bXFlip = Random (False,True);
+					}
+				}
+				
+				Spawn ("MVP_QuadcopterGib",Pos); //Just fall straight down lol.
+				SmokeCounter = Random (1,4);
+				For (Int I = 0; I < SmokeCounter; I++)
+				{
+					Actor Prop = Spawn ("MVP_QuadcopterGib",Pos);
+					Prop.SetOrigin (Level.Vec3Offset(Pos,(Random (16,-16),Random (22,-22),0)),True); //Pick random position to put the propeller at.
+					Prop.SmokeCounter = 1;
+					Prop.Vel = (FRandom (8,-8),FRandom (8,-8),FRandom (4,8));
+				}
+				
+				A_StopSound (CHAN_BODY);
+			}
+			Stop;
+	}
+}
+
+Class MVP_QuadcopterGib : Actor
+{
+	Default
+	{
+		+RollSprite;
+		XScale 0.5;
+		YScale 0.41666; //0.5/1.2
+		-Solid;
+		+NoBlockmap;
+	}
+	
+	States
+	{
+		Spawn:
+			PND2 [ 0 A_JumpIf (SmokeCounter == 0,"Fall"); //Gun
+			PND2 ] 0 A_JumpIf (SmokeCounter == 1,"Fall"); //Rotor
+		Fall:
+			PND2 # 1
+			{
+				Roll += 20;
+				If (!TestMobjZ(True) || GetZAt ()+1 >= Pos.Z)
+				{
+					If (SmokeCounter == 0) //Hit the floor.
+					{
+						Roll = 13;
+						Return FindState ("Death",True);
+					}
+					Else
+					{
+						Roll = 0;
+						Return FindState ("Death.Propeller",True);
+					}
+				}
+				
+				Return State(Null);
+			}
+			Loop;
+		Death:
+			PND2 [ -1;
+			Stop;
+		Death.Propeller:
+			PND2 ^ -1;
+			Stop;
+	}
+}

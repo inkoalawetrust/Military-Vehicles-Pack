@@ -12,6 +12,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		+KAI_Actor.NoTargetPrediction; //It's a flying bomb.
 		Tag "Loitering Munition";
 		KAI_Actor.ThreatLevelThreshold THREAT_ASSESS; //We don't care.
+		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
 		KAI_Actor.FlightAcceleration 0.25;
 		KAI_Actor.FlightDeceleration 0.5;
 		KAI_Actor.FlightWrongDirFactor 2.5;
@@ -88,7 +89,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		If (IsFrozen())
 			Return;
 		
-		bDontFollowPlayers = True; //Now idea what's turning it off.
+		bDontFollowPlayers = True; //No idea what's turning it off.
 		
 		//Still keep the debug stuff though.
 		If (DebugPoint)
@@ -165,29 +166,6 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 			Return "%o should've stood out of a drones' way";
 		
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
-	}
-	
-	//IDEA: I will probably make this generic to share it with any future flying NPCs like the larger quadcopter.
-	//Forward: The frame to switch to when the actor is sufficiently propelling towards' its facing angle.
-	//Back: Ditto, but when facing too far back.
-	//Straight: The fallback frame to use when it's not moving too strongly either way.
-	//Threshold: If the horizontal velocity of the actor is below this value, just make it face straight.
-	//Diff: Using a dot product of the front of the actor and the actual XY direction. If the difference is at above this threshold, the actor is moving backwards.
-	Int LeanFlyerAround (Int Forward, Int Back, Int Straight, Double Threshold = 7, Double Diff = -0.6)
-	{
-		Double Dir = Vel.XY Dot AngleToVector (Angle,Speed);
-		
-		If (Vel.XY.Length() < Threshold || (Abs(Dir)-Abs(Diff) <= Abs(Diff))) //Too slow, or facing more sideways than either the back or front, just face straight up.
-			Return Straight;
-		
-		//The difference between the front and back is large enough that we are clearly going AWAY from where we're facing.
-		If (Dir <= Diff)
-			Return Back;
-		//No it's not, we are moving forwards yippie.
-		Else
-			Return Forward;
-		
-		Return Straight; //Fallback
 	}
 	
 	Void MVP_KamikazeChase ()
