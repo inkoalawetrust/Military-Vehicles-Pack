@@ -1,5 +1,6 @@
 //Generic projectiles used by multiple vehicles.
 
+//TODO: Rename to MVP_LargeRifleBullet
 Class MVP_50CalBullet : MVP_BaseProjectile
 {
 	Default
@@ -110,6 +111,7 @@ Class MVP_BulletCasing : Actor
 }
 
 //A smaller bullet projectile sort of based on the 7.62mm NATO round.
+//TODO: Use the fucking belmondo bullet trace for these like I did the marines jesus.
 Class MVP_RifleBullet : MVP_BaseProjectile
 {
 	Default
@@ -119,7 +121,7 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		Speed 200; //IRL, the M240 has a slightly slower muzzle velocity than the M2 Browning, so the rifle round is slightlky slower too, but not as slow as the autocannon.
 		//I mean, autocannon shells are also fired at a higher muzzle velocity than bullets, yet the autocannon projectile is SLOWER instead of faster, but whatever.
 		FastSpeed 220;
-		DamageFunction (Random (10,16)); //The marines' rifles do 6 to 10 damage, so this is about double that. Why ? I don't fucking know, let's just say the marines use 5.56mm rounds or something.
+		DamageFunction (Random (10,20)); //The marines' rifles do 6 to 10 damage, so this is about double that. Why ? I don't fucking know, let's just say the marines use 5.56mm rounds or something.
 		XScale 0.1;
 		YScale 0.083333; //0.1 / 1.2
 		ProjectileKickback 16;
@@ -187,6 +189,23 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		Crash: //Bullet hit a non bleeding actor.
 			TNT1 A 1 A_StartSound ("Vehicle/APC/SmallMGImpact");
 			Stop;
+	}
+}
+
+//5.56mm bullet
+Class MVP_SmallRifleBullet : MVP_RifleBullet
+{
+	Default
+	{
+		Speed 170;
+		FastSpeed 200;
+		DamageFunction (Random (8,15));
+		XScale 0.2;
+		YScale 0.166666; //0.2 / 1.2
+		ProjectileKickback 10;
+		Decal "BulletChip";
+		DamageType "SmallRifleBullet";
+		+KAI_BaseProjectile.Deflectable;
 	}
 }
 

@@ -1,5 +1,7 @@
 //TODO:
 //Also make a recolored (Orange?) gyrojet variant, which is THREAT_ABOVENORMAL.
+//Add the ability for it to land and walk on the ground.
+
 //MAYDO: I can afford to make these more expensive, so maybe make a group structure for each of them that allows them to split focus on targets. Among other things.
 
 Class MVP_Quadcopter : MVP_BaseFlyer
@@ -16,29 +18,38 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		KAI_Actor.FlightAcceleration 0.25;
 		KAI_Actor.FlightDeceleration 0.25;
 		KAI_Actor.FlightWrongDirFactor 2.5;
+		MVP_BaseVehicle.SmokeDelay 8;
+		KAI_BaseVehicle.HeadlightLevel 88;
+		KAI_Actor.Inaccuracy (32,32,32);
+		KAI_Actor.InaccuracyFrequency 0.6;
+		
 		+WindThrust;
-		+Pushable;
+		//+Pushable;
 		+SlidesOnWalls;
 		+FloatBob; //Scales with speed
 		+LookAllAround;
 		+AvoidMelee;
 		
 		Health 50;
+		WoundHealth 20;
 		GibHealth 30;
 		XScale 0.3;
 		YScale 0.25; //0.3/1.2
-		FloatSpeed 3;
+		FloatSpeed 1;
 		FloatBobStrength 0.5;
 		Mass 35;
 		Height 14;
 		DeathHeight 8;
 		Radius 16;
 		CameraHeight 5;
+		MeleeRange 64;
 		Obituary "%o died from a drone strike";
 		ActiveSound "Vehicle/Drone/Fly";
+		AttackSound "Vehicle/APC/SmallMGFire";
 		Speed 10;
 		FastSpeed 16;
 		//Friction 0.5;
+		RipLevelMin 1;
 	}
 	
 	Override Void PostBeginPlay()
@@ -46,6 +57,34 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Super.PostBeginPlay();
 		
 		A_StartSound (ActiveSound,flags:CHANF_LOOPING,attenuation:1.5);
+	}
+	
+	Override Void UserVariableDefaults()
+	{
+		If (User_ChaseTime == 0) User_ChaseTime = 35*30;
+		If (User_RetreatDistance == 0) User_RetreatDistance = 384;
+	}
+	
+	Override Void SpawnHeadlights()
+	{
+		Headlights.Push (SpawnVehicleHeadlight (Self,(16,0,0),VHSF_SPRITEROT,(255,0,0),128,(15,80)));
+	}
+	
+	Override Bool CanAttack()
+	{
+		If (CurSector.Flags & Sector.SECF_NOATTACK) Return False;
+		Return True;
+	}
+	
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!Super.SpawnDamageSmoke()) Return False;
+		Vector3 SpawnPos = Level.Vec3Offset (Pos,(FRandom(-8,8),FRandom(-8,8),FRandom(2,8)));
+		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Smoke.Roll = FRandom(-180,180);
+		Smoke.A_SetScale (FRandom(0.1,0.5));
+		Smoke.Vel.Z = FRandom (1,2);
+		Return True;
 	}
 	
 	Override Void Tick()
@@ -62,28 +101,61 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 		//Console.Printf ("Bob strength %.2f",FloatBobStrength);
 		
-		//Replace sprites to make it visually lean based on how high its' velocity is and where it's heading relative to its' current angle.
-		If (!IsInState (Self,"Death"))
+		If (!IsInAttackState())
 		{
-			//HACK: Frames are offset by -1 to stop the states from flickering to the default state sprite for one tick on every state change.
-			//KLUDGE: Oh also do NOT shift them by +1 instead, as that makes them basically switch every tick regardless of the state machine!
-			Switch (Frame)
+			If (FireDelay) FireDelay--;
+			If (Target)
 			{
-				Case 2: //A
-					Frame = LeanFlyerAround (1,4,0,6); // B, E, A
-					Break;
-				Case 0: //B
-					Frame = LeanFlyerAround (2,5,0,6); // C, F, A
-					Break;
-				Case 1: //C
-					Frame = LeanFlyerAround (3,6,0,6); // D, G, A
-					Break;
-				Default:
-					Break;
+				FireAngle = GetAngleToPos (Target.Pos,5);
+				FirePitch = PitchTo (Target);//-GetPitchToPos (Target.Pos,5); //HACK: Pitches are fucking haunted in GZDoom, so we can't increment THAT one over time!
+				FirePitch = Clamp (FirePitch,MaxGunPitch,90);
+				//kai_lofraycast.visualizetracepath (Pos,level.vec3offset(pos,kai_math.angletovector3d(fireangle,firepitch,256)),256);
+			}
+			//Replace sprites to make it visually lean based on how high its' velocity is and where it's heading relative to its' current angle.
+			If (!IsInState (Self,"Death"))
+			{
+				//HACK: Frames are offset by -1 to stop the states from flickering to the default state sprite for one tick on every state change.
+				//KLUDGE: Oh also do NOT shift them by +1 instead, as that makes them basically switch every tick regardless of the state machine!
+				Switch (Frame)
+				{
+					Case 2: //A
+						Frame = LeanFlyerAround (1,4,0,6); // B, E, A
+						Break;
+					Case 0: //B
+						Frame = LeanFlyerAround (2,5,0,6); // C, F, A
+						Break;
+					Case 1: //C
+						Frame = LeanFlyerAround (3,6,0,6); // D, G, A
+						Break;
+					Default:
+						Break;
+				}
+			}
+			Else If (Frame == 24) //We only care about frame Y.
+				Frame = LeanFlyerAround (22,23,24); //W, X, Y
+		}
+		
+		Else
+		{
+			//We aim ahead using a separate set of pitches and angles, allowing the drone to not have to actually change angle and pitch mid move.
+			Double RealAngle = Angle; Double RealPitch = Pitch;
+			
+			Angle = FireAngle; Pitch = FirePitch;
+			AimAtTarget (5,5,flags:FAF_MIDDLE,attackspeed:170,200);
+			FireAngle = Angle; FirePitch = Pitch;
+			
+			Angle = RealAngle; Pitch = RealPitch;
+			console.printf ("attack angle %d, real angle %d, attack pitch %d, real pitch %d",fireangle,angle,firepitch,pitch);
+			MVP_QuadcopterChase(); //Oh yes, we can run n' gun quite fine.
+			
+			If (FirePitch >= 15)
+			{
+				If (Frame == 0) //A
+					Frame = 8; //I
+				Else If (Frame == 7) //H
+					Frame = 9; //J
 			}
 		}
-		Else If (Frame == 24) //We only care about frame Y.
-			Frame = LeanFlyerAround (22,23,24); //W, X, Y
 	}
 	
 	//Added more obituaries (And gyrojet ones) later.
@@ -92,6 +164,23 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
 	}
 	
+	Override Bool ShouldAttack (Bool NoStateJump)
+	{
+		If (!CanAttack() || IsInAttackState() || FireDelay > 0) //Don't run from within attack states to allow the drone to run n' gun by calling its' chase function.
+			{console.printf ("no lol");Return False;}
+		
+		If (MVP_QuadcopterLOF() && KAI_CheckMissileRange (Target,CMR_3DDISTANCE|CMR_NOHITFRIEND))
+		{console.printf ("fire!");
+			If (!NoStateJump)
+				SetStateLabel ("Missile");
+			
+			Return True;
+		}
+		
+		Return False;
+	}
+	
+	//TODO: For bChaseGoal when patrolling, make the drone able to shoot at the target while VISUALLY appearing to be facing them.
 	Void MVP_QuadcopterChase ()
 	{
 		KAI_Chase_PreChecks();
@@ -105,9 +194,10 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		//TODO: Add support for hazards. Maybe using an averaged position between all hazards in range and/or the target.
 		Bool RunAway = (!bNoFear && (IsFrightening (Target) || bFrightened)); //Run away from spooky actors, or maybe we're just a little bitch.
 		//If we're set to run away from targets over our threat threshold that get too close, do so.
-		Double RunRange = RetreatRange;
+		Double RunRange = User_RetreatDistance;
 		If (Target) RunRange += Target.Radius;
-		If (!bNoFear && Target != Goal && !RunAway && RunRange > 0 && ThreatLevelThreshold != THREAT_ASSESS && Distance3DSquared(Target) <= RunRange*RunRange &&
+		
+		If (User_RetreatDistance != -1 && !bNoFear && Target != Goal && !RunAway && RunRange > 0 && ThreatLevelThreshold != THREAT_ASSESS && Distance3DSquared(Target) <= RunRange*RunRange &&
 		AssessThreatLevel(Target, True) >= ThreatLevelThreshold && CheckSight (Target,SF_IGNOREWATERBOUNDARY))
 			RunAway = True;
 		
@@ -125,6 +215,10 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			
 			RunAway = IsMeleeAttacker;
 		}
+		
+		//Always avoid getting too close to a target since we got no melee anyway.
+		If (!RunAway && Target && Distance3DSquared (Target) <= (MeleeRange+Target.Radius)*(MeleeRange+Target.Radius))
+			RunAway = True;
 		
 		Actor Proj;
 		If ((Proj = MVP_QuadcopterDodge(256)))
@@ -167,23 +261,34 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 				KMT_3D_SpeedLimit (Speed,(0,0,0.1));
 		}
 		
+		//Target is too high up to fire at.
+		Bool CantAttack;
+		If (Target && PitchTo (Target) <= MaxGunPitch)
+		{console.printf ("drone rising up to fire");
+			CantAttack = True;
+			KMT_3D_SpeedLimit (Speed,(0,0,0.5));
+		}
+		
 		//Move to target, and also handle patrolling but then seeing a target.
-		If (Target && Target != Goal && !MovedAlready)
+		If (Target && Target != Goal && !(IsPatrolling(Self) && bChaseGoal )&& !MovedAlready)
 		{
 			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),1,TurnHorz,flags:KMTFlags,TurnVert);
-			//If (Random (0,255) < 1) KAI_Chase_HandleStrafing(Target,0,True,MaxTargetRange);
 			MovedAlready = True;
 		}
 		
 		If (!MovedAlready)
 		{
-			MeleeRange = 32;
-			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Stand",1,TurnHorz,flags:KMTFlags,TurnVert);
-			MeleeRange = Default.MeleeRange;
+			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Spawn",1,TurnHorz,flags:KMTFlags,TurnVert);
+			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
+				KAI_MoveTowards (Goal.Pos,1,TurnHorz,flags:KMTFlags,TurnVert);
 			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
-			//if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d",goal.pos,movedalready,b);
+			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d",goal.pos,movedalready,b);
 		}
 		
+		If (!CantAttack && ShouldAttack())
+			Return;
+		
+		HandleChaseTimer();
 	}
 	
 	//IDEA: Also make it handle flying away from homing projectiles maybe?
@@ -208,7 +313,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			
 			If (!DodgeAllyProjectiles && !IsActorHostile (Proj.Target)) //Ignore friendly projectiles.
 				Continue;
-			
+			console.printf ("matrix");
 			//Is the projectile about to hit me ? Weird math nonsense written by RaveYard.
 			double blackBox = -0.15;
 			If (IsHoming && Proj.Tracer == Self) blackBox = -0.075;
@@ -233,20 +338,85 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Return StrongestProj;
 	}
 	
+	//Return true if we are aiming ahead of our target and also have a valid LOF straight at them.
+	Bool MVP_QuadcopterLOF()
+	{
+		//If (!AimingAheadOfTarget())
+		If (!Target)
+			Return False;
+			
+		Let Check = New ("KAI_ProjectileLOFCheck");
+		
+		Check.Shooter = Self;
+		Check.Other = Target;
+		//Check.SplashRadius = SplashRadius;
+		Check.PropHealthThreshold = 50;
+		Check.FriendlyFire = False;
+		
+		Check.ProjInfo = New ('LOFProjInfo'); //Assign data class.
+		Check.ProjInfo.Projectile = "MVP_SmallRifleBullet"; //Pass projectile class to class.
+		Check.ProjInfo.InitializeProjectileInfo(); //Let it infer the rest.
+		
+		Check.Trace (Pos,CurSector,KAI_Math.AngleToVector3D(AngleTo(Target),PitchTo(Target,targzofs:Target.Height/2)),Distance3D (Target)+32,0);
+		
+		If (Check.BadLOF)
+		{console.printf ("quadcopter can't see shit");
+			If (Check.ProjInfo) Check.ProjInfo.Destroy();
+			Check.Destroy();
+			Return False;
+		}
+		
+		If (Check.ProjInfo) Check.ProjInfo.Destroy();
+		Check.Destroy();
+		Return True;
+	}
+	
+	Void MVP_QuadcopterFire ()
+	{
+		A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
+		Actor Proj = A_SpawnProjectile ("MVP_SmallRifleBullet",0,angle:FireAngle,flags:CMF_AIMDIRECTION|CMF_ABSOLUTEANGLE,FirePitch); //pew pew
+		AddProjectileSpread (Proj,(0.3,-0.3),(0.6,-0.6));
+		Bool B; Actor Casing;
+		[B, Casing] = A_SpawnItemEx ("MVP_BulletCasing",0,0,0,FRandom(2,-2),FRandom(8,14),FRandom(6,12));
+		Casing.Scale.X = 0.125; Casing.Scale.Y = 0.104166;
+		FireDelay = 35*Random (2,4);
+	}
+	
 	Const TurnHorz = 15;
 	Const TurnVert = 60;
-	Const RetreatRange = 384;
+	Const MaxGunPitch = -20; //How much the imaginary gun can aim up.
 	Actor LastProjectile;
+	Double FireAngle, FirePitch; //The actual orientation used when firing. Think of it like an imaginary turret actor.
+	UInt FireDelay;
 	FLineTraceData Ground;
 	
 	States
 	{
 		Spawn:
-			PND2 ABC 1 KAI_Look(extraflags:KAIL_CHASETARGET); //NOTE: The ABCD frames are replaced dynamically.
+			PND2 ABC 1
+			{
+				KAI_Look(extraflags:KAIL_CHASETARGET); //NOTE: The ABC frames are replaced dynamically.
+				KMT_3D_SpeedLimit (0,(0,0,0)); //Stand still.
+			}
 			Loop;
 		See:
 			PND2 ABC 1 MVP_QuadcopterChase();
 			Loop;
+		Idle:
+			PND2 ABC 1
+			{
+				KAI_Look(extraflags:KAIL_CHASETARGET);
+				KAI_Wander (anglelimit:TurnHorz,flags:KMT_3D,TurnVert);
+			}
+			Loop;
+		Missile:
+			PND2 A 3;
+			PND2 H 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
+			PND2 A 3;
+			PND2 H 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
+			PND2 A 3;
+			PND2 H 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
+			Goto See;
 		Death:
 			TNT1 A 0
 			{
