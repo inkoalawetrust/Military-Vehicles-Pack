@@ -1,6 +1,6 @@
 //TODO:
 //Also make a recolored (Orange?) gyrojet variant, which is THREAT_ABOVENORMAL.
-//Override the default vehicle fall impact logic, right now it's using the normal code that's for big vehicles.
+//MAYDO: I can afford to make these more expensive, so maybe make a group structure for each of them that allows them to split focus on targets. Among other things.
 
 Class MVP_Quadcopter : MVP_BaseFlyer
 {
@@ -14,13 +14,14 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
 		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		KAI_Actor.FlightAcceleration 0.25;
-		KAI_Actor.FlightDeceleration 0.5;
-		KAI_Actor.FlightWrongDirFactor 1.5;
+		KAI_Actor.FlightDeceleration 0.25;
+		KAI_Actor.FlightWrongDirFactor 2.5;
 		+WindThrust;
 		+Pushable;
 		+SlidesOnWalls;
 		+FloatBob; //Scales with speed
 		+LookAllAround;
+		+AvoidMelee;
 		
 		Health 50;
 		GibHealth 30;
@@ -35,8 +36,8 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		CameraHeight 5;
 		Obituary "%o died from a drone strike";
 		ActiveSound "Vehicle/Drone/Fly";
-		Speed 16;
-		FastSpeed 20;
+		Speed 10;
+		FastSpeed 16;
 		//Friction 0.5;
 	}
 	
@@ -62,7 +63,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		//Console.Printf ("Bob strength %.2f",FloatBobStrength);
 		
 		//Replace sprites to make it visually lean based on how high its' velocity is and where it's heading relative to its' current angle.
-		//TODO: This is obviously copied from the kamikaze drone, but this drone should also visually lean when destroyed! Until it hits the ground.
 		If (!IsInState (Self,"Death"))
 		{
 			//HACK: Frames are offset by -1 to stop the states from flickering to the default state sprite for one tick on every state change.
@@ -92,13 +92,160 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
 	}
 	
+	Void MVP_QuadcopterChase ()
+	{
+		KAI_Chase_PreChecks();
+		If (IsDead (Target)) Target = Null;
+		KAI_Chase_Retarget(0,True);
+		
+		Bool MovedAlready; Bool B;
+		Int KMTFlags = KMT_3D;
+		
+		//DETERMINE IF WE SHOULD BE MOVING AWAY FROM THE TARGET.
+		//TODO: Add support for hazards. Maybe using an averaged position between all hazards in range and/or the target.
+		Bool RunAway = (!bNoFear && (IsFrightening (Target) || bFrightened)); //Run away from spooky actors, or maybe we're just a little bitch.
+		//If we're set to run away from targets over our threat threshold that get too close, do so.
+		Double RunRange = RetreatRange;
+		If (Target) RunRange += Target.Radius;
+		If (!bNoFear && Target != Goal && !RunAway && RunRange > 0 && ThreatLevelThreshold != THREAT_ASSESS && Distance3DSquared(Target) <= RunRange*RunRange &&
+		AssessThreatLevel(Target, True) >= ThreatLevelThreshold && CheckSight (Target,SF_IGNOREWATERBOUNDARY))
+			RunAway = True;
+		
+		//Avoid melee attackers.
+		If (!RunAway && Target && (bAvoidMelee || Level.Info.Flags3 & LEVEL3_AVOIDMELEE))
+		{
+			Bool IsMeleeAttacker;
+			If (!Target.Player && Target.MeleeState) //Melee NPC
+			{
+				Double Dist = (Target.MeleeRange + Target.Radius)*2;
+				IsMeleeAttacker = Distance3DSquared (Target) < Dist*Dist;
+			}
+			Else If (Target.Player && Target.Player.ReadyWeapon && Target.Player.ReadyWeapon.bMeleeWeapon) //Melee player
+				IsMeleeAttacker = Distance3dSquared(Target) <= 192*192;
+			
+			RunAway = IsMeleeAttacker;
+		}
+		
+		Actor Proj;
+		If ((Proj = MVP_QuadcopterDodge(256)))
+		{
+			//KAI_Chase_HandleStrafing (Proj,0,True,INT.MAX);
+			Double Delta = DeltaAngle (Angle,AngleTo(Proj));
+			If (Delta >= -2)
+				KMT_3D_SpeedLimit(15,(AngleToVector (Angle-90,15),0));
+			Else
+				KMT_3D_SpeedLimit(15,(AngleToVector (Angle+90,15),0));
+			
+			LastProjectile = Proj; //So we don't constantly dodge the same thing.
+		}
+		
+		//Push yourself away from the enemy.
+		If (RunAway)
+		{
+			A_FaceTarget(TurnHorz,TurnVert);
+			//If there's already a prior position to move to, begin moving there instead. Until within melee range of that position.
+			If (!KAI_Math.IsEmptyVector3 (NextMovePos) && NewPosStepCount <= 32 && Level.Vec3Diff (Pos,NextMovePos).Length() >= MeleeRange)
+			{console.printf ("going to next move pos");
+				KMT_3D_SpeedLimit (Speed/2,KAI_Math.AngleToVector3D(GetAngleToPos(NextMovePos,0),-GetPitchToPos(NextMovePos,0),FlightAcceleration));
+				NewPosStepCount++;
+				Return;
+			}
+			//Once the position is reached, get a new one.
+			Else
+			{console.printf ("set nextmovepos");
+				NextMovePos = FindRandomMovePos(Target.Pos,full3D:True);
+				NewPosStepCount = 0;
+			}
+			MovedAlready = True;
+		}
+		
+		//Stay slightly off the ground when not in a tight space.
+		If ((CeilingZ - FloorZ) >= 72)
+		{
+			LineTrace (0,32,90,TRF_BLOCKSELF,data:Ground);
+			If (Ground.Distance < 32)
+				KMT_3D_SpeedLimit (Speed,(0,0,0.1));
+		}
+		
+		//Move to target, and also handle patrolling but then seeing a target.
+		If (Target && Target != Goal && !MovedAlready)
+		{
+			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),1,TurnHorz,flags:KMTFlags,TurnVert);
+			//If (Random (0,255) < 1) KAI_Chase_HandleStrafing(Target,0,True,MaxTargetRange);
+			MovedAlready = True;
+		}
+		
+		If (!MovedAlready)
+		{
+			MeleeRange = 32;
+			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Stand",1,TurnHorz,flags:KMTFlags,TurnVert);
+			MeleeRange = Default.MeleeRange;
+			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
+			//if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d",goal.pos,movedalready,b);
+		}
+		
+	}
+	
+	//IDEA: Also make it handle flying away from homing projectiles maybe?
+	Actor MVP_QuadcopterDodge (Double Range = 128)
+	{
+		Array <Actor> Threats;
+		//Actually find projectiles.
+		ForEach (Proj : KAIHandler.ProjectileList)
+		{
+			If (!Proj || Proj == LastProjectile) Continue;
+			
+			Bool DodgeAllyProjectiles;
+			
+			Bool IsHoming = Proj.bSeekerMissile; //HACK: NO stupid revenant rocket check.
+
+			Double Dist = Distance3DSquared (Proj);
+			If ((Dist > Range*Range || IsHoming && Proj.Tracer == Self && Dist > (Range*Range)*2 )) //Out of range. But if it's a seeker, check at double the range to potentially run away.
+				Continue;
+			
+			//Dodge even friendly projectiles if they'd do too much damage, unless friendly fire is off.
+			DodgeAllyProjectiles = (!(Proj Is "KAI_BaseProjectile" && KAI_BaseProjectile(Proj).bNoFriendlyFire) && Proj.GetMissileDamage (1,7) >= Health/2);
+			
+			If (!DodgeAllyProjectiles && !IsActorHostile (Proj.Target)) //Ignore friendly projectiles.
+				Continue;
+			
+			//Is the projectile about to hit me ? Weird math nonsense written by RaveYard.
+			double blackBox = -0.15;
+			If (IsHoming && Proj.Tracer == Self) blackBox = -0.075;
+			bool projectile_is_flying_towards_me = (Vec3To(proj).Unit() dot proj.vel.Unit()) < blackBox;
+			double projectileSafeRadius = sqrt(2 * ((proj.radius + radius) ** 2.5));
+			if(projectile_is_flying_towards_me && KAI_Math.distance3dline(pos, proj.pos, proj.pos + proj.vel) < projectileSafeRadius && CheckSight(Proj,SF_IGNOREWATERBOUNDARY))
+				Threats.Push (Proj);
+		}
+		
+		Double HighestDamage;
+		Actor StrongestProj;
+		For (Int I = Threats.Size()-1; I >= 0; I--)
+		{
+			Double CurrentDamage = Threats[I].GetMissileDamage(1,7);
+			If (HighestDamage < CurrentDamage)
+			{
+				HighestDamage = CurrentDamage;
+				StrongestProj = Threats[I];
+			}
+		}
+		
+		Return StrongestProj;
+	}
+	
+	Const TurnHorz = 15;
+	Const TurnVert = 60;
+	Const RetreatRange = 384;
+	Actor LastProjectile;
+	FLineTraceData Ground;
+	
 	States
 	{
 		Spawn:
 			PND2 ABC 1 KAI_Look(extraflags:KAIL_CHASETARGET); //NOTE: The ABCD frames are replaced dynamically.
 			Loop;
 		See:
-			PND2 ABC 1;
+			PND2 ABC 1 MVP_QuadcopterChase();
 			Loop;
 		Death:
 			TNT1 A 0
