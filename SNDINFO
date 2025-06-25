@@ -297,3 +297,14 @@ $Random MVPMarine/Death
 	$Limit Vehicle/Drone/Buzz 0
 	$Limit Vehicle/Drone/Beep 8
 	$Limit Vehicle/Drone/Beep 0
+	
+	Vehicle/Drone/Speak1 "Sounds/Voices/Panopticon/speech.ogg"
+	Vehicle/Drone/Speak2 "Sounds/Voices/Panopticon/speech2.ogg"
+	Vehicle/Drone/Speak3 "Sounds/Voices/Panopticon/speech3.ogg"
+	Vehicle/Drone/Speak4 "Sounds/Voices/Panopticon/speech4.ogg"
+	Vehicle/Drone/Speak5 "Sounds/Voices/Panopticon/speech5.ogg"
+	$Limit Vehicle/Drone/Speak1 0
+	$Limit Vehicle/Drone/Speak2 0
+	$Limit Vehicle/Drone/Speak3 0
+	$Limit Vehicle/Drone/Speak4 0
+	$Limit Vehicle/Drone/Speak5 0

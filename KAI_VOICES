@@ -16,3 +16,8 @@ Voice M6V3
 	//Custom TakeAim = "" //Just started aiming towards an enemy. DUD, DOES NOTHING ON THE MBT, NO SOUNDS TO IMPLEMENT WITH!
 	Custom Smoke = "MBT/Voice/Smoke1", "MBT/Voice/Smoke2", "MBT/Voice/Smoke3", "MBT/Voice/Smoke4", "MBT/Voice/Smoke5", "MBT/Voice/Smoke6"  //Tank deploying smokescreen.
 }
+
+Voice Panopticon
+{
+	See = "Vehicle/Drone/Speak1", "Vehicle/Drone/Speak2", "Vehicle/Drone/Speak3", "Vehicle/Drone/Speak4", "Vehicle/Drone/Speak5"
+}

@@ -82,9 +82,10 @@ Class MVP_BaseFlyer : MVP_BaseVehicle
 	//Straight: The fallback frame to use when it's not moving too strongly either way.
 	//Threshold: If the horizontal velocity of the actor is below this value, just make it face straight.
 	//Diff: Using a dot product of the front of the actor and the actual XY direction. If the difference is at above this threshold, the actor is moving backwards.
-	Int LeanFlyerAround (Int Forward, Int Back, Int Straight, Double Threshold = 7, Double Diff = -0.6)
+	//Offset: And offset for the angle difference calculated. Can be used when visually offseting the actors' angle with SpriteRotation.
+	Int LeanFlyerAround (Int Forward, Int Back, Int Straight, Double Threshold = 7, Double Diff = -0.6, Double Offset = 0)
 	{
-		Double Dir = Vel.XY Dot AngleToVector (Angle,Speed);
+		Double Dir = Vel.XY Dot AngleToVector (Angle+Offset,Speed);
 		
 		If (Vel.XY.Length() < Threshold || (Abs(Dir)-Abs(Diff) <= Abs(Diff))) //Too slow, or facing more sideways than either the back or front, just face straight up.
 			Return Straight;
