@@ -268,12 +268,12 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 	
 	Void MVP_KamikazeLook (Int Flags = 0)
 	{
-		If (!User_RandomTarget)
-			KAI_Look (Flags,extraflags:KAIL_NOTEMPSTAND);
-		Else
+		//HACK: We can't rely on A_LookEx() because if the drone is following a quadcopter that ceases to exist (i.e frozen and then breaks),
+		//it WILL ignore LOF_NOJUMP and cause an infinite recursion, that's right, I literally fucking MUST use LookForEnemiesEx().
+		//If (!User_RandomTarget)
+		//	KAI_Look (Flags,extraflags:KAIL_NOTEMPSTAND);
+		//Else
 		{
-			//KAI_Look (Flags|LOF_NOSIGHTCHECK|LOF_NOSOUNDCHECK,extraflags:KAIL_NOTEMPSTAND); //Only run patrolling logic in random target mode.
-			
 			//Port of some of the A_Look() logic for beginning to chase a patrol route.
 			if (special == Thing_SetGoal && args[0] == 0) 
 			{
@@ -299,13 +299,13 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 					//So we have to double check here to prevent fun problems like infinite recursions!
 					If (IsDead(Targs[I]))
 						Targs.Delete(I);
-					//if (targs[i])
-					//	console.printf ("i see %s",Targs[I].getclassname());
 				}
 				If (Targs.Size() == 1 && !IsDead(Targs[0]))
 					Target = Targs[0];
 				Else If (Targs.Size())
-					Target = Targs[Random(0,Targs.Size()-1)]; //Pick random target in sight.
+				{
+					Target = User_RandomTarget ? Targs[Random(0,Targs.Size()-1)] : Targs[0]; //Pick random target in sight. Or the first one we found.
+				}
 			}
 			If (IsDead (Target)) //Prevents infinite recursions.
 				Target = Null;
@@ -402,8 +402,11 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 						KAI_Wander(8,384,anglelimit:TurnHorz,flags:KMT_3D,pitchlimit:TurnVert);
 					Else If (Distance3DSquared (Master) > (MeleeRange+Master.Radius)*(MeleeRange+Master.Radius))
 						KAI_MoveTowards (Master.Pos.PlusZ(Master.Height/2),anglelimit:TurnHorz,flags:KMT_3D,pitchlimit:TurnVert);
-					MVP_KamikazeLook();
+					MVP_KamikazeLook(LOF_NOJUMP);
+					If (Target) //HACK: We must manually check this because if a quadcopter that's our master is frozen and then breaks (vanishes), say it with me, popular programming Q&A site!
+						Return SeeState;
 				}
+				Return State(Null);
 			}
 			Loop;
 		Stand: //Before patrolling again
