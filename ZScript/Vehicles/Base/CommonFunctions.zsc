@@ -99,6 +99,7 @@ Mixin Class MVP_SharedFunctions
 	Int User_ChaseTime; //How much time the vehicle spends looking for its out-of-sight target before giving up.
 	Bool User_NoHeadLights; //Vehicle doesn't use it's headlights, or if its' a prop, the headlights should be off.
 	KAI_NPCGroup VehicleGroup; //The vehicles' group, with it as the leader. Relevant for vehicles that drop marines, to make them follow it as the master.
+	Int DefaultOrder; //The default order mode.
 	
 	//Internal variables
 	Actor DeathWarnZone; //The warning zone attached to the vehicle after it died, if any. Used to warn Smart Marines if the vehicle wreck is burning.
@@ -126,29 +127,34 @@ Mixin Class MVP_SharedFunctions
 			
 			//Found at least one visible friendly player to follow.
 			If (VisibleFriends.Size())
-			{//CONSOLE.PRINTF ("default order is follow");
+			{CONSOLE.PRINTF ("default order is follow");
 				SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
 				SetNPCOrder (ORDER_FOLLOW);
+				DefaultOrder = Order_Follow;
 			}
 			//No friendplayer, or they are out of sight
 			Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
-			{//CONSOLE.PRINTF ("default order is wander");
+			{CONSOLE.PRINTF ("default order is wander");
 				SetNPCOrder (ORDER_WANDER);
+				DefaultOrder = ORDER_WANDER;
 				bDontFollowPlayers = True;
 			}
 		}
 		Else If (User_DefaultOrder ~== "Follow")
 		{
 			SetNPCOrder (ORDER_FOLLOW);
+			DefaultOrder = ORDER_FOLLOW;
 		}
 		Else If (User_DefaultOrder ~== "Wander")
 		{
 			SetNPCOrder (ORDER_WANDER);
+			DefaultOrder = ORDER_WANDER;
 			bDontFollowPlayers = True;
 		}
 		Else If (User_DefaultOrder ~== "Stay" || User_DefaultOrder ~== "Stand")
 		{
 			SetNPCOrder (ORDER_STAY);
+			DefaultOrder = ORDER_STAY;
 		}
 	}
 	

@@ -1,4 +1,4 @@
-//TODO: Replace the current master following code in Idle: with a proper set of HandleFollowingActor() and OnWander() overrides, or maybe not, cheaper that way?
+//MAYDO: Replace the current master following code in Idle: with a proper set of HandleFollowingActor() and OnWander() overrides, or maybe not, cheaper that way?
 Class MVP_KamikazeDrone : MVP_BaseFlyer
 {
 	Default
@@ -8,6 +8,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		//$Sprite PND1E1
 		
 		+KAI_Actor.NoTargetPrediction; //It's a flying bomb.
+		+KAI_Actor.NoWanderVirtual;
 		Tag "Loitering Munition";
 		KAI_Actor.ThreatLevelThreshold THREAT_ASSESS; //We don't care.
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;
@@ -398,6 +399,9 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 			{
 				If (!MVP_KamikazeSpiral())
 				{
+					If (IsDead(Master))
+						Master = Null;
+					
 					If (!Master)
 						KAI_Wander(8,384,anglelimit:TurnHorz,flags:KMT_3D,pitchlimit:TurnVert);
 					Else If (Distance3DSquared (Master) > (MeleeRange+Master.Radius)*(MeleeRange+Master.Radius))

@@ -1,9 +1,5 @@
 //TODO:
 //Also make a recolored (Orange?) gyrojet variant, which is THREAT_ABOVENORMAL.
-//Add the ability for it to land and walk on the ground.
-//Add an OnWander() override to handle following the player (And anything else) more properly.
-
-//BUG: If the drone is frozen, it will then stack overflow upon shattering, very cool!
 
 Class MVP_Quadcopter : MVP_BaseFlyer
 {
@@ -43,6 +39,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		DeathHeight 8;
 		Radius 16;
 		CameraHeight 5;
+		MaxStepHeight 10;
 		MeleeRange 64;
 		Obituary "%o died from a drone strike";
 		ActiveSound "Vehicle/Drone/Fly";
@@ -57,14 +54,24 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	{
 		Super.PostBeginPlay();
 		
-		A_StartSound (ActiveSound,flags:CHANF_LOOPING,attenuation:1.5);
 		If (KAIHandler) Yapper = KAIHandler.GetNPCVoice ("Panopticon");
+		If (!User_NoWalking)
+		{
+			If (!TestMobjZ(True) || GetZAt ()+1 >= Pos.Z)
+				MVP_QuadcopterLand();
+			Else
+				MVP_QuadcopterTakeOff();
+		}
+		LandParams.AngleLimit = TurnHorz;
+		LandParams.DetourFactor = DetourFactor;
+		AttackStates.Push (FindState("Missile.Ground",True));
 	}
 	
 	Override Void UserVariableDefaults()
 	{
 		If (User_ChaseTime == 0) User_ChaseTime = 35*30;
 		If (User_RetreatDistance == 0) User_RetreatDistance = 384;
+		If (User_DodgeRange == 0) User_DodgeRange = 256;
 	}
 	
 	Override Void SpawnHeadlights()
@@ -95,6 +102,19 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		If (IsFrozen())
 			Return;
 		
+		If (!Target && IdleWalkTimer > 0)
+			IdleWalkTimer--;
+		
+		Bool Attacking = IsInAttackState();
+		
+		If (FireDelay && !Attacking) FireDelay--;
+		
+		If (Landed) //When you walking.
+		{
+			If (IsInState(Self,"Missile.Ground")) AimAtTarget (5,5,flags:FAF_MIDDLE,attackspeed:170,200);
+			Return;
+		}
+		
 		Bool Ded = IsDead(Self);
 		//Scale visual bobbing with speed.
 		If (!Ded)
@@ -104,9 +124,8 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 		//Console.Printf ("Bob strength %.2f",FloatBobStrength);
 		
-		If (!IsInAttackState())
+		If (!Attacking)
 		{
-			If (FireDelay) FireDelay--;
 			If (!Ded && Target && Target != Goal) //Adjust imaginary turret, as long as the target isn't actually a goal point. So that bChaseGoal works.
 			{
 				Double RealAngle = Angle; Double RealPitch = Pitch;
@@ -179,7 +198,15 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		If (MVP_QuadcopterLOF() && KAI_CheckMissileRange (Target,CMR_3DDISTANCE|CMR_NOHITFRIEND))
 		{
 			If (!NoStateJump)
-				SetStateLabel ("Missile");
+			{
+				If (!Landed)
+					SetStateLabel ("Missile");
+				Else
+				{
+					LandBullets = Random (8,16);
+					SetStateLabel ("Missile.Ground");
+				}
+			}
 			
 			Return True;
 		}
@@ -191,6 +218,14 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	{
 		If (EventType == KAI_NPCGroup.GRPEVNT_NONE || !Affected || IsDead(Self))
 			Return;
+		
+		If (Affected == Self)
+		{
+			If (EventType == KAI_NPCGroup.GRPEVNT_JOIN) //We follow when in a group.
+				SetNPCOrder (ORDER_FOLLOW);
+			Else If (EventType == KAI_NPCGroup.GRPEVNT_LEFT) //And go back to the defaults when not in one.
+				SetNPCOrder (DefaultOrder);
+		}
 		
 		//Swarm member died, but only speak if they are like, remotely important and also not just one of the flying bombs
 		If ((EventType == KAI_NPCGroup.GRPEVNT_DEATH || EventType == KAI_NPCGroup.GRPEVNT_ERASED) && WhatGroup Is "MVP_DroneSwarm" && Random (0,255) < 16 &&
@@ -205,7 +240,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		KAI_Chase_Retarget(0,True);
 		
 		Bool MovedAlready; Bool B;
-		Int KMTFlags = KMT_3D;
+		Int KMTFlags = !Landed ? KMT_3D : 0;
 		
 		//DETERMINE IF WE SHOULD BE MOVING AWAY FROM THE TARGET.
 		Bool RunAway = (!bNoFear && (IsFrightening (Target) || bFrightened)); //Run away from spooky actors, or maybe we're just a little bitch.
@@ -236,7 +271,19 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			Else If (Target.Player && Target.Player.ReadyWeapon && Target.Player.ReadyWeapon.bMeleeWeapon) //Melee player
 				IsMeleeAttacker = Distance3dSquared(Target) <= 192*192;
 			
+			If (Landed && IsMeleeAttacker) //Fly out of melee.
+			{
+				SetStateLabel ("TakeOff");
+				Return;
+			}
+			
 			RunAway = IsMeleeAttacker;
+		}
+		
+		If (Landed && (TargetLevel > ThreatLevelThreshold || Health <= WoundHealth)) //Fly away from very dangerous target or when too injured.
+		{
+			SetStateLabel ("TakeOff");
+			Return;
 		}
 		
 		If (Health > WoundHealth) //Ignore weak hazards if not weak yourself.
@@ -301,41 +348,67 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			RunAway = True;
 		
 		Actor Proj;
-		If ((Proj = MVP_QuadcopterDodge(256)))
+		If ((Proj = MVP_QuadcopterDodge(!Landed ? User_DodgeRange : User_DodgeRange*3)))
 		{
-			//KAI_Chase_HandleStrafing (Proj,0,True,INT.MAX);
-			Double Delta = DeltaAngle (Angle,AngleTo(Proj));
-			If (Delta >= -2)
-				KMT_3D_SpeedLimit(15,(AngleToVector (Angle-90,15),0));
-			Else
-				KMT_3D_SpeedLimit(15,(AngleToVector (Angle+90,15),0));
-			
-			LastProjectile = Proj; //So we don't constantly dodge the same thing.
-		}
-		
-		//Push yourself away from the enemy or hazard.
-		If (!LockedIn && RunAway)
-		{
-			A_FaceTarget(TurnHorz,TurnVert);
-			//If there's already a prior position to move to, begin moving there instead. Until within melee range of that position.
-			If (!KAI_Math.IsEmptyVector3 (NextMovePos) && NewPosStepCount <= 16 && Level.Vec3Diff (Pos,NextMovePos).Length() >= MeleeRange)
+			If (!Landed)
 			{
-				KMT_3D_SpeedLimit (Speed/2,KAI_Math.AngleToVector3D(GetAngleToPos(NextMovePos,0),-GetPitchToPos(NextMovePos,0),FlightAcceleration));
-				NewPosStepCount++;
+				Double Delta = DeltaAngle (Angle,AngleTo(Proj));
+				If (Delta >= -2)
+					KMT_3D_SpeedLimit(15,(AngleToVector (Angle-90,15),0));
+				Else
+					KMT_3D_SpeedLimit(15,(AngleToVector (Angle+90,15),0));
+				
+				LastProjectile = Proj; //So we don't constantly dodge the same thing.
+			}
+			Else
+			{
+				SetStateLabel ("TakeOff");
 				Return;
 			}
-			//Once the position is reached, get a new one. Do take a few extra steps away though.
-			Else If (NewPosStepCount++ <= 24)
-			{console.printf ("set nextmovepos, hazard is %p",haz);
-				Vector3 RuNpos = !Haz ? Target.Pos : GetHazardOriginPos(Haz);
-				NextMovePos = FindRandomMovePos(RunPos,full3D:True);
-				NewPosStepCount = 0;
+		}
+		
+		//Decide to land sometimes when attacking close to the ground. Especially if crammed.
+		Double SectorHeight = (CeilingZ - FloorZ);
+		If (!User_NoWalking && !Landed)
+		{
+			Int LandChance = (SectorHeight >= 128) ? 1536 : 512;
+			If (Health > WoundHealth && !BigThreat && !LockedIn && !RunAway && (Pos.Z - FloorZ) <= 96 && Random(0,LandChance) == Random (0,LandChance))
+			{
+				SetStateLabel ("Land.Landing");
+				Return;
+			}
+		}
+		
+		If (!LockedIn && RunAway)
+		{
+			If (!Landed) //Push yourself away from the enemy or hazard.
+			{
+				A_FaceTarget(TurnHorz,TurnVert);
+				//If there's already a prior position to move to, begin moving there instead. Until within melee range of that position.
+				If (!KAI_Math.IsEmptyVector3 (NextMovePos) && NewPosStepCount <= 16 && Level.Vec3Diff (Pos,NextMovePos).Length() >= MeleeRange)
+				{
+					KMT_3D_SpeedLimit (Speed/2,KAI_Math.AngleToVector3D(GetAngleToPos(NextMovePos,0),-GetPitchToPos(NextMovePos,0),FlightAcceleration));
+					NewPosStepCount++;
+					Return;
+				}
+				//Once the position is reached, get a new one. Do take a few extra steps away though.
+				Else If (NewPosStepCount++ <= 24)
+				{
+					Vector3 RunPos = !Haz ? Target.Pos : GetHazardOriginPos(Haz);
+					NextMovePos = FindRandomMovePos(RunPos,full3D:True);
+					NewPosStepCount = 0;
+				}
+			}
+			Else //Turn around.
+			{
+				Vector3 RunPos = !Haz ? Target.Pos : GetHazardOriginPos(Haz);
+				KAI_MoveAway (Null,kmaflags:KMA_STRAIGHT,RunPos);
 			}
 			MovedAlready = True;
 		}
 		
 		//Stay slightly off the ground when not in a tight space.
-		If ((CeilingZ - FloorZ) >= 72)
+		If (!Landed && SectorHeight >= 72)
 		{
 			LineTrace (0,32,90,TRF_BLOCKSELF,data:Ground);
 			If (Ground.Distance < 32)
@@ -346,26 +419,51 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Bool CantAttack;
 		If (Target && TargetInSight && PitchTo (Target) <= MaxGunPitch)
 		{console.printf ("drone rising up to fire");
+			If (Landed)
+			{
+				SetStateLabel ("TakeOff");
+				Return;
+			}
 			CantAttack = True;
 			KMT_3D_SpeedLimit (Speed,(0,0,0.5));
 		}
 		
-		Vector3 Scale = ScaleInAdvance (384);
-		If (!KAI_Math.IsEmptyVector3(Scale))
+		If (!Landed)
 		{
-			KMT_3D_SpeedLimit (Speed,(0,0,FloatSpeed));
+			Vector3 ScaleObs = ScaleInAdvance (384);
+			If (!KAI_Math.IsEmptyVector3(ScaleObs))
+				KMT_3D_SpeedLimit (Speed,(0,0,FloatSpeed));
 		}
+		Else If (Random (0,255) < 64)
+			A_StartSound ("Vehicle/Drone/ClinkWalk",attenuation:ATTN_STATIC);
 		
 		//Move to target, and also handle patrolling but then seeing a target.
 		If (Target && Target != Goal && !(IsPatrolling(Self) && bChaseGoal) && !MovedAlready)
 		{
+			If (Landed)  //Occasionally check if we can still reach our target while on the ground, and take off if we haven't been able to do so for too long.
+			{
+				If (Random(0,255) < 8)
+				{
+					If (!IsPosReachable (Target.Pos,Target.Radius*1.5,Radius))
+						TargetLandAttempts++;
+					Else
+						TargetLandAttempts = 0;
+					console.printf ("targetlandattempts %u",targetlandattempts);
+				}
+					
+				If (TargetLandThreshold <= TargetLandAttempts)
+				{
+					SetStateLabel("TakeOff");
+					Return;
+				}
+			}
 			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),DetourFactor,TurnHorz,flags:KMTFlags,TurnVert);
 			MovedAlready = True;
 		}
 		
 		//Patrol handling.
 		//BUG: ZDoom's hacky usage of ReactionTime makes the drone not wait at patrol points when it has a target.
-		If (!MovedAlready)
+		If (!MovedAlready && !Landed)
 		{
 			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Spawn",DetourFactor,TurnHorz,flags:KMTFlags,TurnVert);
 			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
@@ -380,6 +478,11 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
 			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d, reactiontime %d",goal.pos,movedalready,b,reactiontime);
 		}
+		Else If (Landed && Goal) //Follow patrol routes by air.
+		{
+			SetStateLabel ("TakeOff");
+			Return;
+		}
 		
 		If (!CantAttack && ShouldAttack())
 			Return;
@@ -387,7 +490,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		HandleChaseTimer();
 	}
 	
-	Vector3 ScaleInAdvance (Double Range)
+	Vector3 ScaleInAdvance (Double Range, Actor Ignore = Null)
 	{
 		Vector3 Where = (Double.NaN, Double.NaN, Double.NaN); Bool Success;
 		FLineTraceData Check;
@@ -395,7 +498,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Vector3 HitPos = Check.HitDir * (Check.Distance-(Radius*0.5)); //Can't be the exact hit location outside ScaleObstacle just returns false.
 		HitPos = Level.Vec3Offset(Pos,HitPos);
 		
-		If (Check.HitType)
+		If (Check.HitType && !(Ignore && Check.HitActor && Ignore == Check.HitActor))
 			Success = KMT_3D_ScaleObstacle(HitPos,Where.Z);
 		
 		If (!Success)
@@ -411,6 +514,9 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	//IDEA: Also make it handle flying away from homing projectiles maybe?
 	Actor MVP_QuadcopterDodge (Double Range = 128)
 	{
+		If (Range <= 0)
+			Return Null;
+		
 		Array <Actor> Threats;
 		//Actually find projectiles.
 		ForEach (Proj : KAIHandler.ProjectileList)
@@ -474,7 +580,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Check.ProjInfo.Projectile = "MVP_SmallRifleBullet"; //Pass projectile class to class.
 		Check.ProjInfo.InitializeProjectileInfo(); //Let it infer the rest.
 		
-		Check.Trace (Pos,CurSector,KAI_Math.AngleToVector3D(AngleTo(Target),PitchTo(Target,targzofs:Target.Height/2)),Distance3D (Target)+32,0);
+		Check.Trace (Pos.PlusZ(4),CurSector,KAI_Math.AngleToVector3D(AngleTo(Target),PitchTo(Target,targzofs:Target.Height/2)),Distance3D (Target)+32,0);
 		
 		If (Check.BadLOF)
 		{
@@ -491,7 +597,16 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	Void MVP_QuadcopterFire ()
 	{
 		A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
-		Actor Proj = A_SpawnProjectile ("MVP_SmallRifleBullet",0,angle:FireAngle,flags:CMF_AIMDIRECTION|CMF_ABSOLUTEANGLE,FirePitch); //pew pew
+		Actor Proj;
+		If (!Landed)
+		{
+			A_SpawnProjectile ("MVP_SmallRifleBullet",4,angle:FireAngle,flags:CMF_AIMDIRECTION|CMF_ABSOLUTEANGLE,FirePitch); //pew pew
+		}
+		Else
+		{
+			A_SpawnProjectile ("MVP_SmallRifleBullet",4,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+			A_Recoil(1);
+		}
 		AddProjectileSpread (Proj,(0.3,-0.3),(0.6,-0.6));
 		Bool B; Actor Casing;
 		[B, Casing] = A_SpawnItemEx ("MVP_BulletCasing",0,0,0,FRandom(2,-2),FRandom(2,8),FRandom(2,6));
@@ -549,7 +664,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			{
 				ForEach (Fren : MVP_DroneSwarm(Grp).Quadcopters)
 				{
-					If (Distance3DSquared (Fren) <= 512*512)
+					If (Fren != Self && Distance3DSquared (Fren) <= 512*512)
 						Frens.Push (Fren);
 				}
 			}
@@ -565,10 +680,154 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 	}
 	
+	Override Bool OnWander()
+	{
+		If (CurrentOrder == ORDER_STAY)
+		{
+			If (!Landed) Vel *= 0.9;
+			Else Frame = 14; //Stay at PND2O when on the ground.
+			Return False;
+		}
+		
+		KAI_Look(LOF_NOJUMP,extraflags:KAIL_CHASETARGET);
+		If (Target)
+		{
+			Speed = GetDefaultSpeed(GetClass());
+			If (!Landed) SetState(SeeState);
+			Else SetStateLabel ("See.Ground");
+			Return False;
+		}
+		
+		Actor Proj;
+		If ((Proj = MVP_QuadcopterDodge(!Landed ? User_DodgeRange : User_DodgeRange*3)))
+		{
+			If (!Landed)
+			{
+				Double Delta = DeltaAngle (Angle,AngleTo(Proj));
+				If (Delta >= -2)
+					KMT_3D_SpeedLimit(15,(AngleToVector (Angle-90,15),0));
+				Else
+					KMT_3D_SpeedLimit(15,(AngleToVector (Angle+90,15),0));
+				
+				LastProjectile = Proj; //So we don't constantly dodge the same thing.
+			}
+			Else
+			{
+				Speed = GetDefaultSpeed(GetClass());
+				SetStateLabel ("TakeOff");
+				Return False;
+			}
+		}
+		console.printf ("when you idlin");
+		Vector3 FolPos = (Double.NaN, Double.NaN, Double.NaN); Actor Followee;
+		Bool Following; //We followed something this time.
+		If (CurrentOrder == ORDER_FOLLOW)
+			[FolPos, Followee] = HandleFollowingActor (FolPos,True); //NOTE: We turn bDontFollowPlayers on between KAI_Wander calls so lonely drones in a swarm don't do that.
+		
+		//Scale obstacles in advance, unless we're following the thing we detect.
+		If (!Landed)
+		{
+			Vector3 ScaleObs = ScaleInAdvance (384,Followee);
+			If (!KAI_Math.IsEmptyVector3(ScaleObs))
+				KMT_3D_SpeedLimit (Speed,(0,0,FloatSpeed));
+		}
+		Else If (Random (0,255) < 64)
+			A_StartSound ("Vehicle/Drone/ClinkWalk",attenuation:ATTN_STATIC);
+		
+		If (Random(0,2048) == Random (0,2048) && Yapper)
+			MVP_QuadcopterSpeak();
+		
+		//Follow something instead. Unless it's another quadcopter or a kamikaze drone. That way pure flying drone swarms are independent-is.
+		If (CurrentOrder == ORDER_FOLLOW)
+		{
+			If (!KAI_Math.IsEmptyVector3(FolPos) && !(Followee && (Followee Is "MVP_Quadcopter" || Followee Is "MVP_KamikazeDrone")))
+			{
+				Following = True;
+				//Don't dogpile.
+				If (Followee && Distance3DSquared(Followee) >= (192+Followee.Radius)*(192+Followee.Radius))
+				{console.printf ("going to %s",followee.getclassname());
+					If (Followee) FolPos.Z = Followee.Z+(Followee.Height/2);
+					KAI_MoveTowards (FolPos,DetourFactor,TurnHorz,flags:!Landed ? KMT_3D : 0,TurnVert);
+					Return False;
+				}
+				Else If (Followee)
+				{
+					If (!Landed)
+					{
+						A_Face (Followee,TurnHorz,TurnVert);
+						//If there's already a prior position to move to, begin moving there instead. Until within melee range of that position.
+						If (!KAI_Math.IsEmptyVector3 (NextMovePos) && NewPosStepCount <= 16 && Level.Vec3Diff (Pos,NextMovePos).Length() >= MeleeRange)
+						{
+							KMT_3D_SpeedLimit (Speed/2,KAI_Math.AngleToVector3D(GetAngleToPos(NextMovePos,0),-GetPitchToPos(NextMovePos,0),FlightAcceleration));
+							NewPosStepCount++;
+							Return False;
+						}
+						//Once the position is reached, get a new one. Do take a few extra steps away though.
+						Else If (NewPosStepCount++ <= 24)
+						{
+							NextMovePos = FindRandomMovePos(Followee.Pos,full3D:!Landed);
+							NewPosStepCount = 0;
+						}
+					}
+					Else //If walking just turn around.
+						KAI_MoveAway (Followee,kmaflags:KMA_STRAIGHT,extraparams:LandParams);
+				}
+			}
+		}
+		console.printf ("IdleWalkTimer %u",IdleWalkTimer);
+		If (Landed && !IdleWalkTimer)
+		{
+			Speed = GetDefaultSpeed(GetClass());
+			SetStateLabel ("TakeOff");
+			Return False;
+		}
+		
+		//Let's land and walk around for a bit.
+		If (!User_NoWalking && !Landed && !Following && Random(0,2048) == Random (0,2048))
+		{
+			SetStateLabel ("Land.Landing");
+			Speed = GetDefaultSpeed(GetClass());
+			Return False;
+		}
+		
+		Return True;
+	}
+	
+	Override Vector3, Actor HandleFollowingActor (Vector3 BasePos, Bool IgnoreDontFollowPlayers)
+	{
+		Vector3 Ret; Actor Ret2;
+		[Ret, Ret2] = Super.HandleFollowingActor (BasePos,IgnoreDontFollowPlayers);
+		
+		//Do NOT follow the player if in a swarm but this virtual returned the friendplayer. Which means the group has nobody else but you.
+		If (CurrentOrder == ORDER_FOLLOW && Groups.Size() && Ret2 == Players[KAI_GetFriendPlayer()].Mo)
+			Return BasePos, Null;
+		
+		Return Ret, Ret2;
+	}
+	
+	Void MVP_QuadcopterTakeOff()
+	{
+		Inaccuracy = Default.Inaccuracy;
+		A_StartSound (ActiveSound,flags:CHANF_LOOPING,attenuation:1.5);
+		bInFloat = bNoGravity = bFloatBob = True;
+		Landed = False;
+		TargetLandAttempts = 0;
+	}
+	
+	Void MVP_QuadcopterLand()
+	{
+		IdleWalkTimer = GameTicRate*Random (6,30); //How much time we spend idly walking before getting bored.
+		Inaccuracy *= 2;
+		bInFloat = bNoGravity = bFloatBob = False; //Vehicle is still marked as a flyer, both for KAI and GZDoom (+FLOAT), it's just not doing that right now.
+		A_StopSound (CHAN_BODY);
+		Landed = True;
+	}
+	
 	Const TurnHorz = 15;
 	Const TurnVert = 60;
 	Const DetourFactor = 1.5;
 	Const MaxGunPitch = -20; //How much the imaginary gun can aim up.
+	Const TargetLandThreshold = 3; //How many times we can determine the target isn't reachable on land before we take off.
 	
 	Actor LastProjectile;
 	Double FireAngle, FirePitch; //The actual orientation used when firing. Think of it like an imaginary turret actor.
@@ -576,28 +835,90 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	FLineTraceData Ground;
 	KAI_Voice Yapper;
 	
+	//Ground mode
+	Bool Landed;
+	KAIMoveParams LandParams;
+	UInt IdleWalkTimer; //How much time the drone spends idly walking.
+	UInt8 LandBullets; //How many rounds the drone fires while on land before stopping.
+	UInt8 TargetLandAttempts; //How many times we've checked while on land if we can reach the target.
+	
+	Double User_DodgeRange;
+	Bool User_NoWalking;
+	
 	States
 	{
 		Spawn:
 			PND2 ABC 1
 			{
-				KAI_Look(extraflags:KAIL_CHASETARGET); //NOTE: The ABC frames are replaced dynamically.
-				KMT_3D_SpeedLimit (0,(0,0,0)); //Stand still.
+				KAI_Look(LOF_NOJUMP,extraflags:KAIL_CHASETARGET); //NOTE: The ABC frames are replaced dynamically.
+				If (Target)
+				{
+					If (!Landed) SetState(SeeState);
+					Else SetStateLabel ("See.Ground");
+				}
+				
+				If (!Landed) KMT_3D_SpeedLimit (0,(0,0,0)); //Stand still.
+				Else Frame = 14; //VISUALLY stand still.
 			}
 			Loop;
 		See:
-			PND2 ABC 1 MVP_QuadcopterChase();
+			PND2 ABC 1 {MVP_QuadcopterChase();console.printf ("when you flyin");}
+			Loop;
+		See.Ground:
+			PND2 OPQR 4 MVP_QuadcopterChase();
 			Loop;
 		Idle:
+			PND2 A 0 A_JumpIf (Landed,"Idle.Ground");
 			PND2 ABC 1
 			{
-				KAI_Look(extraflags:KAIL_CHASETARGET);
-				KAI_Wander (anglelimit:TurnHorz,flags:KMT_3D,TurnVert);
-				
-				If (Random(0,2048) == Random (0,2048) && Yapper)
-					MVP_QuadcopterSpeak();
+				Bool FuckYou = bDontFollowPlayers; bDontFollowPlayers = True;
+				KAI_Wander (detourfactor:DetourFactor,anglelimit:TurnHorz,flags:KMT_3D,TurnVert);
+				bDontFollowPlayers = FuckYou;
+			}
+			Goto Idle+1;
+		Idle.Ground:
+			PND2 OPQR 4
+			{
+				Bool FuckYou = bDontFollowPlayers; bDontFollowPlayers = True;
+				If (Landed)
+					Speed = 5;
+				KAI_Wander (detourfactor:DetourFactor,anglelimit:TurnHorz);
+				If (Landed)
+					Speed = GetDefaultSpeed(GetClass());
+				bDontFollowPlayers = FuckYou;
 			}
 			Loop;
+		Land.Landing:
+			PND2 ABC 1
+			{
+				KAI_Look(LOF_NOJUMP,extraflags:KAIL_CHASETARGET);
+				Double FS = FloatSpeed;
+				If (Target) //Nvm we have a target to kill.
+				{
+					If (Health > WoundHealth && AssessThreatLevel (Target) > ThreatLevelThreshold)
+						Return SeeState;
+					Else //Or it's not too dangerous, so land twice as hard to deal with it by firing very fast
+						FloatSpeed *= 2;
+				}
+				
+				Vel *= 0.9;
+				SetZ (Pos.Z-FloatSpeed*2);
+				FloatSpeed = FS;
+				If (!TestMobjZ(True) || GetZAt ()+1 >= Pos.Z)
+					Return FindState ("Land",True);
+				
+				Return State(Null);
+			}
+			Loop;
+		Land:
+			PND2 K 1 MVP_QuadcopterLand();
+			PND2 KLMN 6;
+			Goto See.Ground;
+		TakeOff:
+		tnt1 a 0 a_log ("taking off");
+			PND2 K 1 MVP_QuadcopterTakeoff();
+			PND2 NMLK 6;
+			Goto See;
 		Missile:
 			PND2 A 3;
 			PND2 H 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
@@ -607,6 +928,23 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			PND2 H 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
 			PND2 H 0 MVP_QuadcopterSwitchTargets();
 			Goto See;
+		Missile.Ground:
+			PND2 S 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
+			PND2 T 3;
+			//PND2 T 0 MVP_QuadcopterSwitchTargets();
+			PND2 T 0
+			{
+				If (LandBullets-- <= 0)
+					Return FindState("See.Ground");
+				
+				//Target is dead or gone, or out of LOF, or too far, or too high up. So look for a new one, and stop if none can be found.
+				If ((IsDead(Target) || !MVP_QuadcopterLOF() || Target && Distance3DSquared(Target) > MaxTargetRange*MaxTargetRange || PitchTo (Target) <= MaxGunPitch)
+				&& !LookForPlayers(True))
+					Return FindState("See.Ground");
+					
+				Return State (Null);
+			}
+			Loop;
 		Death:
 			TNT1 A 0
 			{
@@ -674,8 +1012,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 }
 
 //Drone swarm group structure. The group leader is kinda irrelevant for this group type.
-//TODO:
-//MAYDO: Make the leader pointer useful by making it so non-drone actors are automatically set as leaders and become what the drones follow?
 
 Class MVP_DroneSwarm : KAI_NPCGroup
 {
