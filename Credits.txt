@@ -103,6 +103,7 @@ Original tank movement and turret turning sounds (TankMoveOriginal.ogg & TankTur
 Kamikaze drone flying sound (DroneBuzz.ogg) is from ZapSplat (https://www.zapsplat.com/music/air-hogs-dr1-drone-fly-around-stop/)
 Kamikaze drone beeping sound (DroneBeep.ogg) made by me (inkoalawetrust).
 Drone flying sound (DroneFly.ogg) by simeonradivoev (https://freesound.org/people/simeonradivoev/sounds/383852/)
+Quadcopter drone walking sounds are from ZapSplat.
 
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|Sounds|==============|

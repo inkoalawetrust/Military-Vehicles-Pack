@@ -1,5 +1,6 @@
 //TODO:
 //Also make a recolored (Orange?) gyrojet variant, which is THREAT_ABOVENORMAL.
+//IDEA: Make them abuse turrets by flying over their pitch limits.
 
 Class MVP_Quadcopter : MVP_BaseFlyer
 {
@@ -184,9 +185,10 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 	}
 	
-	//Added more obituaries (And gyrojet ones) later.
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
+		If (Landed)
+			Return "%o got %p knees popped by a drone";
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
 	}
 	
@@ -601,6 +603,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		If (!Landed)
 		{
 			A_SpawnProjectile ("MVP_SmallRifleBullet",4,angle:FireAngle,flags:CMF_AIMDIRECTION|CMF_ABSOLUTEANGLE,FirePitch); //pew pew
+			Vel += KAI_Math.AngleToVector3D (Angle,Pitch,-2.5);
 		}
 		Else
 		{

@@ -159,12 +159,23 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
 		If (IsDead(Self) && Victim == Target) //We died (Exploded) and our target is the victim, so our victim got blown up presumably trying to destroy us lol.
+		{
+			If (Random (False, True) == True) Return "%o whacked %p stick too hard";
 			Return "%o played stupid games with a flying bomb";
+		}
 		
 		If (bFriendly && Victim.Player) //KLUDGE: Because IsActorHostile() doesn't work, obviously!
 			Return "%o should've stood out of a drones' way";
 		
-		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+		String DroneObituaries[] = {
+		"%o thought %g was safe behind cover",
+		"%o should be more observant of the sky",
+		"%o didn't pray hard enough"};
+		
+		If (Random (False, True) == True)
+			Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+		Else
+			Return DroneObituaries[Random(0,DroneObituaries.Size()-1)];
 	}
 	
 	Void MVP_KamikazeChase ()

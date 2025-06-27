@@ -46,11 +46,11 @@ Class MVP_BaseVehicle : KAI_BaseVehicle
 		
 		//Damage factors specific to the Smart Marines.
 		DamageFactor "MarineHMG", 0.8;
-		DamageFactor "LargeRifleBullet", 0.8; //Replaces MarineHMG.
 		DamageFactor "MarineGrenade", 0.7;
 		DamageFactor "MarineRifle", 0.7; //Not used anymore by Smart Marines as of the rewrite.
 		//Vehicle damage factors
 		DamageFactor "Autocannon", 0.8;
+		DamageFactor "LargeRifleBullet", 0.9; //Replaces MarineHMG.
 		DamageFactor "RifleBullet", 0.8;
 		DamageFactor "SmallRifleBullet", 0.6;
 		+DoShadowBlock;

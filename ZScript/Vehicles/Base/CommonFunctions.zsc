@@ -112,7 +112,7 @@ Mixin Class MVP_SharedFunctions
 		UpdateUserVariables(); //Pass the vehicles' user variables as properties to the KAI library.
 		If (!bFriendly) Species = 'MilitaryHostile';
 		
-		If ((!User_DefaultOrder || User_DefaultOrder ~== "") && bFriendly)
+		If ((!User_DefaultOrder || User_DefaultOrder ~== "" || User_DefaultOrder ~== " ") && bFriendly)
 		{
 			//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
 			Array <PlayerPawn> VisibleFriends;
@@ -127,14 +127,14 @@ Mixin Class MVP_SharedFunctions
 			
 			//Found at least one visible friendly player to follow.
 			If (VisibleFriends.Size())
-			{CONSOLE.PRINTF ("default order is follow");
+			{
 				SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
 				SetNPCOrder (ORDER_FOLLOW);
 				DefaultOrder = Order_Follow;
 			}
 			//No friendplayer, or they are out of sight
 			Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
-			{CONSOLE.PRINTF ("default order is wander");
+			{
 				SetNPCOrder (ORDER_WANDER);
 				DefaultOrder = ORDER_WANDER;
 				bDontFollowPlayers = True;

@@ -1047,7 +1047,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		}
 		
 		String HESHSpallObituaries[] = {
-		"%o thought %p was safe behind cover",
+		"%o thought %g was safe behind cover",
 		"%o reported %k for wallhacking",
 		"%o figured out why spall liners are important"};
 		
