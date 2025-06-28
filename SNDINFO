@@ -297,6 +297,7 @@ $Random MVPMarine/Death
 	Vehicle/Drone/Clink2 "Sounds/Vehicles/Drones/QuadStep2.ogg"
 	Vehicle/Drone/Clink3 "Sounds/Vehicles/Drones/QuadStep3.ogg"
 	Vehicle/Drone/Clink4 "Sounds/Vehicles/Drones/QuadStep4.ogg"
+	Vehicle/Drone/FireGyro "Sounds/Vehicles/Drones/GyroFire.ogg"
 	
 	$Random Vehicle/Drone/ClinkWalk
 	{
@@ -309,6 +310,7 @@ $Random MVPMarine/Death
 	$Limit Vehicle/Drone/Buzz 0
 	$Limit Vehicle/Drone/Beep 8
 	$Limit Vehicle/Drone/Beep 0
+	$Limit Vehicle/Drone/FireGyro 0
 	
 	Vehicle/Drone/Speak1 "Sounds/Voices/Panopticon/speech.ogg"
 	Vehicle/Drone/Speak2 "Sounds/Voices/Panopticon/speech2.ogg"

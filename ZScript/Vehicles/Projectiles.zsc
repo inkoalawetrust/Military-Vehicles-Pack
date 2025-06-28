@@ -1,7 +1,7 @@
 //Generic projectiles used by multiple vehicles.
 
-//TODO: Rename to MVP_LargeRifleBullet
-Class MVP_50CalBullet : MVP_BaseProjectile
+Class MVP_50CalBullet : MVP_RifleBullet{} //Old name.
+Class MVP_LargeRifleBullet : MVP_BaseProjectile
 {
 	Default
 	{
@@ -206,6 +206,182 @@ Class MVP_SmallRifleBullet : MVP_RifleBullet
 		Decal "BulletChip";
 		DamageType "SmallRifleBullet";
 		+KAI_BaseProjectile.Deflectable;
+	}
+}
+
+//Explosive gyroject
+Class MVP_Gyrojet : MVP_BaseProjectile
+{
+	Default
+	{
+		Radius 4;
+		Height 6;
+		Speed 50;
+		FastSpeed 70;
+		DamageFunction (Random (12,20));
+		XScale 0.2;
+		YScale 0.16666; //0.2 / 1.2
+		ProjectileKickback 32;
+		ExplosionRadius 24;
+		ExplosionDamage 32;
+		Decal "Scorch";
+		DamageType "Explosive";
+		MissileType "MVP_RocketFlame";
+		Obituary "%o was hit by a gyrojet";
+		SeeSound "Vehicle/Drone/FireGyro";
+		+SeekerMissile;
+		+KAI_BaseProjectile.NoTrailLine;
+		KAI_BaseProjectile.TrailSprite "MVP_RocketFireSprite";
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		Vel3DFromAngle (8,Angle,Pitch); //Start off slow and reach full speed over time. You know, gyrojet.
+		DefSpeed = GetDefaultSpeed(GetClass());
+	}
+	
+	//Rocket trail.
+	Override Void TrailSpawn (VisualThinker Trail)
+	{
+		Super.TrailSpawn(Trail);
+		If (Vel.Length() >= DefSpeed-MinVel)
+		{
+			Trail.Destroy();
+			Return;
+		}
+		Trail.PostBeginPlay(); //Scale the trail NOW.
+		KAI_Tracer(Trail).RanPostBeginPlayEarly = True;
+		Trail.Pos = KAI_Math.Vec3OffsetRelative (Self,(-4,0,0));
+		Trail.Flags |= SPF_ROLL;
+		Trail.Roll = FRandom(-180,180);
+		Trail.Scale *= FRandom(0.15,0.25);
+		Trail.PostBeginPlay(); //Scale the trail NOW.
+		KAI_Tracer(Trail).RanPostBeginPlayEarly = True;
+		Trail.Vel.X = FRandom (-2,2);
+		Trail.Vel.Y = FRandom (-2,2);
+		Trail.Vel.Z = FRandom (-0.5,0.5);
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen() || !bMissile)
+			Return;
+		
+		A_Weave(1,1,Weave,Weave);
+		
+		If (Vel.Length() >= DefSpeed-MinVel)
+			Return;
+		
+		Double Calc = KAI_Math.LinearMap(GetAge(),0,35*2,8,DefSpeed);
+		Calc = Clamp (Calc,8,DefSpeed);
+		Vel3DFromAngle (Calc,Angle,Pitch); //Speed up with age.
+		Weave = KAI_Math.LinearMap (Vel.Length(),8,DefSpeed,0,3); //Weave around more with age.
+	}
+	
+	Void DoGyrojetSplash (Int LiquidType, Bool UpsideDown = False)
+	{
+		If (LiquidType == LIQUID_NONE) Return;
+		HitLiquid = True;
+		Actor Splash = SpawnLiquidSplash (LiquidType,"SFX/LiquidExplosion",0.5,1.5,ExplosionDamage*0.5,ExplosionRadius*0.5,ExplosionRadius*0.5,"Explosive",True);
+		
+		Double Size = FRandom (0.5,0.75);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.bXFlip = Random (False,True);
+	}
+	
+	Double DefSpeed;
+	Double Weave;
+	Bool HitLiquid;
+	
+	States
+	{
+		Spawn:
+			BUL1 I 0;
+			BUL1 # 4 Light ("RifleTracerLight")
+			{
+				Frame = UpdateProjectileElevation (10,10,8,9,9); //K, K, I, J, J
+				KAI_SeekerMissile (1,0.75,SMF_CURSPEED|SMF_SMART,(32,32,32));
+				If (Vel.Length() >= DefSpeed-MinVel)
+				{
+					bSeekerMissile = False;
+					//bNoTrailLine = False; //Stop the rocket fire.
+					Return FindState ("Cruise");
+				}
+				Return State(Null);
+			}
+			Loop;
+		Cruise: //Finished acceleration
+			BUL1 # 4
+			{
+				PlayFlybySound ("SFX/BulletFlyby",flags:CHANF_NOSTOP,0.6,ATTN_STATIC,distance:384);
+				Frame = UpdateProjectileElevation (10,10,8,9,9); //K, K, I, J, J
+			}
+			Loop;
+		Death:
+			TNT1 A 0
+			{
+				//The floor was hit.
+				If (Pos.Z <= FloorZ)
+					DoGyrojetSplash(CheckLiquid(FloorPic));
+				//The ceiling was hit.
+				Else If (Pos.Z + Height >= CeilingZ)
+					DoGyrojetSplash(CheckLiquid(CeilingPic),True);
+				
+				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+			}
+			TNT1 A 0
+			{
+				Roll = Random (0,360);
+				A_SetScale (0.5);
+				A_SetRenderStyle (1.0,STYLE_ADD);
+				MakeAlliesImmuneToExplosion (Target,ExplosionRadius);
+				A_Explode (ExplosionDamage,ExplosionRadius,XF_CIRCULAR|XF_CIRCULARTHRUST,False,ExplosionRadius);
+				RemoveAllyExplosionImmunity();
+				A_StartSound ("SFX/Explosion",volume:0.5,attenuation:2);
+			}
+			GAXP ABCDEFGHIJ 2 Bright;
+			Stop;
+	}
+}
+
+//Ugh, I need to animate this with ANIMDEFS and also have custom age timings for transitioning from fire to smoke.
+Class MVP_RocketFireSprite : MVP_Tracer
+{
+	Override Void SetProperties()
+	{
+		Super.SetProperties();
+		DefaultSprite = TexMan.CheckForTexture("RSMKA0",TexMan.Type_Sprite);
+		NoWarp = True;
+		DestroyIfNoOwner = False;
+		Flags |= SPF_FULLBRIGHT;
+		SetTranslation('BrightZDoomFire');
+	}
+	
+	Int Tics;
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		
+		Tics++;
+		
+		If (Tics == 1) //Normal fire brightness.
+			SetTranslation ('ZDoomFire');
+		Else If (Tics == 3) //Switch to smoke mode.
+		{
+			SetTranslation ('None');
+			//SetRenderStyle (STYLE_TRANSLUCENT);
+			//Alpha = 0.8;
+			Flags &= ~SPF_FULLBRIGHT;
+		}
+		Else If (Tics >= 6) //Done
+			Destroy();
 	}
 }
 

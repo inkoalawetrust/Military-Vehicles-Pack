@@ -63,6 +63,20 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			Else
 				MVP_QuadcopterTakeOff();
 		}
+		
+		If (Self Is "MVP_GyrojetQuadcopter")
+		{
+			ProjSpeed = 50;
+			ProjFastSpeed = 70;
+			ProjTurn = 10;
+		}
+		Else
+		{
+			ProjSpeed = 170;
+			ProjFastSpeed = 200;
+			ProjTurn = 5;
+		}
+		
 		LandParams.AngleLimit = TurnHorz;
 		LandParams.DetourFactor = DetourFactor;
 		AttackStates.Push (FindState("Missile.Ground",True));
@@ -112,7 +126,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		
 		If (Landed) //When you walking.
 		{
-			If (IsInState(Self,"Missile.Ground")) AimAtTarget (5,5,flags:FAF_MIDDLE,attackspeed:170,200);
+			If (IsInState(Self,"Missile.Ground")) AimAtTarget (ProjTurn,ProjTurn,flags:FAF_MIDDLE,attackspeed:ProjSpeed,ProjFastSpeed);
 			Return;
 		}
 		
@@ -132,8 +146,8 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 				Double RealAngle = Angle; Double RealPitch = Pitch;
 			
 				Angle = FireAngle; Pitch = FirePitch;
-				FireAngle = GetAngleToPos (Target.Pos,5);
-				FirePitch = GetPitchToPos (Target.Pos,5);
+				FireAngle = GetAngleToPos (Target.Pos,ProjTurn);
+				FirePitch = GetPitchToPos (Target.Pos,ProjTurn);
 				Angle = RealAngle; Pitch = RealPitch;
 				//FirePitch = PitchTo (Target);//-GetPitchToPos (Target.Pos,5); //HACK: Pitches are fucking haunted in GZDoom, so we can't increment THAT one over time!
 				//FirePitch = Clamp (FirePitch,MaxGunPitch,90);
@@ -168,7 +182,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			Double RealAngle = Angle; Double RealPitch = Pitch;
 			
 			Angle = FireAngle; Pitch = FirePitch;
-			AimAtTarget (5,5,flags:FAF_MIDDLE,attackspeed:170,200);
+			AimAtTarget (ProjTurn,ProjTurn,flags:FAF_MIDDLE,attackspeed:ProjSpeed,ProjFastSpeed);
 			FireAngle = Angle; FirePitch = Pitch;
 			
 			Angle = RealAngle; Pitch = RealPitch;
@@ -205,7 +219,8 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 					SetStateLabel ("Missile");
 				Else
 				{
-					LandBullets = Random (8,16);
+					If (!(Self Is "MVP_GyrojetQuadcopter")) LandBullets = Random (8,16);
+					Else LandBullets = Random (6,12); //Don't fire as many gyrojets.
 					SetStateLabel ("Missile.Ground");
 				}
 			}
@@ -600,21 +615,40 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	{
 		A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
 		Actor Proj;
-		If (!Landed)
+		If (!(Self Is "MVP_GyrojetQuadcopter"))
 		{
-			A_SpawnProjectile ("MVP_SmallRifleBullet",4,angle:FireAngle,flags:CMF_AIMDIRECTION|CMF_ABSOLUTEANGLE,FirePitch); //pew pew
-			Vel += KAI_Math.AngleToVector3D (Angle,Pitch,-2.5);
+			If (!Landed)
+			{
+				Proj = A_SpawnProjectile ("MVP_SmallRifleBullet",4,angle:FireAngle,flags:CMF_AIMDIRECTION|CMF_ABSOLUTEANGLE,FirePitch); //pew pew
+				Vel += KAI_Math.AngleToVector3D (Angle,Pitch,-2.5);
+			}
+			Else
+			{
+				Proj = A_SpawnProjectile ("MVP_SmallRifleBullet",4,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				A_Recoil(1);
+			}
 		}
 		Else
 		{
-			A_SpawnProjectile ("MVP_SmallRifleBullet",4,flags:CMF_AIMDIRECTION,Pitch); //pew pew
-			A_Recoil(1);
+			If (!Landed)
+			{
+				Proj = A_SpawnProjectile ("MVP_Gyrojet",4,angle:FireAngle,flags:CMF_AIMDIRECTION|CMF_ABSOLUTEANGLE,FirePitch);
+				Proj.Tracer = Target;
+			}
+			Else
+			{
+				Proj = A_SpawnProjectile ("MVP_Gyrojet",4,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				Proj.Tracer = Target;
+			}
 		}
 		AddProjectileSpread (Proj,(0.3,-0.3),(0.6,-0.6));
-		Bool B; Actor Casing;
-		[B, Casing] = A_SpawnItemEx ("MVP_BulletCasing",0,0,0,FRandom(2,-2),FRandom(2,8),FRandom(2,6));
-		Casing.Scale.X = 0.125; Casing.Scale.Y = 0.104166;
 		FireDelay = 35*Random (2,4);
+		If (!(Self Is "MVP_GyrojetQuadcopter"))
+		{
+			Bool B; Actor Casing;
+			[B, Casing] = A_SpawnItemEx ("MVP_BulletCasing",0,0,0,FRandom(2,-2),FRandom(2,8),FRandom(2,6));
+			Casing.Scale.X = 0.125; Casing.Scale.Y = 0.104166;
+		}
 	}
 	
 	//When in a group
@@ -837,6 +871,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	UInt FireDelay;
 	FLineTraceData Ground;
 	KAI_Voice Yapper;
+	Int ProjSpeed, ProjFastSpeed, ProjTurn; //This can change if it's a gyrojet drone instead.
 	
 	//Ground mode
 	Bool Landed;
@@ -1014,8 +1049,22 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	}
 }
 
-//Drone swarm group structure. The group leader is kinda irrelevant for this group type.
+Class MVP_GyrojetQuadcopter : MVP_Quadcopter
+{
+	Default
+	{
+		//$Title Quadcopter (Gyrojet)
+		//$Category Vehicles/Panopticon
+		//$Sprite PND2B1
+		
+		Tag "Quadcopter Drone with gyrojet gun";
+		Translation "Quadcopter_Orange";
+		AttackSound ""; //The gyrojets have their own firing sound.
+	}
+}
 
+//Drone swarm group structure. The group leader is kinda irrelevant for this group type.
+//$GZDB_SKIP
 Class MVP_DroneSwarm : KAI_NPCGroup
 {
 	Override Void PreInitialize () //No need to set group icons!

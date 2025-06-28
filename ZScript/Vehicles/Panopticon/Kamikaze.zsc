@@ -415,7 +415,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 					
 					If (!Master)
 						KAI_Wander(8,384,anglelimit:TurnHorz,flags:KMT_3D,pitchlimit:TurnVert);
-					Else If (Distance3DSquared (Master) > (MeleeRange+Master.Radius)*(MeleeRange+Master.Radius))
+					Else If (Distance3DSquared (Master) > (ExplosionRadius+Master.Radius)*(ExplosionRadius+Master.Radius))
 						KAI_MoveTowards (Master.Pos.PlusZ(Master.Height/2),anglelimit:TurnHorz,flags:KMT_3D,pitchlimit:TurnVert);
 					MVP_KamikazeLook(LOF_NOJUMP);
 					If (Target) //HACK: We must manually check this because if a quadcopter that's our master is frozen and then breaks (vanishes), say it with me, popular programming Q&A site!
