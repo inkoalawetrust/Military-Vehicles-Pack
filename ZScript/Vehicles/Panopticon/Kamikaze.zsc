@@ -156,6 +156,12 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		Return Super.CanCollideWith (Other, Passive);
 	}
 	
+	Override Vector3 GetAttackLocation()
+	{
+		If (Target) Return Target.Pos; //Beeline to target.
+		Return (Double.NaN,Double.NaN,Double.NaN);
+	}
+	
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
 		If (IsDead(Self) && Victim == Target) //We died (Exploded) and our target is the victim, so our victim got blown up presumably trying to destroy us lol.

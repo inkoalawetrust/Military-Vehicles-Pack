@@ -19,5 +19,5 @@ Voice M6V3
 
 Voice Panopticon
 {
-	See = "Vehicle/Drone/Speak1", "Vehicle/Drone/Speak2", "Vehicle/Drone/Speak3", "Vehicle/Drone/Speak4", "Vehicle/Drone/Speak5"
+	See = "Vehicle/Drone/Speak1", "Vehicle/Drone/Speak2", "Vehicle/Drone/Speak3", "Vehicle/Drone/Speak4", "Vehicle/Drone/Speak5", "Vehicle/Drone/Speak6", "Vehicle/Drone/Speak7", "Vehicle/Drone/Speak8", "Vehicle/Drone/Speak9", "Vehicle/Drone/Speak10"
 }

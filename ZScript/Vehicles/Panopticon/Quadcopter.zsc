@@ -199,6 +199,12 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 	}
 	
+	Override Vector3 GetAttackLocation() //Wherever we're aiming.
+	{
+		LineTrace (FireAngle,MaxTargetRange,FirePitch,TRF_THRUHITSCAN|TRF_SOLIDACTORS,data:Ground);
+		Return (Ground.HitLocation);
+	}
+	
 	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
 	{
 		If (Landed)
@@ -651,9 +657,10 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 	}
 	
-	//When in a group
+	//When in a group or attacking a vehicle turret.
 	Void MVP_QuadcopterSwitchTargets()
 	{
+		RetargetVehicleHull (); //Target the hull of a vehicle if it makes sense.
 		Array <Actor> Taken; //Other drones are already targeting these.
 		Array <Actor> Others; //Other potential targets.
 		
