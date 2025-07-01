@@ -31,6 +31,7 @@ Version "4.12.0"
 	//Homicidal robots
 	#Include "ZScript/Vehicles/Panopticon/Kamikaze.zsc"
 	#Include "ZScript/Vehicles/Panopticon/Quadcopter.zsc"
+	#Include "ZScript/Vehicles/Panopticon/Tracked.zsc"
 	//MISSION 01 START
 	#Include "ZScript/Vehicles/Di-Cokka/Di-Cokka.zsc"
 	#Include "ZScript/Vehicles/Di-Cokka/OtherActors.zsc"

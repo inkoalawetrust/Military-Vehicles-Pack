@@ -10,7 +10,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		//$Category Vehicles/Panopticon
 		//$Sprite PND2B1
 		
-		Tag "Quadcopter Drone";
+		Tag "Akcipitro 2A"; //A = Armed/Gunner
 		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
 		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		KAI_Actor.FlightAcceleration 0.25;
@@ -20,6 +20,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		KAI_BaseVehicle.HeadlightLevel 88;
 		KAI_Actor.Inaccuracy (32,32,32);
 		KAI_Actor.InaccuracyFrequency 0.6;
+		KAI_Actor.ActorFollowDist 192;
 		
 		+WindThrust;
 		//+Pushable;
@@ -788,9 +789,9 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			{
 				Following = True;
 				//Don't dogpile.
-				If (Followee && Distance3DSquared(Followee) >= (192+Followee.Radius)*(192+Followee.Radius))
+				If (Followee && Distance3DSquared(Followee) >= (FollowDist+Followee.Radius)*(FollowDist+Followee.Radius))
 				{console.printf ("going to %s",followee.getclassname());
-					If (Followee) FolPos.Z = Followee.Z+(Followee.Height/2);
+					If (Followee) FolPos.Z = Followee.Pos.Z+(Followee.Height/2);
 					KAI_MoveTowards (FolPos,DetourFactor,TurnHorz,flags:!Landed ? KMT_3D : 0,TurnVert);
 					Return False;
 				}
@@ -1064,7 +1065,7 @@ Class MVP_GyrojetQuadcopter : MVP_Quadcopter
 		//$Category Vehicles/Panopticon
 		//$Sprite PND2B1
 		
-		Tag "Quadcopter Drone with gyrojet gun";
+		Tag "Akcipitro 2RK"; //RK = Raketa Kuglo
 		Translation "Quadcopter_Orange";
 		AttackSound ""; //The gyrojets have their own firing sound.
 	}

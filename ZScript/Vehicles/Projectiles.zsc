@@ -222,7 +222,7 @@ Class MVP_Gyrojet : MVP_BaseProjectile
 		XScale 0.2;
 		YScale 0.16666; //0.2 / 1.2
 		ProjectileKickback 32;
-		ExplosionRadius 24;
+		ExplosionRadius 32;
 		ExplosionDamage 32;
 		Decal "Scorch";
 		DamageType "Explosive";

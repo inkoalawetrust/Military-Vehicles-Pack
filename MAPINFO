@@ -41,4 +41,5 @@ DoomEdNums
 		17024 = MVP_KamikazeDrone
 		17025 = MVP_Quadcopter
 		17026 = MVP_GyrojetQuadcopter
+		17027 = MVP_GunDrone
 }

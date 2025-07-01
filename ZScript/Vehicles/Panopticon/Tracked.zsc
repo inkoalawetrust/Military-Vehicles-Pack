@@ -1,0 +1,147 @@
+Class MVP_GunDrone : MVP_BaseVehicle
+{
+	Default
+	{
+		//$Title Tracked Drone
+		//$Category Vehicles/Panopticon
+		//$Sprite MVPEF1
+		Health 80;
+		WoundHealth 40;
+		GibHealth 60;
+		Speed 4;
+		FastSpeed 6;
+		XScale 0.4;
+		YScale 0.333333; //0.4 / 1.2
+		Radius 12;
+		Height 10;
+		DeathHeight 10;
+		MeleeRange 128;
+		//MaxSlopeSteepness 0.65;
+		MaxStepHeight 8;
+		Mass 40;
+		FriendlySeeBlocks 64;
+		MaxTargetRange 8192;
+		RipLevelMin 2;
+		+AvoidMelee;
+		+LookAllAround;
+		KAI_Actor.ThreatLevel THREAT_NORMAL;
+		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
+		KAI_Actor.ActorFollowDist 192;
+		KAI_BaseVehicle.MaxPushMass 120;
+		KAI_BaseVehicle.MaxPushRadius 64;
+		KAI_BaseVehicle.MaxPushHeight 64;
+		KAI_BaseVehicle.RetreatRange 192;
+		Tag "MUSC-4A"; //Mult-utila ŝpurita ĉasio 4 "Artileriisto"
+		ActiveSound "Vehicle/Tank/Move";
+		//Armor, yes, good luck, lmao.
+		DamageFactor 0.8; //Generic damage factor.
+		DamageFactor "ExplosiveImpact", 0.85;
+		DamageFactor "Explosion", 0.8;
+		DamageFactor "Explosive", 0.8;
+		DamageFactor "Grenade", 0.4;
+		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.4;
+		DamageFactor "Fire", 0.5;
+		DamageFactor "Plasma", 0.7;
+		
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "LargeRifleBullet", 0.9;
+		DamageFactor "RifleBullet", 0.1;
+		DamageFactor "SmallRifleBullet", 0.7;
+		DamageFactor "Missile", 0.9;
+		DamageFactor "AntiAir", 0.7;
+		
+		//Deflection stats
+		KAI_Actor.DeflectionChance 32;
+		KAI_Actor.DeflectDamageFactor 0.75;
+		KAI_Actor.DeflectSlowDownFactor 0.9;
+		KAI_Actor.DeflectionFunnel (5,-5,5,-5);
+	}
+	
+	Override Void UserVariableDefaults ()
+	{
+		If (User_RetreatDistance == 0) User_RetreatDistance = Default.RetreatRange;
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		DroneMove.DetourFactor = 1.5;
+		DroneMove.Attempts = 8;
+		DroneMove.MaxSteps = 32;
+		DroneMOve.RunRad = 128;
+		//No running behind corners or anything for the little drone. The large hull though has different params.
+	}
+	
+	Override Bool CanAttack()
+	{
+		Return True; //Placeholder
+	}
+	
+	KAIMoveParams DroneMove;
+	
+	States
+	{
+		Spawn:
+			PND0 A 4 KAI_Look(extraflags:KAIL_CHASETARGET);
+			Loop;
+		See:
+			PND0 ABCD 2 KAI_LandVehicleChase(Null,LVC_MAKEFRIENDSIDLE|LVC_ZIGZAGGING|LVC_USERETREATSTATE,CHF_NOPLAYACTIVE,8,FollowDist,DroneMove,HazardInfo.HAZARD_LOW);
+			Loop;
+		//Idle:
+		//Retreat by turning around and all.
+		Retreat:
+			PND0 ABCD 2
+			{
+				//Reverse from hazard or target.
+				If (NearestEnemy)
+				{
+					StrongestHazard = Null;
+					Return FindState ("Retreat.Reverse",True);
+				}
+				//Drive away from hazard normally.
+				Else If (StrongestHazard)
+					KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8,targpos:GetHazardOriginPos(StrongestHazard));
+				a_log ("run away");Return State(Null);
+			}
+			Loop;
+		//Retreat by "reversing"
+		Retreat.Reverse:
+			PND0 D 1
+			{
+				SpriteRotation = 180;
+				Angle -= 180;
+				If (Turret) Turret.TurretRotationOffset -= 180;
+			}
+			PND0 DCBA 2
+			{console.printf ("back it up");
+				State End = FindState ("Retreat.End.Reverse",True);
+				
+				//Reverse away from hazard.
+				If (StrongestHazard && InHazardRange(StrongestHazard))
+					KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8,kmaflags:KMA_STRAIGHT,GetHazardOriginPos(StrongestHazard));
+				//Reverse away from the nearest enemy.
+				Else If (NearestEnemy && Distance3DSquared(NearestEnemy) >= RetreatRange*RetreatRange)
+					KAI_MoveAway (NearestEnemy,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8);
+				//Or if we are here despite not having a hazard or enemy in range, then LandVehicleChase() put as here to drive away from our target.
+				Else If (Target && Distance3DSquared(Target) >= RetreatRange*RetreatRange)
+					KAI_MoveAway (Target,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8);
+				Else //Nvm lol.
+					Return End;
+				
+				Return State(Null);
+			}
+			Goto Retreat.Reverse+1;
+		//MAYDO: Turn in place first away from the threat before retreating away like normal?
+		Retreat.Turn:
+		Retreat.End.Reverse:
+			TNT1 A 0
+			{
+				SpriteRotation = 0;
+				Angle += 180;
+				If (Turret) Turret.TurretRotationOffset += 180;
+			}
+			Goto See;
+	}
+}
