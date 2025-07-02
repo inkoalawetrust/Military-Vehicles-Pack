@@ -293,7 +293,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 				IsMeleeAttacker = Distance3DSquared (Target) < Dist*Dist;
 			}
 			Else If (Target.Player && Target.Player.ReadyWeapon && Target.Player.ReadyWeapon.bMeleeWeapon) //Melee player
-				IsMeleeAttacker = Distance3dSquared(Target) <= 192*192;
+				IsMeleeAttacker = Distance3DSquared(Target) <= 192*192;
 			
 			If (Landed && IsMeleeAttacker) //Fly out of melee.
 			{
@@ -372,7 +372,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			RunAway = True;
 		
 		Actor Proj;
-		If ((Proj = MVP_QuadcopterDodge(!Landed ? User_DodgeRange : User_DodgeRange*3)))
+		If ((Proj = MVP_DroneDodge(Self,!Landed ? User_DodgeRange : User_DodgeRange*3,LastProjectile)))
 		{
 			If (!Landed)
 			{
@@ -536,37 +536,37 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	}
 	
 	//IDEA: Also make it handle flying away from homing projectiles maybe?
-	Actor MVP_QuadcopterDodge (Double Range = 128)
+	Static Actor MVP_DroneDodge (KAI_Actor Caller, Double Range = 128, Actor LastDodged = Null)
 	{
 		If (Range <= 0)
 			Return Null;
 		
 		Array <Actor> Threats;
 		//Actually find projectiles.
-		ForEach (Proj : KAIHandler.ProjectileList)
+		ForEach (Proj : Caller.KAIHandler.ProjectileList)
 		{
-			If (!Proj || Proj == LastProjectile) Continue;
+			If (!Proj || Proj == LastDodged) Continue;
 			
 			Bool DodgeAllyProjectiles;
 			
 			Bool IsHoming = Proj.bSeekerMissile; //HACK: NO stupid revenant rocket check.
 
-			Double Dist = Distance3DSquared (Proj);
-			If ((Dist > Range*Range || IsHoming && Proj.Tracer == Self && Dist > (Range*Range)*2 )) //Out of range. But if it's a seeker, check at double the range to potentially run away.
+			Double Dist = Caller.Distance3DSquared (Proj);
+			If ((Dist > Range*Range || IsHoming && Proj.Tracer == Caller && Dist > (Range*Range)*2 )) //Out of range. But if it's a seeker, check at double the range to potentially run away.
 				Continue;
 			
 			//Dodge even friendly projectiles if they'd do too much damage, unless friendly fire is off.
-			DodgeAllyProjectiles = (!(Proj Is "KAI_BaseProjectile" && KAI_BaseProjectile(Proj).bNoFriendlyFire) && Proj.GetMissileDamage (1,7) >= Health/2);
+			DodgeAllyProjectiles = (!(Proj Is "KAI_BaseProjectile" && KAI_BaseProjectile(Proj).bNoFriendlyFire) && Proj.GetMissileDamage (1,7) >= Caller.Health/2);
 			
-			If (!DodgeAllyProjectiles && !IsActorHostile (Proj.Target)) //Ignore friendly projectiles.
+			If (!DodgeAllyProjectiles && !Caller.IsActorHostile (Proj.Target)) //Ignore friendly projectiles.
 				Continue;
-			console.printf ("matrix");
+			
 			//Is the projectile about to hit me ? Weird math nonsense written by RaveYard.
 			double blackBox = -0.15;
-			If (IsHoming && Proj.Tracer == Self) blackBox = -0.075;
-			bool projectile_is_flying_towards_me = (Vec3To(proj).Unit() dot proj.vel.Unit()) < blackBox;
-			double projectileSafeRadius = sqrt(2 * ((proj.radius + radius) ** 2.5));
-			if(projectile_is_flying_towards_me && KAI_Math.distance3dline(pos, proj.pos, proj.pos + proj.vel) < projectileSafeRadius && CheckSight(Proj,SF_IGNOREWATERBOUNDARY))
+			If (IsHoming && Proj.Tracer == Caller) blackBox = -0.075;
+			bool projectile_is_flying_towards_me = (Caller.Vec3To(proj).Unit() dot proj.vel.Unit()) < blackBox;
+			double projectileSafeRadius = sqrt(2 * ((proj.radius + Caller.radius) ** 2.5));
+			if(projectile_is_flying_towards_me && KAI_Math.distance3dline(Caller.pos, proj.pos, proj.pos + proj.vel) < projectileSafeRadius && Caller.CheckSight(Proj,SF_IGNOREWATERBOUNDARY))
 				Threats.Push (Proj);
 		}
 		
@@ -744,7 +744,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 		
 		Actor Proj;
-		If ((Proj = MVP_QuadcopterDodge(!Landed ? User_DodgeRange : User_DodgeRange*3)))
+		If ((Proj = MVP_DroneDodge(Self,!Landed ? User_DodgeRange : User_DodgeRange*3,LastProjectile)))
 		{
 			If (!Landed)
 			{

@@ -105,6 +105,9 @@ Kamikaze drone beeping sound (DroneBeep.ogg) made by me (inkoalawetrust).
 Drone flying sound (DroneFly.ogg) by simeonradivoev (https://freesound.org/people/simeonradivoev/sounds/383852/)
 Quadcopter drone walking sounds are from ZapSplat.
 Drone gyrojet firing sound (GyroFire.ogg) is from Project Brutality, no clue what the exact source is.
+Drone electric motor sound (DroneSmallMotor.ogg) is from ZapSplat (https://www.zapsplat.com/music/car-suv-adjusting-an-electric-seat-motor-whir-2019-nissan-patrol-1/)
+Drone track sound (DroneTrack.ogg) is from ZapSplat (https://www.zapsplat.com/music/loop-steady-rattling-tracks-of-a-small-driving-tank-fast/)
+Drone turret turn sound (DroneTurret.ogg) is from ZapSplat (https://www.zapsplat.com/music/sound-of-a-small-tank-turning-around-its-turret-different-lengths-within-variations/)
 
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|Sounds|==============|

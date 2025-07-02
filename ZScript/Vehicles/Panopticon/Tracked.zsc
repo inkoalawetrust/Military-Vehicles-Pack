@@ -22,7 +22,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		FriendlySeeBlocks 64;
 		MaxTargetRange 8192;
 		RipLevelMin 2;
-		+AvoidMelee;
+		//+AvoidMelee; //We already do this.
 		+LookAllAround;
 		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
@@ -30,10 +30,10 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		KAI_BaseVehicle.MaxPushMass 120;
 		KAI_BaseVehicle.MaxPushRadius 64;
 		KAI_BaseVehicle.MaxPushHeight 64;
-		KAI_BaseVehicle.RetreatRange 192;
+		KAI_BaseVehicle.RetreatRange 512; //Very big scary enemy retreat range.
 		Tag "MUSC-4A"; //Mult-utila ŝpurita ĉasio 4 "Artileriisto"
-		ActiveSound "Vehicle/Tank/Move";
-		//Armor, yes, good luck, lmao.
+		ActiveSound "Vehicle/Drone/Tracks";
+		
 		DamageFactor 0.8; //Generic damage factor.
 		DamageFactor "ExplosiveImpact", 0.85;
 		DamageFactor "Explosion", 0.8;
@@ -61,6 +61,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 	Override Void UserVariableDefaults ()
 	{
 		If (User_RetreatDistance == 0) User_RetreatDistance = Default.RetreatRange;
+		If (User_DodgeRange == 0) User_DodgeRange = 384;
 	}
 	
 	Override Void PostBeginPlay()
@@ -68,80 +69,223 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		Super.PostBeginPlay();
 		
 		DroneMove.DetourFactor = 1.5;
-		DroneMove.Attempts = 8;
-		DroneMove.MaxSteps = 32;
-		DroneMOve.RunRad = 128;
+		DroneMove.Attempts = 16;
+		DroneMove.MaxSteps = 64;
+		DroneMove.RunRad = 128;
+		DroneMove.AngleLimit = 8;
 		//No running behind corners or anything for the little drone. The large hull though has different params.
+		
+		A_StartSound ("Vehicle/Drone/Motor",CHAN_VOICE,CHANF_LOOPING,1,ATTN_STATIC);
 	}
 	
 	Override Bool CanAttack()
 	{
-		Return True; //Placeholder
+		Return True; //Placeholder until I add a turret.
+	}
+	
+	Void MVP_GunDroneChase()
+	{
+		KAI_Chase_PreChecks();
+		If (IsDead (Target)) Target = Null;
+		KAI_Chase_Retarget(0,True);
+		
+		Bool MovedAlready; Bool B;
+		Int KMTFlags = KMT_ZIGZAG;
+		
+		//DETERMINE IF WE SHOULD BE MOVING AWAY FROM THE TARGET.
+		Bool RunAway = (!bNoFear && (IsFrightening (Target) || bFrightened)); //Run away from spooky actors, or maybe we're just a little bitch.
+		Bool Reverse;
+		//If we're set to run away from targets over our threat threshold that get too close, do so.
+		Double RunRange = User_RetreatDistance;
+		Int TargetLevel;
+		If (Target)
+		{
+			RunRange += Target.Radius;
+			TargetLevel = AssessThreatLevel(Target, True);
+		}
+		
+		Bool TargetInSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
+		Bool LockedIn = bChaseGoal && Goal; //Don't run away if you have a target but are also patrolling in bChaseGoal mode.
+		Bool BigThreat = (ThreatLevelThreshold != THREAT_ASSESS && TargetLevel >= ThreatLevelThreshold); //Target's threat level is over the threshold.
+		If (RunRange != -1 && !bNoFear && Target && Target != Goal && !LockedIn && !RunAway && BigThreat && RunRange > 0 && Distance3DSquared(Target) <= RunRange*RunRange && TargetInSight)
+			RunAway = True;
+		
+		//Avoid melee attackers.
+		If (!LockedIn && !RunAway && Target && (bAvoidMelee || Level.Info.Flags3 & LEVEL3_AVOIDMELEE))
+		{
+			Bool IsMeleeAttacker;
+			If (!Target.Player && Target.MeleeState) //Melee NPC
+			{
+				Double Dist = (Target.MeleeRange + Target.Radius)*2;
+				IsMeleeAttacker = Distance3DSquared (Target) < Dist*Dist;
+			}
+			Else If (Target.Player && Target.Player.ReadyWeapon && Target.Player.ReadyWeapon.bMeleeWeapon) //Melee player
+				IsMeleeAttacker = Distance3DSquared(Target) <= 192*192;
+			
+			RunAway = IsMeleeAttacker;
+			Reverse = IsMeleeAttacker;
+		}
+		
+		If (Health > WoundHealth) //Ignore weak hazards if not weak yourself.
+		{
+			For (Int I = Hazards.Size()-1; I >= 0; I--)
+			{
+				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_LOW)
+					Hazards.Delete(I);
+			}
+		}
+		HazardInfo Haz = GetStrongestHazard(Hazards);
+		Double HazardDist = GetHazardDistance (Haz); //Get distance to nearest hazard that you're in range of.
+		
+		//Keep different distances for targets under the threshold.
+		If (!LockedIn && !RunAway && Target && (TargetLevel < ThreatLevelThreshold || RunRange != -1))
+		{
+			Double Dist = 0;
+			Switch (TargetLevel)
+			{
+				Case THREAT_SUPERDANGER:
+					Dist = 768;
+					Break;
+				Case THREAT_VERYDANGEROUS:
+					Dist = 512;
+					Break;
+				Case THREAT_DANGEROUS:
+					Dist = 384;
+					Break;
+				//Just in case the threshold is changed ^^^^^
+				Case THREAT_ABOVENORMAL:
+					Dist = 192;
+					Break;
+				Case THREAT_NORMAL:
+					Dist = 128;
+					Break;
+				Case THREAT_MILD:
+				Case THREAT_LOW:
+					Dist = 32;
+					Break;
+				Case THREAT_VERYLOW:
+				Default:
+					Break;
+			}
+			If (Dist > 0) Dist += Target.Radius;
+			If (Health <= WoundHealth) //Keep some extra distance when hurt.
+				Dist += 32;
+			
+			Double TargDist = Distance3D (Target);
+			If (TargDist <= 192+Radius)
+				Reverse = True;
+			
+			//Run from target if hazard isn't closer.
+			If (Dist && TargDist <= Dist && !(Haz && TargDist >= HazardDist))
+			{
+				RunAway = True;
+				Haz = Null; //Signify that we shouldn't run from a hazard later in the function.
+			}
+		}
+		//Also check for scary hazards.
+		If (Haz)
+			RunAway = True;
+		
+		//Dodge projectiles by driving out of the way if not already busy.
+		Actor Proj;
+		If (!RunAway && (Proj = MVP_Quadcopter.MVP_DroneDodge(Self,User_DodgeRange)))
+		{
+			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
+			Vector3 Where = Delta >= -2 ? (Vec2Angle(64,Angle+90),0) : (Vec2Angle(64,Angle-90),0);
+			Where.Z = GetZAt (Where.X,Where.Y,flags:GZF_ABSOLUTEPOS);
+			[B, DodgePos] = IsPosReachable (DodgePos);
+			DodgePos = B ? Where : DodgePos; //We can just go where we want, do that. If not, go to the closest position IsPosReachable() returned.
+			console.printf ("dodging to %.2f %.2f %.2f, delta is %.2f",dodgepos,delta);
+			actor debug = spawn ("kai_debugpoint",dodgepos);
+			debug.scale *= 0.5;
+		}
+		
+		//Dodge projectile, if not busy already. So if we're already running from something else, stop the dodge.
+		If (!KAI_Math.IsEmptyVector3 (DodgePos) && !RunAway && NewPosStepCount <= 16 && Level.Vec3Diff (Pos,DodgePos).Length() >= 8)
+		{
+			Speed += 2;
+			KAI_MoveTowards (DodgePos,DroneMove.DetourFactor,DroneMove.AngleLimit+4); //No zigzag.
+			Speed -= 2;
+			NewPosStepCount++;
+			Return;
+		}
+		Else
+		{console.printf ("no dodge, runaway is %d",runaway);
+			DodgePos = (Double.NaN,Double.NaN,Double.NaN);
+			NewPosStepCount = 0;
+		}
+		
+		//Run away from threat, no running behind corners or anything super sophisticated though. This is meant to be a very simple drone.
+		If (!LockedIn && RunAway)
+		{
+			Vector3 RunPos = !Haz ? Target.Pos : GetHazardOriginPos(Haz);
+			If (!Reverse)
+				KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags,targpos:RunPos);
+			Else
+			{
+				Frame = RevFrame;
+				If (Rev++ >= 2) //Every 2 tics, switch frame.
+				{
+					Rev = 0;
+					If (RevFrame == 0)
+						RevFrame = 3;
+					Else
+						RevFrame--;
+				}
+				//Tics--; //Reduce tics twice as fast to make it reverse faster.
+				Angle -= 180;
+				//Speed *= 1.55;
+				KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags,KMA_STRAIGHT,RunPos);
+				//Speed /= 1.55;
+				Angle += 180;
+			}
+			
+			MovedAlready = True;
+		}
+		
+		//MAYDO: Add retreating from other nearby enemies? Or maybe not, and reserve that for the larger hull.
+		
+		//Move to target, and also handle patrolling but then seeing a target.
+		If (!MovedAlready && Target && Target != Goal && !(IsPatrolling(Self) && bChaseGoal) )
+		{
+			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
+			MovedAlready = True;
+		}
+		
+		//Patrol handling.
+		//BUG: ZDoom's hacky usage of ReactionTime makes the (Ground ! Yes this is copy of MVP_QuadcopterChase) drone not wait at patrol points when it has a target.
+		If (!MovedAlready)
+		{
+			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Spawn",DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
+			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
+				KAI_MoveTowards (Goal.Pos,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
+			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
+			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d, reactiontime %d",goal.pos,movedalready,b,reactiontime);
+		}
+		
+		//If (ShouldAttack())
+		//	Return;
+		
+		HandleChaseTimer();
 	}
 	
 	KAIMoveParams DroneMove;
+	UInt8 Rev;
+	UInt8 RevFrame;
+	Vector3 DodgePos; //Where we're going to dodge a projectile (Hopefully).
+	
+	Double User_DodgeRange; //From how far the drone dodges projectiles, this is pretty high by default to give it SOME time to drive away.
 	
 	States
 	{
 		Spawn:
+			PND0 A 0 A_StopSound (CHAN_BODY); //Stop the track sound when not in motion.
 			PND0 A 4 KAI_Look(extraflags:KAIL_CHASETARGET);
-			Loop;
+			Goto Spawn+1;
 		See:
-			PND0 ABCD 2 KAI_LandVehicleChase(Null,LVC_MAKEFRIENDSIDLE|LVC_ZIGZAGGING|LVC_USERETREATSTATE,CHF_NOPLAYACTIVE,8,FollowDist,DroneMove,HazardInfo.HAZARD_LOW);
-			Loop;
+			TNT1 A 0 A_StartSound (ActiveSound,flags:CHANF_LOOPING,0.3,2.0);
+			PND0 ABCD 2 MVP_GunDroneChase();
+			Goto See+1;
 		//Idle:
-		//Retreat by turning around and all.
-		Retreat:
-			PND0 ABCD 2
-			{
-				//Reverse from hazard or target.
-				If (NearestEnemy)
-				{
-					StrongestHazard = Null;
-					Return FindState ("Retreat.Reverse",True);
-				}
-				//Drive away from hazard normally.
-				Else If (StrongestHazard)
-					KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8,targpos:GetHazardOriginPos(StrongestHazard));
-				a_log ("run away");Return State(Null);
-			}
-			Loop;
-		//Retreat by "reversing"
-		Retreat.Reverse:
-			PND0 D 1
-			{
-				SpriteRotation = 180;
-				Angle -= 180;
-				If (Turret) Turret.TurretRotationOffset -= 180;
-			}
-			PND0 DCBA 2
-			{console.printf ("back it up");
-				State End = FindState ("Retreat.End.Reverse",True);
-				
-				//Reverse away from hazard.
-				If (StrongestHazard && InHazardRange(StrongestHazard))
-					KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8,kmaflags:KMA_STRAIGHT,GetHazardOriginPos(StrongestHazard));
-				//Reverse away from the nearest enemy.
-				Else If (NearestEnemy && Distance3DSquared(NearestEnemy) >= RetreatRange*RetreatRange)
-					KAI_MoveAway (NearestEnemy,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8);
-				//Or if we are here despite not having a hazard or enemy in range, then LandVehicleChase() put as here to drive away from our target.
-				Else If (Target && Distance3DSquared(Target) >= RetreatRange*RetreatRange)
-					KAI_MoveAway (Target,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,anglelimit:8);
-				Else //Nvm lol.
-					Return End;
-				
-				Return State(Null);
-			}
-			Goto Retreat.Reverse+1;
-		//MAYDO: Turn in place first away from the threat before retreating away like normal?
-		Retreat.Turn:
-		Retreat.End.Reverse:
-			TNT1 A 0
-			{
-				SpriteRotation = 0;
-				Angle += 180;
-				If (Turret) Turret.TurretRotationOffset += 180;
-			}
-			Goto See;
 	}
 }

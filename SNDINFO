@@ -298,6 +298,9 @@ $Random MVPMarine/Death
 	Vehicle/Drone/Clink3 "Sounds/Vehicles/Drones/QuadStep3.ogg"
 	Vehicle/Drone/Clink4 "Sounds/Vehicles/Drones/QuadStep4.ogg"
 	Vehicle/Drone/FireGyro "Sounds/Vehicles/Drones/GyroFire.ogg"
+	Vehicle/Drone/Motor "Sounds/Vehicles/Drones/DroneSmallMotor.ogg"
+	Vehicle/Drone/Turret "Sounds/Vehicles/Drones/DroneTurret.ogg"
+	Vehicle/Drone/Tracks "Sounds/Vehicles/Drones/DroneTrack.ogg"
 	
 	$Random Vehicle/Drone/ClinkWalk
 	{
