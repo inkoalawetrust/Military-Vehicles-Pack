@@ -381,7 +381,12 @@ Class MVP_GunDrone : MVP_BaseVehicle
 			PND0 ABCD 2 MVP_GunDroneChase();
 			Goto See+1;
 		Idle:
-			PND0 ABCD 2 KAI_Wander (DroneMove.Attempts,DroneMove.RunRad*2,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit);
+			PND0 ABCD 2
+			{
+				Bool FuckYou = bDontFollowPlayers; bDontFollowPlayers = True;
+				KAI_Wander (DroneMove.Attempts,DroneMove.RunRad*2,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit);
+				bDontFollowPlayers = FuckYou;
+			}
 			Loop;
 		Death:
 			PNDD A -1

@@ -208,10 +208,11 @@ Mixin Class MVP_SharedFunctions
 		Int Safety;
 		Do
 		{
+			If (!Cur)
+				Break;
 			TotalMass += Cur.Mass;
-			console.printf ("getting mass of %p (%s)",cur,cur.getclassname());
 			Prev = Cur;
-			Cur = Turret.Turret;
+			Cur = Cur.Turret;
 			
 			If (Safety++ >= 10000) //Bad news if I make a vehicle with 10000 turrets on it.
 				Break;
