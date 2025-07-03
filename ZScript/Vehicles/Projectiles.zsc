@@ -240,6 +240,8 @@ Class MVP_Gyrojet : MVP_BaseProjectile
 		
 		Vel3DFromAngle (8,Angle,Pitch); //Start off slow and reach full speed over time. You know, gyrojet.
 		DefSpeed = GetDefaultSpeed(GetClass());
+		WeaveIndexXY = Random (0,63);
+		WeaveIndexZ = Random (0,63);
 	}
 	
 	//Rocket trail.
