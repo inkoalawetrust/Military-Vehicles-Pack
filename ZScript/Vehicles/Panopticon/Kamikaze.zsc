@@ -9,6 +9,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		
 		+KAI_Actor.NoTargetPrediction; //It's a flying bomb.
 		+KAI_Actor.NoWanderVirtual;
+		+MVP_BaseVehicle.Drone;
 		Tag "Loitering Munition";
 		KAI_Actor.ThreatLevelThreshold THREAT_ASSESS; //We don't care.
 		KAI_Actor.ThreatLevel THREAT_ABOVENORMAL;

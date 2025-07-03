@@ -28,6 +28,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		+FloatBob; //Scales with speed
 		+LookAllAround;
 		+AvoidMelee;
+		+MVP_BaseVehicle.Drone;
 		
 		Health 50;
 		WoundHealth 20;
@@ -654,7 +655,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		{
 			Bool B; Actor Casing;
 			[B, Casing] = A_SpawnItemEx ("MVP_BulletCasing",0,0,0,FRandom(2,-2),FRandom(2,8),FRandom(2,6));
-			Casing.Scale.X = 0.125; Casing.Scale.Y = 0.104166;
+			Casing.Scale.X = 0.1; Casing.Scale.Y = 0.083333; 
 		}
 	}
 	
@@ -727,19 +728,19 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	
 	Override Bool OnWander()
 	{
-		If (CurrentOrder == ORDER_STAY)
-		{
-			If (!Landed) Vel *= 0.9;
-			Else Frame = 14; //Stay at PND2O when on the ground.
-			Return False;
-		}
-		
 		KAI_Look(LOF_NOJUMP,extraflags:KAIL_CHASETARGET);
 		If (Target)
 		{
 			Speed = GetDefaultSpeed(GetClass());
 			If (!Landed) SetState(SeeState);
 			Else SetStateLabel ("See.Ground");
+			Return False;
+		}
+		
+		If (CurrentOrder == ORDER_STAY)
+		{
+			If (!Landed) Vel *= 0.9;
+			Else Frame = 14; //Stay at PND2O when on the ground.
 			Return False;
 		}
 		
@@ -782,10 +783,10 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		If (Random(0,2048) == Random (0,2048) && Yapper)
 			MVP_QuadcopterSpeak();
 		
-		//Follow something instead. Unless it's another quadcopter or a kamikaze drone. That way pure flying drone swarms are independent-is.
+		//Follow something instead. Unless it's another drone that's too weak. That way pure flying drone swarms are independent-is.
 		If (CurrentOrder == ORDER_FOLLOW)
 		{
-			If (!KAI_Math.IsEmptyVector3(FolPos) && !(Followee && (Followee Is "MVP_Quadcopter" || Followee Is "MVP_KamikazeDrone")))
+			If (!KAI_Math.IsEmptyVector3(FolPos))
 			{
 				Following = True;
 				//Don't dogpile.
@@ -838,18 +839,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Return True;
 	}
 	
-	Override Vector3, Actor HandleFollowingActor (Vector3 BasePos, Bool IgnoreDontFollowPlayers)
-	{
-		Vector3 Ret; Actor Ret2;
-		[Ret, Ret2] = Super.HandleFollowingActor (BasePos,IgnoreDontFollowPlayers);
-		
-		//Do NOT follow the player if in a swarm but this virtual returned the friendplayer. Which means the group has nobody else but you.
-		If (CurrentOrder == ORDER_FOLLOW && Groups.Size() && Ret2 == Players[KAI_GetFriendPlayer()].Mo)
-			Return BasePos, Null;
-		
-		Return Ret, Ret2;
-	}
-	
 	Void MVP_QuadcopterTakeOff()
 	{
 		Inaccuracy = Default.Inaccuracy;
@@ -880,6 +869,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	FLineTraceData Ground;
 	KAI_Voice Yapper;
 	Int ProjSpeed, ProjFastSpeed, ProjTurn; //This can change if it's a gyrojet drone instead.
+	Mixin MVP_DroneFollowLogic;
 	
 	//Ground mode
 	Bool Landed;
@@ -938,6 +928,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			PND2 ABC 1
 			{
 				KAI_Look(LOF_NOJUMP,extraflags:KAIL_CHASETARGET);
+				NextMovePos = (Double.NaN,Double.NaN,Double.NaN);
 				Double FS = FloatSpeed;
 				If (Target) //Nvm we have a target to kill.
 				{
@@ -961,7 +952,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			PND2 KLMN 6;
 			Goto See.Ground;
 		TakeOff:
-		tnt1 a 0 a_log ("taking off");
 			PND2 K 1 MVP_QuadcopterTakeoff();
 			PND2 NMLK 6;
 			Goto See;
@@ -1124,7 +1114,7 @@ Class MVP_QuadcopterGib : Actor
 	States
 	{
 		Spawn:
-			PND2 [ 0 A_JumpIf (SmokeCounter == 0,"Fall"); //Gun
+			PND2 [ 0 NoDelay A_JumpIf (SmokeCounter == 0,"Fall"); //Gun
 			PND2 ] 0 A_JumpIf (SmokeCounter == 1,"Fall"); //Rotor
 		Fall:
 			PND2 # 1
@@ -1153,5 +1143,24 @@ Class MVP_QuadcopterGib : Actor
 		Death.Propeller:
 			PND2 ^ -1;
 			Stop;
+	}
+}
+
+Mixin Class MVP_DroneFollowLogic
+{
+	Override Vector3, Actor HandleFollowingActor (Vector3 BasePos, Bool IgnoreDontFollowPlayers)
+	{
+		Vector3 Ret; Actor Ret2;
+		[Ret, Ret2] = Super.HandleFollowingActor (BasePos,IgnoreDontFollowPlayers);
+		
+		//Do NOT follow the player if in a swarm but this virtual returned the friendplayer. Which means the group has nobody else but you.
+		If (CurrentOrder == ORDER_FOLLOW && Groups.Size() && Ret2 == Players[KAI_GetFriendPlayer()].Mo)
+			Return BasePos, Null;
+		
+		//Do not follow other fragile drones in a swarm.
+		If (MVP_BaseVehicle(Ret2) && MVP_BaseVehicle(Ret2).bDrone && AssessThreatLevel(Ret2) < THREAT_DANGEROUS)
+			Return BasePos, Null;
+		
+		Return Ret, Ret2;
 	}
 }

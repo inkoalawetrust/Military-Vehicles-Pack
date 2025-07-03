@@ -201,11 +201,22 @@ Mixin Class MVP_SharedFunctions
 	{
 		Super.OnGroundImpact(ImpactVel,InTheWay);
 		
-		//Get the total mass of the vehicle plus the next 3 turrets.
+		//Get the total mass of the vehicle and all of its' turrets..
 		Int TotalMass = Mass;
-		If (Turret) TotalMass += Turret.Mass;
-		If (Turret && Turret.Turret) TotalMass += Turret.Turret.Mass;
-		If (Turret && Turret.Turret && Turret.Turret.Turret) TotalMass += Turret.Turret.Turret.Mass;
+		KAI_BaseVehicle Cur = Turret;
+		KAI_BaseVehicle Prev;
+		Int Safety;
+		Do
+		{
+			TotalMass += Cur.Mass;
+			console.printf ("getting mass of %p (%s)",cur,cur.getclassname());
+			Prev = Cur;
+			Cur = Turret.Turret;
+			
+			If (Safety++ >= 10000) //Bad news if I make a vehicle with 10000 turrets on it.
+				Break;
+		}
+		While (Cur && Prev != Cur);
 		
 		//No actors that we were stopped by, so we probably hit level geometry.
 		If (!InTheWay.Size())
