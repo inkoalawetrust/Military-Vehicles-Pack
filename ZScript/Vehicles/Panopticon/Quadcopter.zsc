@@ -30,7 +30,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		+AvoidMelee;
 		+MVP_BaseVehicle.Drone;
 		
-		Health 50;
+		Health 40;
 		WoundHealth 20;
 		GibHealth 30;
 		XScale 0.3;
@@ -373,7 +373,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			RunAway = True;
 		
 		Actor Proj;
-		If ((Proj = MVP_DroneDodge(Self,!Landed ? User_DodgeRange : User_DodgeRange*3,LastProjectile)))
+		If ((Proj = MVP_DroneDodge(!Landed ? User_DodgeRange : User_DodgeRange*3,LastProjectile)))
 		{
 			If (!Landed)
 			{
@@ -536,56 +536,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Return Where;
 	}
 	
-	//IDEA: Also make it handle flying away from homing projectiles maybe?
-	Static Actor MVP_DroneDodge (KAI_Actor Caller, Double Range = 128, Actor LastDodged = Null)
-	{
-		If (Range <= 0)
-			Return Null;
-		
-		Array <Actor> Threats;
-		//Actually find projectiles.
-		ForEach (Proj : Caller.KAIHandler.ProjectileList)
-		{
-			If (!Proj || Proj == LastDodged) Continue;
-			
-			Bool DodgeAllyProjectiles;
-			
-			Bool IsHoming = Proj.bSeekerMissile; //HACK: NO stupid revenant rocket check.
-
-			Double Dist = Caller.Distance3DSquared (Proj);
-			If ((Dist > Range*Range || IsHoming && Proj.Tracer == Caller && Dist > (Range*Range)*2 )) //Out of range. But if it's a seeker, check at double the range to potentially run away.
-				Continue;
-			
-			//Dodge even friendly projectiles if they'd do too much damage, unless friendly fire is off.
-			DodgeAllyProjectiles = (!(Proj Is "KAI_BaseProjectile" && KAI_BaseProjectile(Proj).bNoFriendlyFire) && Proj.GetMissileDamage (1,7) >= Caller.Health/2);
-			
-			If (!DodgeAllyProjectiles && !Caller.IsActorHostile (Proj.Target)) //Ignore friendly projectiles.
-				Continue;
-			
-			//Is the projectile about to hit me ? Weird math nonsense written by RaveYard.
-			double blackBox = -0.15;
-			If (IsHoming && Proj.Tracer == Caller) blackBox = -0.075;
-			bool projectile_is_flying_towards_me = (Caller.Vec3To(proj).Unit() dot proj.vel.Unit()) < blackBox;
-			double projectileSafeRadius = sqrt(2 * ((proj.radius + Caller.radius) ** 2.5));
-			if(projectile_is_flying_towards_me && KAI_Math.distance3dline(Caller.pos, proj.pos, proj.pos + proj.vel) < projectileSafeRadius && Caller.CheckSight(Proj,SF_IGNOREWATERBOUNDARY))
-				Threats.Push (Proj);
-		}
-		
-		Double HighestDamage;
-		Actor StrongestProj;
-		For (Int I = Threats.Size()-1; I >= 0; I--)
-		{
-			Double CurrentDamage = Threats[I].GetMissileDamage(1,7);
-			If (HighestDamage < CurrentDamage)
-			{
-				HighestDamage = CurrentDamage;
-				StrongestProj = Threats[I];
-			}
-		}
-		
-		Return StrongestProj;
-	}
-	
 	//Return true if we are aiming ahead of our target and also have a valid LOF straight at them.
 	Bool MVP_QuadcopterLOF()
 	{
@@ -659,47 +609,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 	}
 	
-	//When in a group or attacking a vehicle turret.
-	Void MVP_QuadcopterSwitchTargets()
-	{
-		RetargetVehicleHull (); //Target the hull of a vehicle if it makes sense.
-		Array <Actor> Taken; //Other drones are already targeting these.
-		Array <Actor> Others; //Other potential targets.
-		
-		ForEach (Grp : Groups)
-		{
-			If (Grp && Grp Is "MVP_DroneSwarm")
-			{
-				ForEach (Mem : Grp.Members)
-				{
-					If (Mem Is "MVP_Quadcopter" && Mem.Target && !IsDead(Mem) && Mem.Target != Goal)
-					{
-						console.printf ("%p is already targeting %p",mem,mem.target);
-						Taken.Push (Mem.Target);
-					}
-				}
-			}
-		}
-		If (!Taken.Size())
-			Return;
-		
-		LookForEnemiesEx (Others, 1024, False, True);
-		
-		ForEach (Targ : Others)
-		{
-			If (IsDead (Targ))
-				Continue;
-			
-			If (Taken.Find (Targ) == Taken.Size()) //This target isn't taken.
-			{
-				Target = Targ;
-				If (Random (0,255) < 8 && Yapper) SayVoiceLine (VOICE_SEE,Yapper);
-				console.printf ("found something my gang isn't targeting already");
-				Break;
-			}
-		}
-	}
-	
 	//Speak with other quadcopters.
 	Void MVP_QuadcopterSpeak()
 	{
@@ -745,7 +654,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		}
 		
 		Actor Proj;
-		If ((Proj = MVP_DroneDodge(Self,!Landed ? User_DodgeRange : User_DodgeRange*3,LastProjectile)))
+		If ((Proj = MVP_DroneDodge(!Landed ? User_DodgeRange : User_DodgeRange*3,LastProjectile)))
 		{
 			If (!Landed)
 			{
@@ -870,6 +779,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	KAI_Voice Yapper;
 	Int ProjSpeed, ProjFastSpeed, ProjTurn; //This can change if it's a gyrojet drone instead.
 	Mixin MVP_DroneFollowLogic;
+	Mixin MVP_DroneFunctions;
 	
 	//Ground mode
 	Bool Landed;
@@ -962,7 +872,11 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			PND2 H 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
 			PND2 A 3;
 			PND2 H 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
-			PND2 H 0 MVP_QuadcopterSwitchTargets();
+			PND2 H 0
+			{
+				If (MVP_DroneSwitchTargets() && Random (0,255) < 8 && Yapper)
+					SayVoiceLine (VOICE_SEE,Yapper);
+			}
 			Goto See;
 		Missile.Ground:
 			PND2 S 2 Light ("RifleFiringLightNoSelfLighting") MVP_QuadcopterFire();
@@ -1058,6 +972,115 @@ Class MVP_GyrojetQuadcopter : MVP_Quadcopter
 		Tag "Akcipitro 2RK"; //RK = Raketa Kuglo
 		Translation "Quadcopter_Orange";
 		AttackSound ""; //The gyrojets have their own firing sound.
+	}
+}
+
+Mixin Class MVP_DroneFunctions
+{
+	//When in a group or attacking a vehicle turret.
+	Bool MVP_DroneSwitchTargets (KAI_Actor Whose = Null, Double Range = 1024)
+	{
+		RetargetVehicleHull (); //Target the hull of a vehicle if it makes sense.
+		
+		Array <Actor> Taken; //Other drones are already targeting these.
+		Array <Actor> Others; //Other potential targets.
+		
+		If (!Whose)
+			Whose = KAI_Actor(Self);
+		
+		ForEach (Grp : Whose.Groups)
+		{
+			If (Grp && Grp Is "MVP_DroneSwarm")
+			{
+				ForEach (Mem : Grp.Members)
+				{
+					//Group member that can attack (Presumably another drone).
+					If (Mem.Target && (Mem.MissileState || Mem.MeleeState) && !IsDead(Mem) && Mem.Target != Goal)
+					{
+						console.printf ("%p is already targeting %p",mem,mem.target);
+						Taken.Push (Mem.Target);
+					}
+					//Turret of turreted vehicle shares target. Especially for drone *hulls* that don't attack themselves.
+					Else If (KAI_BaseVehicle(Mem))
+					{
+						Let Tur = KAI_BaseVehicle(Mem).Turret;
+						If (Tur && Tur.Target && !IsDead(Actor(Tur)) && Mem.Target != Goal)
+						{
+							console.printf ("%p (%s) is already targeting %p",Tur,tur.getclassname(),tur.target);
+							Taken.Push (Tur.Target);
+						}
+					}
+				}
+			}
+		}
+		If (!Taken.Size())
+			Return False;
+		
+		LookForEnemiesEx (Others, Range, False, True);
+		
+		ForEach (Targ : Others)
+		{
+			If (IsDead (Targ))
+				Continue;
+			
+			If (Taken.Find (Targ) == Taken.Size()) //This target isn't taken.
+			{
+				Target = Targ;
+				console.printf ("found something my gang isn't targeting already");
+				Return True;
+			}
+		}
+		Return False;
+	}
+	
+	//IDEA: Also make it handle flying away from homing projectiles maybe?
+	Actor MVP_DroneDodge (Double Range = 128, Actor LastDodged = Null)
+	{
+		If (Range <= 0)
+			Return Null;
+		
+		Array <Actor> Threats;
+		//Actually find projectiles.
+		ForEach (Proj : KAIHandler.ProjectileList)
+		{
+			If (!Proj || Proj == LastDodged) Continue;
+			
+			Bool DodgeAllyProjectiles;
+			
+			Bool IsHoming = Proj.bSeekerMissile; //HACK: NO stupid revenant rocket check.
+
+			Double Dist = Distance3DSquared (Proj);
+			If ((Dist > Range*Range || IsHoming && Proj.Tracer == Self && Dist > (Range*Range)*2 )) //Out of range. But if it's a seeker, check at double the range to potentially run away.
+				Continue;
+			
+			//Dodge even friendly projectiles if they'd do too much damage, unless friendly fire is off.
+			DodgeAllyProjectiles = (!(Proj Is "KAI_BaseProjectile" && KAI_BaseProjectile(Proj).bNoFriendlyFire) && Proj.GetMissileDamage (1,7) >= Health/2);
+			
+			If (!DodgeAllyProjectiles && !IsActorHostile (Proj.Target)) //Ignore friendly projectiles.
+				Continue;
+			
+			//Is the projectile about to hit me ? Weird math nonsense written by RaveYard.
+			double blackBox = -0.15;
+			If (IsHoming && Proj.Tracer == Self) blackBox = -0.075;
+			bool projectile_is_flying_towards_me = (Vec3To(proj).Unit() dot proj.vel.Unit()) < blackBox;
+			double projectileSafeRadius = sqrt(2 * ((proj.radius + radius) ** 2.5));
+			if(projectile_is_flying_towards_me && KAI_Math.distance3dline(pos, proj.pos, proj.pos + proj.vel) < projectileSafeRadius && CheckSight(Proj,SF_IGNOREWATERBOUNDARY))
+				Threats.Push (Proj);
+		}
+		
+		Double HighestDamage;
+		Actor StrongestProj;
+		For (Int I = Threats.Size()-1; I >= 0; I--)
+		{
+			Double CurrentDamage = Threats[I].GetMissileDamage(1,7);
+			If (HighestDamage < CurrentDamage)
+			{
+				HighestDamage = CurrentDamage;
+				StrongestProj = Threats[I];
+			}
+		}
+		
+		Return StrongestProj;
 	}
 }
 

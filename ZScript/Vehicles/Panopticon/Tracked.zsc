@@ -5,8 +5,8 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		//$Title Tracked Drone
 		//$Category Vehicles/Panopticon
 		//$Sprite MVPEF1
-		Health 80;
-		WoundHealth 40;
+		Health 60;
+		WoundHealth 30;
 		GibHealth 60;
 		Speed 4;
 		FastSpeed 6;
@@ -28,6 +28,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		KAI_Actor.ThreatLevel THREAT_NORMAL;
 		KAI_Actor.ThreatLevelThreshold THREAT_DANGEROUS;
 		KAI_Actor.ActorFollowDist 192;
+		MVP_BaseVehicle.SmokeDelay 8;
 		KAI_BaseVehicle.MaxPushMass 80;
 		KAI_BaseVehicle.MaxPushRadius 64;
 		KAI_BaseVehicle.MaxPushHeight 64;
@@ -41,16 +42,16 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		DamageFactor "ExplosiveImpact", 0.85;
 		DamageFactor "Explosion", 0.8;
 		DamageFactor "Explosive", 0.8;
-		DamageFactor "Grenade", 0.4;
+		DamageFactor "Grenade", 0.8;
 		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
-		DamageFactor "Shrapnel", 0.4;
-		DamageFactor "Fire", 0.5;
+		DamageFactor "Shrapnel", 0.5;
+		DamageFactor "Fire", 0.6;
 		DamageFactor "Plasma", 0.7;
 		
 		DamageFactor "Autocannon", 1.2;
-		DamageFactor "LargeRifleBullet", 0.9;
-		DamageFactor "RifleBullet", 0.1;
-		DamageFactor "SmallRifleBullet", 0.7;
+		DamageFactor "LargeRifleBullet", 1.0;
+		DamageFactor "RifleBullet", 0.9;
+		DamageFactor "SmallRifleBullet", 0.8;
 		DamageFactor "Missile", 1.2;
 		DamageFactor "AntiAir", 0.7;
 		
@@ -82,9 +83,20 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		If (!Turret) ThreatLevel = THREAT_NONE;
 	}
 	
+	Override Bool SpawnDamageSmoke()
+	{
+		If (!Super.SpawnDamageSmoke()) Return False;
+		Vector3 SpawnPos = Level.Vec3Offset (Pos,(FRandom(-8,8),FRandom(-8,8),FRandom(6,12)));
+		Actor Smoke = Spawn ("MVP_DamageSmoke",SpawnPos);
+		Smoke.Roll = FRandom(-180,180);
+		Smoke.A_SetScale (FRandom(0.1,0.5));
+		Smoke.Vel.Z = FRandom (1,2);
+		Return True;
+	}
+	
 	Override Bool CanAttack()
 	{
-		Return True; //Placeholder until I add a turret.
+		Return Turret;
 	}
 	
 	Void MVP_GunDroneChase()
@@ -195,7 +207,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		
 		//Dodge projectiles by driving out of the way if not already busy.
 		Actor Proj;
-		If (!RunAway && !LockedIn && (Proj = MVP_Quadcopter.MVP_DroneDodge(Self,User_DodgeRange)))
+		If (!RunAway && !LockedIn && (Proj = MVP_DroneDodge(User_DodgeRange)))
 		{
 			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
 			Vector3 Where = Delta >= -2 ? (Vec2Angle(64,Angle+90),0) : (Vec2Angle(64,Angle-90),0);
@@ -362,6 +374,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 	}
 	
 	Mixin MVP_DroneFollowLogic;
+	Mixin MVP_DroneFunctions;
 	
 	KAIMoveParams DroneMove;
 	UInt8 Rev;
@@ -447,7 +460,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 	Default
 	{
 		Health 40;
-		WoundHealth 20; //Shit aim threshold
+		WoundHealth 25; //Shit aim threshold
 		XScale 0.4;
 		YScale 0.333333; //0.4 / 1.2
 		Radius 8;
@@ -508,6 +521,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 	
 	Const BurstSize = 3;
 	Const VertOffset = 4;
+	Mixin MVP_DroneFunctions;
 	
 	HazardInfo GunHazard;
 	Array <Actor> Crap;
@@ -591,12 +605,14 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 		
 		If (SmokeCounter > 0)
 			SmokeCounter--;
-		console.printf ("lof is %d, smokecounter is %u",KAI_TurretCheckLOF (Target,0,0,(0,0,VertOffset),TLOF_OnlyAhead,"MVP_SmallRifleBullet"),smokecounter);
+		
 		If (!SmokeCounter && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,0,0,(0,0,VertOffset),TLOF_OnlyAhead,"MVP_SmallRifleBullet"))
 		{
 			If (!NoStateJump)
 			{console.printf ("fire");
 				SmokeCounter = 0;
+				If (Master && Master.Health <= WoundHealth)
+					Inaccuracy = Default.Inaccuracy*3;
 				If (Distance3DSquared(Target) < 4096*4096)
 					SetState (MissileState);
 				//Snipe the target if too far away.
@@ -632,17 +648,18 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 			}
 			Loop;
 		Fire:
-			PNDA ###### 1 {Frame = UpdateTurretElevation (5,1,3,3); /*F, B, D, D*/}
+			PNDA ###### 1 {Frame = UpdateTurretElevation (4,0,2,2); /*E, A, C, C*/}
 			PNDA # 3 Light ("RifleFiringLightNoSelfLighting") MVP_GunDroneShoot();
 			PNDA # 1
 			{
 				If (SmokeCounter++ >= BurstSize-1)
 				{
 					SmokeCounter = Clamp (GameTicRate*Random(2,8),0,UInt8.MAX);
+					MVP_DroneSwitchTargets (KAI_Actor(Master),2048);
 					Return SeeState;
 				}
 				
-				If (IsDead (Target))
+				/*If (IsDead (Target))
 				{
 					A_ClearTarget();
 					LookForPlayers (True); //Look for a new target.
@@ -661,7 +678,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 				{
 					SmokeCounter = Clamp (GameTicRate*Random(2,8),0,UInt8.MAX);
 					Return SeeState;
-				}
+				}*/
 				
 				HandleChaseTimer();
 				
@@ -670,13 +687,13 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 			}
 			Goto Fire+6;
 		Fire.Single:
-			PNDA # 0 {Inaccuracy = (6,6,6);} //Be more accurate
-			PNDA ################################### 1 {Frame = UpdateTurretElevation (5,1,3,3); /*F, B, D, D*/} //Adjust for one second.
+			PNDA # 0 {Inaccuracy /= 2.5;} //Be more accurate
+			PNDA ################################### 1 {Frame = UpdateTurretElevation (4,0,2,2); /*E, A, C, C*/} //Adjust for one second.
 			PNDA # 3 Light ("RifleFiringLightNoSelfLighting") MVP_GunDroneShoot(True);
 			PNDA # 0
 			{console.printf ("snipin's a good job mate");
 				SmokeCounter = Random(35,115); //Only wait 1-3 seconds after the last shot if you just sniped.
-				Inaccuracy = Default.Inaccuracy;
+				Inaccuracy *= 2.5;
 			}
 			Goto See;
 		Death:
