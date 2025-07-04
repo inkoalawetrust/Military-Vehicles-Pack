@@ -239,25 +239,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Return False;
 	}
 	
-	Override Void HandleNPCGroupEvent (Int EventType, Actor Affected, KAI_NPCGroup WhatGroup)
-	{
-		If (EventType == KAI_NPCGroup.GRPEVNT_NONE || !Affected || IsDead(Self))
-			Return;
-		
-		If (Affected == Self)
-		{
-			If (EventType == KAI_NPCGroup.GRPEVNT_JOIN) //We follow when in a group.
-				SetNPCOrder (ORDER_FOLLOW);
-			Else If (EventType == KAI_NPCGroup.GRPEVNT_LEFT) //And go back to the defaults when not in one.
-				SetNPCOrder (DefaultOrder);
-		}
-		
-		//Swarm member died, but only speak if they are like, remotely important and also not just one of the flying bombs
-		If ((EventType == KAI_NPCGroup.GRPEVNT_DEATH || EventType == KAI_NPCGroup.GRPEVNT_ERASED) && WhatGroup Is "MVP_DroneSwarm" && Random (0,255) < 16 &&
-		AssessThreatLevel (Affected,True,checkdead:True) >= THREAT_MILD && !(Affected Is "MVP_KamikazeDrone"))
-			{SayVoiceLine (VOICE_SEE,Yapper);console.printf ("NOOOOOOOOOOOO!!!!!!!!!");}
-	}
-	
 	Void MVP_QuadcopterChase ()
 	{
 		KAI_Chase_PreChecks();
@@ -778,7 +759,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	FLineTraceData Ground;
 	KAI_Voice Yapper;
 	Int ProjSpeed, ProjFastSpeed, ProjTurn; //This can change if it's a gyrojet drone instead.
-	Mixin MVP_DroneFollowLogic;
+	Mixin MVP_DroneVirtuals;
 	Mixin MVP_DroneFunctions;
 	
 	//Ground mode
@@ -1169,7 +1150,7 @@ Class MVP_QuadcopterGib : Actor
 	}
 }
 
-Mixin Class MVP_DroneFollowLogic
+Mixin Class MVP_DroneVirtuals
 {
 	Override Vector3, Actor HandleFollowingActor (Vector3 BasePos, Bool IgnoreDontFollowPlayers)
 	{
@@ -1185,5 +1166,24 @@ Mixin Class MVP_DroneFollowLogic
 			Return BasePos, Null;
 		
 		Return Ret, Ret2;
+	}
+	
+	Override Void HandleNPCGroupEvent (Int EventType, Actor Affected, KAI_NPCGroup WhatGroup)
+	{
+		If (EventType == KAI_NPCGroup.GRPEVNT_NONE || !Affected || IsDead(Self))
+			Return;
+		
+		If (Affected == Self)
+		{
+			If (EventType == KAI_NPCGroup.GRPEVNT_JOIN) //We follow when in a group.
+				SetNPCOrder (ORDER_FOLLOW);
+			Else If (EventType == KAI_NPCGroup.GRPEVNT_LEFT) //And go back to the defaults when not in one.
+				SetNPCOrder (DefaultOrder);
+		}
+		
+		//Swarm member died, but only speak if they are like, remotely important and also not just one of the flying bombs
+		If ((EventType == KAI_NPCGroup.GRPEVNT_DEATH || EventType == KAI_NPCGroup.GRPEVNT_ERASED) && WhatGroup Is "MVP_DroneSwarm" && Random (0,255) < 16 &&
+		AssessThreatLevel (Affected,True,checkdead:True) >= THREAT_MILD && !(Affected Is "MVP_KamikazeDrone"))
+			SayVoiceLine (VOICE_SEE,Yapper);
 	}
 }

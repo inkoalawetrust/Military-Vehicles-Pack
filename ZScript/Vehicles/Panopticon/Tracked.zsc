@@ -8,8 +8,8 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		Health 60;
 		WoundHealth 30;
 		GibHealth 60;
-		Speed 4;
-		FastSpeed 6;
+		Speed 6;
+		FastSpeed 8;
 		XScale 0.4;
 		YScale 0.333333; //0.4 / 1.2
 		Radius 12;
@@ -82,6 +82,8 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		
 		A_StartSound ("Vehicle/Drone/Motor",CHAN_VOICE,CHANF_LOOPING,1,ATTN_STATIC);
 		If (!Turret) ThreatLevel = THREAT_NONE;
+		//The gun drone can talk, with the turret making the hull talk when switching targets and stuff. But this drone isn't as talkative as the quadcopters.
+		If (KAIHandler) Yapper = KAIHandler.GetNPCVoice ("Panopticon");
 	}
 	
 	Override Bool SpawnDamageSmoke()
@@ -185,8 +187,8 @@ Class MVP_GunDrone : MVP_BaseVehicle
 					Break;
 			}
 			If (Dist > 0) Dist += Target.Radius;
-			If (Health <= WoundHealth) //Keep some extra distance when hurt.
-				Dist += 32;
+			If (Health <= WoundHealth) //Keep double distance when hurt.
+				Dist *= 2;
 			
 			Double TargDist = Distance3D (Target);
 			If (TargDist <= 192+Radius) //Too close to target, reverse.
@@ -374,13 +376,14 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		Return True;
 	}
 	
-	Mixin MVP_DroneFollowLogic;
+	Mixin MVP_DroneVirtuals;
 	Mixin MVP_DroneFunctions;
 	
 	KAIMoveParams DroneMove;
 	UInt8 Rev;
 	UInt8 RevFrame;
 	Vector3 DodgePos; //Where we're going to dodge a projectile (Hopefully).
+	KAI_Voice Yapper;
 	
 	Double User_DodgeRange; //From how far the drone dodges projectiles, this is pretty high by default to give it SOME time to drive away.
 	
@@ -658,7 +661,8 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 				If (SmokeCounter++ >= BurstSize-1)
 				{
 					SmokeCounter = Clamp (GameTicRate*Random(2,8),0,UInt8.MAX);
-					MVP_DroneSwitchTargets (KAI_Actor(Master),2048);
+					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 8 && MVP_GunDrone(Master) && MVP_GunDrone(Master).Yapper)
+						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_GunDrone(Master).Yapper);
 					Return SeeState;
 				}
 				
@@ -694,8 +698,9 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 			PNDA ################################### 1 {Frame = UpdateTurretElevation (4,0,2,2); /*E, A, C, C*/} //Adjust for one second.
 			PNDA # 3 Light ("RifleFiringLightNoSelfLighting") MVP_GunDroneShoot(True);
 			PNDA # 0
-			{console.printf ("snipin's a good job mate");
-				MVP_DroneSwitchTargets (KAI_Actor(Master),2048);
+			{
+				If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 8 && MVP_GunDrone(Master) && MVP_GunDrone(Master).Yapper)
+					KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_GunDrone(Master).Yapper);
 				SmokeCounter = Random(35,115); //Only wait 1-3 seconds after the last shot if you just sniped.
 				Inaccuracy *= 2.5;
 			}
