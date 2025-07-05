@@ -1,5 +1,3 @@
-//TODO:
-//Also make a recolored (Orange?) gyrojet variant, which is THREAT_ABOVENORMAL.
 //IDEA: Make them abuse turrets by flying over their pitch limits.
 
 Class MVP_Quadcopter : MVP_BaseFlyer
@@ -1182,7 +1180,7 @@ Mixin Class MVP_DroneVirtuals
 		}
 		
 		//Swarm member died, but only speak if they are like, remotely important and also not just one of the flying bombs
-		If ((EventType == KAI_NPCGroup.GRPEVNT_DEATH || EventType == KAI_NPCGroup.GRPEVNT_ERASED) && WhatGroup Is "MVP_DroneSwarm" && Random (0,255) < 16 &&
+		If ((EventType == KAI_NPCGroup.GRPEVNT_DEATH || EventType == KAI_NPCGroup.GRPEVNT_ERASED) && WhatGroup Is "MVP_DroneSwarm" && Random (0,255) < 8 &&
 		AssessThreatLevel (Affected,True,checkdead:True) >= THREAT_MILD && !(Affected Is "MVP_KamikazeDrone"))
 			SayVoiceLine (VOICE_SEE,Yapper);
 	}
