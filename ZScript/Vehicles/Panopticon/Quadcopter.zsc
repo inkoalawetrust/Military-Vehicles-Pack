@@ -1,5 +1,3 @@
-//IDEA: Make them abuse turrets by flying over their pitch limits.
-
 Class MVP_Quadcopter : MVP_BaseFlyer
 {
 	Default
@@ -1175,7 +1173,7 @@ Mixin Class MVP_DroneVirtuals
 			Return BasePos, Null;
 		
 		//Do not follow other fragile drones in a swarm.
-		If (MVP_BaseVehicle(Ret2) && MVP_BaseVehicle(Ret2).bDrone && AssessThreatLevel(Ret2) < THREAT_DANGEROUS)
+		If (MVP_BaseVehicle(Ret2) && MVP_BaseVehicle(Ret2).bDrone && AssessThreatLevel(Ret2) < THREAT_ABOVENORMAL)
 			Return BasePos, Null;
 		
 		Return Ret, Ret2;

@@ -354,8 +354,8 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 {
 	Default
 	{
-		Radius 16;
-		Height 32;
+		Radius 10;
+		Height 20;
 		Speed 60;
 		FastSpeed 80;
 		DamageFunction (Random (80,100));
@@ -371,6 +371,14 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 		Obituary "%o was hit by a rocket";
 		+KAI_BaseProjectile.NoTrailLine;
 		KAI_BaseProjectile.TrailSprite "MVP_RocketFireSprite";
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		WeaveIndexXY = Random (0,63);
+		WeaveIndexZ = Random (0,63);
 	}
 	
 	//Rocket trail.
@@ -417,7 +425,11 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 				A_StartSound ("Vehicle/Tank/RocketMotor",flags:CHANF_LOOPING,0.6,2.0);
 				Speed *= Default.Speed;
 			}
-			AAFR # 4 Light ("50CalTracerLight") {Frame = UpdateProjectileElevation (8,8,6,7,7);} // I, G, H
+			AAFR # 1 Light ("50CalTracerLight")
+			{
+				Frame = UpdateProjectileElevation (8,8,6,7,7); // I, G, H
+				A_Weave (1,1,Random (0,1),Random (0,1));
+			}
 			Wait;
 		Death:
 			TNT1 A 0
@@ -541,6 +553,49 @@ Class MVP_RocketFireSprite : MVP_Tracer
 		}
 		Else If (Tics >= 6) //Done
 			Destroy();
+	}
+}
+
+Class MVP_RocketBackblastParticle : MVP_RocketFireSprite
+{
+	Override Void SetProperties()
+	{
+		Super.SetProperties();
+		DefaultSprite = TexMan.CheckForTexture("RSMKA0",TexMan.Type_Sprite);
+		RNG1 = Random (1,5);
+		RNG2 = Random (6,11);
+	}
+	
+	Int RNG1, RNG2;
+	
+	Override Void Tick()
+	{
+		MVP_Tracer.Tick();
+		
+		If (IsFrozen()) Return;
+		
+		Tics++;
+		
+		Pos.Z += 1;
+		Vel *= 0.94;
+		Roll += Random (1,4);
+		
+		If (Tics == RNG1) //Normal fire brightness.
+			SetTranslation ('ZDoomFire');
+		Else If (Tics == RNG2) //Switch to smoke mode.
+		{
+			TexMan.CheckForTexture("RSMKD0",TexMan.Type_Sprite);
+			SetTranslation ('None');
+			SetRenderStyle (STYLE_TRANSLUCENT);
+			Alpha = 0.8;
+			Flags &= ~SPF_FULLBRIGHT;
+		}
+		Else If (Tics >= 12)
+		{
+			Alpha -= 0.02;
+			If (Alpha <= 0)
+				Destroy();
+		}
 	}
 }
 

@@ -356,7 +356,8 @@ Mixin Class MVP_SharedFunctions
 	//TODO: Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
 	//Range: The range around which to check for enemies.
 	//AvoidAllies: Deduct points from the score for any allies in the AOE.
-	Int AttackByQuantity (Actor Origin, Double Range = 256, Bool AvoidAllies = False)
+	//CountOrigin: Count the actor the check is ran around of as well.
+	Int AttackByQuantity (Actor Origin, Double Range = 256, Bool AvoidAllies = False, Bool CountOrigin = False)
 	{
 		If (!Origin) Return 0;
 		Actor Mobj;
@@ -369,7 +370,7 @@ Mixin Class MVP_SharedFunctions
 		{
 			Mobj = FindEnemies.Thing;
 			
-			If (!Mobj || IsDead (Mobj) || IsInanimateObject (Mobj) || Mobj == Self || Mobj == Origin) Continue;
+			If (!Mobj || IsDead (Mobj) || IsInanimateObject (Mobj) || Mobj == Self || !CountOrigin && Mobj == Origin) Continue;
 			
 			IsHostile = IsActorHostile (Mobj); IsVisible = IsVisible (Mobj,False);
 			If (AvoidAllies && !IsHostile && IsVisible)

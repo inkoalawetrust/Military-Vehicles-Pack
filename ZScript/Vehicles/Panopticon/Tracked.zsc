@@ -248,8 +248,6 @@ Class MVP_GunDrone : MVP_BaseVehicle
 			Return;
 		}
 		
-		//MAYDO: Add retreating from other nearby enemies? Or maybe not, and reserve that for the larger hull.
-		
 		//Move to target, and also handle patrolling but then seeing a target.
 		If (Target && Target != Goal && !LockedIn)
 		{
@@ -426,7 +424,6 @@ Class MVP_GunDrone : MVP_BaseVehicle
 					}
 				}
 				
-				//MAYDO: Actually, this should probably be on the actual turret object.
 				If (Turret)
 				{
 					[B, Debris] = A_SpawnItemEx ("MVP_GunDroneGib",zofs: 16, FRandom (0,6), FRandom (1,-1), FRandom (1,8)); //Gun
@@ -546,15 +543,16 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 	{
 		Super.Tick ();
 		
-		If (!IsFrozen() && GetAge() % 4 == 0 && IsInAttackState())
+		If (!IsFrozen() && GetAge() % 4 == 0 && IsInAttackState() && !IsInState (Self,"Fire.Rocket"))
 		{
 			KAI_FindInLOF (FIL_MISSILEHIT,8192*2,1,(0,0,VertOffset),foundactors:Crap);
+			GunHazard.Position = GetAttackLocation();
 			
-			If (Crap.Size())
+			ForEach (Mo : Crap)
 			{
 				//console.printf ("let's crash because of %p",crap[0]);
-				GunHazard.Position = GetAttackLocation();
-				HazardInfo.GiveHazard(Crap[0],GunHazard);
+				If (IsActorHostile (Mo) && HazardInfo.GiveHazard(Mo,GunHazard))
+					Break;
 			}
 		}
 	}
@@ -566,6 +564,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 		KAI_Chase_Retarget(0,True);
 		
 		ShouldAttack();
+		HandleChaseTimer();
 	}
 	
 	Void MVP_GunDroneShoot (Bool Snipe = False)
@@ -678,7 +677,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		//$Category Vehicles/Panopticon
 		//$Sprite MVPEF1
 		Health 250;
-		WoundHealth 80;
+		WoundHealth 100;
 		GibHealth 120;
 		Speed 8;
 		FastSpeed 10;
@@ -1065,8 +1064,8 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
 		KAI_Actor.Inaccuracy (16,16,16);
-		KAI_Actor.InaccuracyFrequency 0.3;
-		AutomapOffsets (0,18); //TODO: Make sure these look right for this big drone.
+		KAI_Actor.InaccuracyFrequency 0.5;
+		AutomapOffsets (0,45);
 		KAI_BaseTurret.MaximumPitch -45;
 		KAI_BaseTurret.MinimumPitch 15;
 		KAI_BaseTurret.TurnSoundRadius 1.5;
@@ -1110,6 +1109,61 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		Super.PostBeginPlay();
 		
 		FireOfs = (0,0,16);
+		AttackStates.Push (FindState ("Fire.Rocket",True));
+		RocketHazard = New ("HazardInfo"); //Create hazard information.
+		If (RocketHazard)
+		{
+			Array <String> Tags;
+			Tags.Push ("Explosive");
+			//Hazard.Position = Data.HitPos;
+			RocketHazard.Origin = Self;
+			RocketHazard.Range = 256;
+			RocketHazard.Type = HazardInfo.HAZARD_ATTACK;
+			RocketHazard.Level = HazardInfo.HAZARD_LARGE;
+			//Hazard.Flags = Flags;
+			RocketHazard.CustomTags.Copy (Tags);
+		}
+	}
+	
+	Override Vector3 GetAttackLocation()
+	{
+		FLineTraceData Where;
+		Double Ang = !IsInState (Self,"Fire.Rocket") ? Angle : AngleTo (Target);
+		Double Pit = !IsInState (Self,"Fire.Rocket") ? Pitch : PitchTo (Target,16,GetFAFPosOffset(Target,TurretAimPos));
+		LineTrace (Ang,8192*2,Pit,TRF_BLOCKSELF,VertOffset,data:Where);
+		Return Where.HitLocation;
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		
+		If (RocketDelay > 0)
+		{
+			RocketDelay--;
+			If (GetAge() % 8 == 0 && (Master && Master.Health <= Master.WoundHealth || AssessThreatLevel (Target) >= ThreatLevelThreshold))
+				RocketDelay -= 8; //Get ready to fire rockets twice as fast for very dangerous targets.
+			console.printf ("rocketdelay is %d",RocketDelay);
+		}
+		
+		If (RocketDelay <= 0 && GetAge() % 4 == 0 && IsInState (Self,"Fire.Rocket"))
+		{
+			Actor FuckOff = Spawn ("KAI_TempPoint",GetAttackLocation());
+			RocketHazard.Position = FuckOff.Pos;
+			Let Finder = BlockThingsIterator.Create (FuckOff,256);
+			
+			Actor Other;
+			While (Finder.Next())
+			{
+				Other = Finder.Thing;
+				If (Level.Vec3Diff (FuckOff.Pos,Other.Pos).Length() > 256 || !(RocketHazard.Flags & RocketHazard.HAZ_NOSIGHT) && !Other.CheckSight (FuckOff,SF_IGNOREWATERBOUNDARY))
+					Continue;
+				
+				HazardInfo.GiveHazard (Other,RocketHazard);
+			}
+		}
 	}
 	
 	Enum Modes
@@ -1121,11 +1175,14 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 	}
 	
 	UInt8 FireMode;
+	HazardInfo RocketHazard;
 	
 	Override Bool ShouldAttack(Bool NoStateJump)
 	{
 		If (ReactionTime-- > 0 || !MVP_BaseTurret.ShouldAttack(NoStateJump)) //Basic attack checks returned false.
 			Return False;
+		
+		Int TargetLevel = AssessThreatLevel (Target,True);
 		
 		//Check if an enemy stronger than our current target is nearby and targeting us.
 		If (Random (0,255) < 32)
@@ -1137,19 +1194,45 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 				If (IsDead (Targ))
 					Continue;
 				
-				If (Targ != Target && Targ.Target == Self && AssessThreatLevel (Targ) > AssessThreatLevel (Target))
+				If (Targ != Target && Targ.Target == Self && AssessThreatLevel (Targ) > TargetLevel)
 				{
 					Target = Targ;
-					console.printf ("found something stronger than my current target in range that's attacking me");
 					Return True;
 				}
 			}
 		}
 		
-		//We have a hostile target in range and within line of fire.
-		//TODO: Add separate check for the rockets, such as for the turret LOF check to not check assuming the rifle bullets.
 		Double Dist;
-		If (Target && (Dist = Distance3D (Target)) <= MaxTargetRange && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,0,0,FireOfs,TLOF_OnlyAhead,"MVP_RifleBullet"))
+		//Check if we should fire rockets. As long as it's not too far for the rockets or the LOF for them is bad.
+		//If (Target && (Dist = Distance3D (Target)) <= 4096 && RocketDelay <= 0 && KAI_TurretCheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,(0,16,16),TLOF_OnlyAhead,"MVP_70mmRocket"))
+		{
+			Int Chance = AttackByQuantity (Target,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,countorigin:True);
+			Chance += Random (0,32);chance = 9999999999;
+			If (Random (0,512) < 4) Chance += 60; //Fuck it.
+			If (Master && Master.Health <= Master.WoundHealth) Chance += 25;
+			If (TargetLevel >= ThreatLevelThreshold) Chance += 40;
+			
+			Bool ImmuneToBlasts = (Target.bNoRadiusDmg || Target.GetRadiusDamage (Target,256,256,48,False,True) <= 256/8); //The enemy is immune or HIGHLY resistant to blasts.
+			
+			//Even more likely to fire rockets if the target is not necessarily immune to explosions, however it will still sometimes blast them sometimes even if they are.
+			If (!ImmuneToBlasts && Random (0,255) < 128)
+				Chance += 80;
+			
+			Int RNG = Random (80,180);
+			console.printf ("ROCKET CHANCE %d, RNG %d",chance,rng);
+			If (Chance >= RNG)
+			{
+				FireMode = MODE_ROCKET;
+				SmokeCounter = 3;
+				If (!NoStateJump) SetStateLabel ("Fire.Rocket");
+				TurretAttackSpeed = GetDefaultByType("MVP_70mmRocket").Speed;
+				FastTurretAttackSpeed = GetDefaultByType("MVP_70mmRocket").FastSpeed;
+				Return True;
+			}
+		}
+		
+		//We have a hostile target in range and within line of fire.
+		If (Target && Dist <= MaxTargetRange && KAI_TurretCheckLOF (Target,100,0,FireOfs,TLOF_OnlyAhead,"MVP_RifleBullet"))
 		{
 			//Determine what fire mode to use by firing 10 traces with a 2 degree wide cone.
 			Int Hits = DetermineHitChance (Target,True,Dist,shots:15,FireOfs,(1.5,-1.5,1.5,-1.5),MaxTargetRange,GetFAFPosOffset(Target,TurretAimPos));
@@ -1176,22 +1259,47 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 					SetState (MissileState);
 				Else If (FireMode == MODE_SINGLE) //Sniping
 					SetStateLabel ("Fire.Single");
-				Else //Lol
-					SetStateLabel ("Fire.Rocket");
 			}
 				
 			Return True;
 		}
-		
-		//TODO: Add check here for making the turret retarget closer enemies that are stronger than the current target?
 		
 		Return False;
 	}
 	
 	Void MVP_BigGunDroneShoot()
 	{
-		Frame = UpdateTurretElevation (9,5,7,7); //J, F, H, H
-		//If (FireMode == MODE_ROCKET) TODO: Later, also, have the backblast effect rely on the visual sprite pitch and angle of the turret, probably.
+		If (FireMode == MODE_ROCKET)
+		{
+			A_StartSound ("Vehicle/Tank/Artillery3",CHAN_WEAPON,CHANF_OVERLAP,0.6);
+			Frame = UpdateTurretElevation (8,4,6,6); //I, E, G, G
+			Actor Proj = A_SpawnProjectile ("MVP_70mmRocket",FireOfs.Z,16,flags:CMF_AIMDIRECTION,Pitch);
+			AddProjectileSpread (Proj,(0.45,-0.45),(0.45,-0.45));
+			
+			Int RNG = Random (64,72);
+			For (Int I = 0; I < RNG; I++)
+			{
+				Let Fire = Level.SpawnVisualThinker ("MVP_RocketBackblastParticle");
+				
+				If (Fire)
+				{
+					Fire.PostBeginPlay();
+					KAI_Tracer(Fire).RanPostBeginPlayEarly = True;
+					Fire.Pos = KAI_Math.Vec3OffsetRelative (Self,(0,-18,16));
+					Fire.Flags |= SPF_ROLL;
+					Fire.Roll = FRandom(-180,180);
+					Fire.Scale *= FRandom(0.4f,0.75f);
+					Fire.PostBeginPlay();
+					KAI_Tracer(Fire).RanPostBeginPlayEarly = True;
+					Fire.Vel = KAI_Math.AngleToVector3D (Angle+FRandom (12,-12),-Pitch+FRandom (12,-12),FRandom (-2,-8));
+				}
+			}
+			
+			MakeAlliesImmuneToExplosion (Self,64);
+			A_Explode (64,64,XF_CIRCULAR|XF_CIRCULARTHRUST,False); //Backblast
+			RemoveAllyExplosionImmunity();
+			Return;
+		}
 		
 		A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.5);
 		Bool B; Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",FireOfs.Z,flags:CMF_AIMDIRECTION,Pitch); //pew pew
@@ -1213,10 +1321,11 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		If (Master) //Recoil the drone back.
 			Master.Vel += KAI_Math.AngleToVector3D (Angle,Pitch,-0.25);
 		Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
+		Frame = UpdateTurretElevation (9,5,7,7); //J, F, H, H
 	}
 	
-	//TODO: Use smoke counter to control how many shots the gun will fire, and ReactionTime to control how many tics it takes before firing again.
 	Vector3 FireOfs;
+	Int RocketDelay;
 	
 	States
 	{
@@ -1290,9 +1399,27 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 				Inaccuracy *= 2.5;
 			}
 			Goto See;
+		Fire.Rocket:
+			PND0 ################## 1 {Frame = UpdateTurretElevation (8,4,6,6); /*I, E, G, G*/} //Adjust for a bit.
+			PND0 # 8 MVP_BigGunDroneShoot();
+			PND0 # 0
+			{
+				//Out of ammo.
+				If (SmokeCounter-- <= 1)
+				{
+					TurretAttackSpeed = Default.TurretAttackSpeed;
+					FastTurretAttackSpeed = Default.FastTurretAttackSpeed;
+					RocketDelay = GameTicRate*Random (4,10); //Time until next barrage.
+					ReactionTime = Clamp (GameTicRate*Random(2,8),0,UInt8.MAX);
+					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 16 && MVP_GunDrone(Master) && MVP_GunDrone(Master).Yapper)
+						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_GunDrone(Master).Yapper);
+					Return SeeState;
+				}
+				Return State (Null);
+			}
+			Goto Fire.Rocket+18;
 	}
 }
-
 
 Class MVP_GunDroneGib : Actor
 {
