@@ -86,7 +86,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 	{
 		If (User_ChaseTime == 0) User_ChaseTime = 35*30;
 		If (User_RetreatDistance == 0) User_RetreatDistance = 384;
-		If (User_DodgeRange == 0) User_DodgeRange = 256;
+		If (User_DodgeRange == 0) User_DodgeRange = 384;
 	}
 	
 	Override Void SpawnHeadlights()
@@ -419,9 +419,23 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 				KMT_3D_SpeedLimit (Speed,(0,0,0.1));
 		}
 		
+		//Abuse turrets by going over their pitch limits if possible.
+		If (!Landed && (CeilingZ - Pos.Z+Height) >= 128 && Target && Target Is "KAI_BaseVehicle")
+		{
+			KAI_BaseTurret Tur = KAI_BaseTurret (Target);
+			If (!Tur && KAI_BaseVehicle(Target) && KAI_BaseVehicle (Target).Turret) //Target isn't a turret. Maybe it's a vehicle WITH a turret?
+				Tur = KAI_BaseVehicle (Target).Turret;
+			
+			//If we are targeting a turret or a turreted vehicle. Bully it.
+			If (Tur && Tur.IsOverPitchLimits (Self,padding:10) == Tur.ELEVATION_INBOUNDS)
+			{console.printf ("cyberbullying");
+				KMT_3D_SpeedLimit (Speed,(0,0,0.75));
+			}
+		}
+		
 		//Target is too high up to fire at.
 		Bool CantAttack;
-		If (Target && TargetInSight && PitchTo (Target) <= MaxGunPitch)
+		If (Target && TargetInSight && !(GetClass() == "MVP_GyrojetQuadcopter") && PitchTo (Target) <= MaxGunPitch)
 		{console.printf ("drone rising up to fire");
 			If (Landed)
 			{
@@ -461,6 +475,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 					Return;
 				}
 			}
+			
 			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),DetourFactor,TurnHorz,flags:KMTFlags,TurnVert);
 			MovedAlready = True;
 		}
@@ -652,7 +667,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 				Return False;
 			}
 		}
-		console.printf ("when you idlin");
+		
 		Vector3 FolPos = (Double.NaN, Double.NaN, Double.NaN); Actor Followee;
 		Bool Following; //We followed something this time.
 		If (CurrentOrder == ORDER_FOLLOW)
@@ -787,7 +802,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			}
 			Loop;
 		See:
-			PND2 ABC 1 {MVP_QuadcopterChase();console.printf ("when you flyin");}
+			PND2 ABC 1 MVP_QuadcopterChase();
 			Loop;
 		See.Ground:
 			PND2 OPQR 4 MVP_QuadcopterChase();

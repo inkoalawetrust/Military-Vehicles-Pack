@@ -301,6 +301,7 @@ $Random MVPMarine/Death
 	Vehicle/Drone/Motor "Sounds/Vehicles/Drones/DroneSmallMotor.ogg"
 	Vehicle/Drone/Turret "Sounds/Vehicles/Drones/DroneTurret.ogg"
 	Vehicle/Drone/Tracks "Sounds/Vehicles/Drones/DroneTrack.ogg"
+	$Alias Vehicle/Drone/BigTurret Vehicle/Drone/Turret
 	
 	$Volume Vehicle/Drone/Turret 0.4
 	$Attenuation Vehicle/Drone/Turret 2.5

@@ -306,7 +306,7 @@ Class MVP_Gyrojet : MVP_BaseProjectile
 			BUL1 # 4 Light ("RifleTracerLight")
 			{
 				Frame = UpdateProjectileElevation (10,10,8,9,9); //K, K, I, J, J
-				KAI_SeekerMissile (1,0.75,SMF_CURSPEED|SMF_SMART,(32,32,32));
+				KAI_SeekerMissile (1,0.35,SMF_CURSPEED|SMF_SMART,(32,32,32));
 				If (Vel.Length() >= DefSpeed-MinVel)
 				{
 					bSeekerMissile = False;
@@ -350,13 +350,170 @@ Class MVP_Gyrojet : MVP_BaseProjectile
 	}
 }
 
+Class MVP_70mmRocket : MVP_BaseProjectile
+{
+	Default
+	{
+		Radius 16;
+		Height 32;
+		Speed 60;
+		FastSpeed 80;
+		DamageFunction (Random (80,100));
+		XScale 0.2;
+		YScale 0.16666; //0.2 / 1.2
+		ProjectileKickback 256;
+		ExplosionRadius 128;
+		ExplosionDamage 128;
+		Decal "BigScorch";
+		DamageType "Explosive";
+		MissileType "MVP_RocketFlame";
+		Translation "Rocket70mm_Default";
+		Obituary "%o was hit by a rocket";
+		+KAI_BaseProjectile.NoTrailLine;
+		KAI_BaseProjectile.TrailSprite "MVP_RocketFireSprite";
+	}
+	
+	//Rocket trail.
+	Override Void TrailSpawn (VisualThinker Trail)
+	{
+		Super.TrailSpawn(Trail);
+		If (GetAge() <= 8) //Not firing yet.
+			Trail.Destroy();
+		Trail.PostBeginPlay(); //Scale the trail NOW.
+		KAI_Tracer(Trail).RanPostBeginPlayEarly = True;
+		Trail.Pos = KAI_Math.Vec3OffsetRelative (Self,(-12,0,0));
+		Trail.Flags |= SPF_ROLL;
+		Trail.Roll = FRandom(-180,180);
+		Trail.Scale *= FRandom(0.35,0.5);
+		Trail.PostBeginPlay(); //Scale the trail NOW.
+		KAI_Tracer(Trail).RanPostBeginPlayEarly = True;
+		Trail.Vel.X = FRandom (-1,1);
+		Trail.Vel.Y = FRandom (-1,1);
+		Trail.Vel.Z = FRandom (-0.75,0.75);
+	}
+	
+	Void DoRocketSplash (Int LiquidType, Bool UpsideDown = False)
+	{
+		If (LiquidType == LIQUID_NONE) Return;
+		HitLiquid = True;
+		Actor Splash = SpawnLiquidSplash (LiquidType,"SFX/LiquidExplosion",1,1.0,ExplosionDamage*0.5,ExplosionRadius*0.5,ExplosionRadius*0.75,"Explosive",True);
+		
+		Double Size = FRandom (1.5,2.25);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.bXFlip = Random (False,True);
+	}
+	
+	Bool HitLiquid;
+	DynamicLight Light;
+	
+	States
+	{
+		Spawn:
+			AAFR A 0 NoDelay A_SetSpeed (Speed/2);
+			AAFR # 2 {Frame = UpdateProjectileElevation (2,2,0,1,1);} // C, A, B
+			AAFR # 2 {Frame = UpdateProjectileElevation (5,5,3,4,4);} // F, D, E
+			TNT1 A 0
+			{
+				A_StartSound ("Vehicle/Tank/RocketMotor",flags:CHANF_LOOPING,0.6,2.0);
+				Speed *= Default.Speed;
+			}
+			AAFR # 4 Light ("50CalTracerLight") {Frame = UpdateProjectileElevation (8,8,6,7,7);} // I, G, H
+			Wait;
+		Death:
+			TNT1 A 0
+			{
+				A_SetTranslation ('None');
+				//The floor was hit.
+				If (Pos.Z <= FloorZ)
+					DoRocketSplash(CheckLiquid(FloorPic));
+				//The ceiling was hit.
+				Else If (Pos.Z + Height >= CeilingZ)
+					DoRocketSplash(CheckLiquid(CeilingPic),True);
+				
+				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+				
+				If (Pos.Z + Height >= CeilingZ) Scale.Y *= -1; //If a ceiling was hit, invert the explosion.
+				Else If (Pos.Z >= FloorZ+32) Return FindState ("Death.Air",True); //If the explosion happened above 32 map units from the ground, trigger the air explosion.
+				Return State (Null);
+			}
+			TNT1 A 0
+			{
+				SetZ (FloorZ);
+				Roll = Random (0,360);
+				A_SetScale (1.25);
+				A_SetRenderStyle (1.0,STYLE_ADD);
+				MakeAlliesImmuneToExplosion (Target,ExplosionRadius);
+				A_Explode (ExplosionDamage,ExplosionRadius,XF_CIRCULAR|XF_CIRCULARTHRUST,False,32);
+				RemoveAllyExplosionImmunity();
+				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.5);
+				
+				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				If (Ring)
+				{
+					Ring.Speed = 0.4;
+					Ring.FloatSpeed = 0.15;
+					Ring.ReactionTime = (GameTicRate/2);
+				}
+				
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+				Duster.ReactionTime = 64;
+				Duster.RadiusDamageFactor = 0.5;
+				Duster.Threshold = 192;
+				Duster.Scale.X *= 0.5;
+				
+				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
+				If (Light)
+				{
+					Light.Args[3] = 128; //Intensity
+					Light.Args[0] = 255; Light.Args[1] = 225; Light.Args[2] = 179; //RGB
+				}
+			}
+			GXPL ABCDEFGHIJLMNO 2 Bright {If (Light) Light.Args[3] -= 9.14;}
+			Stop;
+		Death.Air:
+			TNT1 A 0
+			{
+				Roll = Random (0,360);
+				A_SetScale (2);
+				A_SetRenderStyle (1.0,STYLE_ADD);
+				MakeAlliesImmuneToExplosion (Target,ExplosionRadius*1.25);
+				A_Explode (ExplosionDamage,ExplosionRadius*1.25,XF_CIRCULAR|XF_CIRCULARTHRUST,False,48);
+				RemoveAllyExplosionImmunity();
+				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.35);
+				
+				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				If (Ring)
+				{
+					Ring.Speed = 0.4;
+					Ring.FloatSpeed = 0.15;
+					Ring.ReactionTime = (GameTicRate/2);
+				}
+				
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+				Duster.ReactionTime = 64;
+				Duster.RadiusDamageFactor = 0.5;
+				Duster.Threshold = 192;
+				Duster.Scale.X *= 0.5;
+				
+				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
+				If (Light)
+				{
+					Light.Args[3] = 128; //Intensity
+					Light.Args[0] = 255; Light.Args[1] = 225; Light.Args[2] = 179; //RGB
+				}
+			}
+			GAXP ABCDEFGHIJ 2 Bright {If (Light) Light.Args[3] -= 12.8;}
+			Stop;
+	}
+}
+
 //Ugh, I need to animate this with ANIMDEFS and also have custom age timings for transitioning from fire to smoke.
 Class MVP_RocketFireSprite : MVP_Tracer
 {
 	Override Void SetProperties()
 	{
 		Super.SetProperties();
-		DefaultSprite = TexMan.CheckForTexture("RSMKA0",TexMan.Type_Sprite);
+		DefaultSprite = TexMan.CheckForTexture("RocketSmokeAnim",TexMan.Type_Sprite);
 		NoWarp = True;
 		DestroyIfNoOwner = False;
 		Flags |= SPF_FULLBRIGHT;

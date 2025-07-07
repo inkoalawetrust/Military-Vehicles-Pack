@@ -424,6 +424,7 @@ Class MVP_HazardZone : KAI_MixinActor
 		+NoDamage;
 		+NoGravity;
 		+NoTarget;
+		+NeverTarget;
 	}
 	
 	Int Flags;

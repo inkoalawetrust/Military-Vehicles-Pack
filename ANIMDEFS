@@ -28,7 +28,7 @@ Texture MSX3A0
 
 Texture RocketSmokeAnim
 	PIC RSMKA0 Tics 2
-	PIC RSMKB0 Tics 1
-	PIC RSMKC0 Tics 1
-	PIC RSMKD0 Tics 1
-	PIC RSMKE0 Tics 1
+	PIC RSMKB0 Tics 2
+	PIC RSMKC0 Tics 2
+	PIC RSMKD0 Tics 2
+	PIC RSMKE0 Tics 2
