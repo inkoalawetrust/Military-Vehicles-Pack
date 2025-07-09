@@ -80,6 +80,8 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		DroneMove.AngleLimit = 8;
 		//No running behind corners or anything for the little drone. The large hull though has different params.
 		
+		DodgePos = (Double.NaN,Double.NaN,Double.NaN);
+		
 		A_StartSound ("Vehicle/Drone/Motor",CHAN_VOICE,CHANF_LOOPING,1,ATTN_STATIC);
 		If (!Turret) ThreatLevel = THREAT_NONE;
 		//The gun drone can talk, with the turret making the hull talk when switching targets and stuff. But this drone isn't as talkative as the quadcopters.
@@ -185,8 +187,9 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		
 		//Dodge projectiles by driving out of the way if not already busy.
 		Actor Proj;
-		If (!RunAway && !LockedIn && (Proj = MVP_DroneDodge(User_DodgeRange)))
+		If (!RunAway && !LockedIn && (Proj = MVP_DroneDodge(User_DodgeRange,LastProj)))
 		{
+			LastProj = Proj;
 			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
 			Vector3 Where = Delta >= -2 ? (Vec2Angle(64,Angle+90),0) : (Vec2Angle(64,Angle-90),0);
 			Where.Z = GetZAt (Where.X,Where.Y,flags:GZF_ABSOLUTEPOS);
@@ -202,6 +205,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 			KAI_MoveTowards (DodgePos,DroneMove.DetourFactor,DroneMove.AngleLimit+4); //No zigzag.
 			Speed -= 2;
 			NewPosStepCount++;
+			LastProj = Null;
 			Return;
 		}
 		Else
@@ -360,6 +364,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 	//UInt8 Rev;
 	UInt8 RevFrame;
 	Vector3 DodgePos; //Where we're going to dodge a projectile (Hopefully).
+	Actor LastProj; //Don't just start dodging by going in a circle you fucking idiot.
 	KAI_Voice Yapper;
 	
 	Double User_DodgeRange; //From how far the drone dodges projectiles, this is pretty high by default to give it SOME time to drive away.
@@ -668,7 +673,6 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 	}
 }
 
-//IDEA: Make the drone find nearby cover and get behind it to fire from, like the marines do. I should probably add the cover seeking code to KAI for that one.
 Class MVP_BigGunDrone : MVP_GunDrone
 {
 	Default
@@ -706,7 +710,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		KAI_BaseVehicle.MaxPushHeight 128;
 		KAI_BaseVehicle.RetreatRange 320;
 		KAI_BaseVehicle.VehicleTurret "MVP_BigGunDroneTurret";
-		KAI_BaseVehicle.TurretOffsets (0,0,0);
+		KAI_BaseVehicle.TurretOffsets (-0.1,0,0);
 		Tag "MUGSC-4A"; //Mult-utila granda ŝpurita ĉasio 4 "Artileriisto"
 		ActiveSound "Vehicle/Drone/Tracks";
 		
@@ -747,6 +751,8 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		DroneMove.CornerDiv = 8;
 		DroneMove.ObstacleDist = Radius+192;
 		DroneMove.ObstacleSlices = 12;
+		
+		CoverPos = (Double.NaN,Double.NaN,Double.NaN);
 		
 		A_StartSound ("Vehicle/Drone/Motor",CHAN_VOICE,CHANF_LOOPING,1,2.25);
 		If (!Turret) ThreatLevel = THREAT_NONE;
@@ -814,6 +820,37 @@ Class MVP_BigGunDrone : MVP_GunDrone
 				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_MEDIUM)
 					Hazards.Delete(I);
 			}
+		}
+		
+		//Cover located, go there
+		If (!KAI_Math.IsEmptyVector3(CoverPos) && !User_NoCover)
+		{
+			If (!KAI_Math.IsEmptyVector3 (CoverPos) && NewPosStepCount <= 128 && Level.Vec3Diff (Pos,CoverPos).Length() >= 24)
+			{//console.printf ("distance to cover is %.2f",Level.Vec3Diff (Pos,DodgePos).Length());
+				//Speed += 2;
+				KAI_MoveTowards (CoverPos,DroneMove.DetourFactor/2,DroneMove.AngleLimit); //No zigzag.
+				//Speed -= 2;
+				KAI_DebugPointDelay.KAI_TempPointSpawn(coverpos,8);
+				NewPosStepCount++;
+				Return;
+			}
+			Else
+			{
+				CoverPos = (Double.NaN,Double.NaN,Double.NaN);
+				DodgePos = (Double.NaN,Double.NaN,Double.NaN);
+				NewPosStepCount = 0;
+				InCover = True; //We are now in cover.
+				A_FaceTarget();
+				A_StopSound (CHAN_BODY);
+				SetStateLabel ("Idle.Cover");
+				Return;
+			}
+		}
+		Else If (!User_NoCover && Turret)
+		{
+			//Find nearby cover.
+			Double TurOfs = MVP_BigGunDroneTurret(Turret) ? MVP_BigGunDroneTurret(Turret).FireOfs.Z : 0;
+			CoverPos = KAI_FindNearbyCover(384,Radius*2,Turret.Target,128,False,(72,192),(Height+TurOfs,Height),from:Turret);
 		}
 		
 		//Reverse from nearest enemy. Reverse because well, they're close.
@@ -884,13 +921,15 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		
 		//Dodge projectiles by driving out of the way if not already busy.
 		Actor Proj;
-		If (!RunAway && !LockedIn && (Proj = MVP_DroneDodge(User_DodgeRange)))
+		If (!RunAway && KAI_Math.IsEmptyVector3 (DodgePos) && !LockedIn && (Proj = MVP_DroneDodge(User_DodgeRange,LastProj)))
 		{
+			LastProj = Proj;
 			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
 			Vector3 Where = Delta >= -2 ? (Vec2Angle(128,Angle+90),0) : (Vec2Angle(128,Angle-90),0);
 			Where.Z = GetZAt (Where.X,Where.Y,flags:GZF_ABSOLUTEPOS);
 			[B, DodgePos] = IsPosReachable (DodgePos);
 			DodgePos = B ? Where : DodgePos; //We can just go where we want, do that. If not, go to the closest position IsPosReachable() returned.
+			spawn ("kai_debugpoint",dodgepos);
 		}
 		
 		//Dodge projectile, if not busy already. So if we're already running from something else, stop the dodge.
@@ -906,6 +945,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		{
 			DodgePos = (Double.NaN,Double.NaN,Double.NaN);
 			NewPosStepCount = 0;
+			LastProj = Null;
 		}
 		
 		//Run away from threat, be it the target itself, a hazard, or a nearby enemy./
@@ -976,6 +1016,10 @@ Class MVP_BigGunDrone : MVP_GunDrone
 	}
 	
 	UInt8 ReverseSteps;
+	Bool InCover;
+	Vector3 CoverPos;
+	
+	Bool User_NoCover;
 	
 	States
 	{
@@ -983,6 +1027,45 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			TNT1 A 0 A_StartSound (ActiveSound,flags:CHANF_LOOPING,0.5,1.75);
 			PND0 ABCD 2 MVP_BigGunDroneChase();
 			Goto See+1;
+		Idle.Cover:
+			PND0 A 1 //NOTE: We need this delay or otherwise the cover loop quits regardless.
+			{
+				If (IsDead (Target))
+				{
+					Target = Null;
+					LookForPlayers (True);
+				}
+				//KAI_Chase_Retarget(CHF_DONTI,True);
+				
+				If (!Turret || User_NoCover)
+					Return SeeState;
+				
+				//Also relook for the turret.
+				If (!Turret.Target || IsDead (Turret.Target))
+				{
+					Turret.A_ClearTarget();
+					Turret.LookForPlayers (True); //Look for a new target.
+				}
+				
+				Return State (Null);
+			}
+			PND0 A 1
+			{
+				//Stop hiding if the target is behind the cover, another enemy is too close, or if there's no target left.
+				Double TurOfs = MVP_BigGunDroneTurret(Turret) ? MVP_BigGunDroneTurret(Turret).FireOfs.Z : 0;console.printf ("target %p",target);
+				InCover = KAI_HasCoverHere(Target,72,True,(72,192),(Height+MVP_BigGunDroneTurret(Turret).FireOfs.Z,Height),from:Turret);
+				NearestEnemy = FindNearestEnemy (128);
+				
+				If (!InCover || NearestEnemy || !Target && !Turret.Target)
+				{
+					DodgePos = (Double.NaN,Double.NaN,Double.NaN);
+					CoverPos = (Double.NaN,Double.NaN,Double.NaN);
+					Return SeeState;
+				}
+				
+				Return State(Null);
+			}
+			Loop;
 		Death:
 			PNDD A -1
 			{
@@ -1128,8 +1211,12 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 	Override Vector3 GetAttackLocation()
 	{
 		FLineTraceData Where;
-		Double Ang = !IsInState (Self,"Fire.Rocket") ? Angle : AngleTo (Target);
-		Double Pit = !IsInState (Self,"Fire.Rocket") ? Pitch : PitchTo (Target,16,GetFAFPosOffset(Target,TurretAimPos));
+		Double Ang;
+		If (Target) Ang = !IsInState (Self,"Fire.Rocket") ? Angle : AngleTo (Target);
+		Else Ang = Angle;
+		Double Pit;
+		If (Target) Pit = !IsInState (Self,"Fire.Rocket") ? Pitch : PitchTo (Target,16,GetFAFPosOffset(Target,TurretAimPos));
+		Else Pit = Pitch;
 		LineTrace (Ang,8192*2,Pit,TRF_BLOCKSELF,VertOffset,data:Where);
 		Return Where.HitLocation;
 	}
@@ -1203,11 +1290,13 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		}
 		
 		Double Dist;
+		Double RocketDist = (MVP_BigGunDrone(Master) && MVP_BigGunDrone(Master).InCover) ? 6144 : 4096;
 		//Check if we should fire rockets. As long as it's not too far for the rockets or the LOF for them is bad.
-		//If (Target && (Dist = Distance3D (Target)) <= 4096 && RocketDelay <= 0 && KAI_TurretCheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,(0,16,16),TLOF_OnlyAhead,"MVP_70mmRocket"))
+		If (Target && (Dist = Distance3D (Target)) <= 4096 && RocketDelay <= 0 && KAI_TurretCheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,(0,16,16),TLOF_OnlyAhead,"MVP_70mmRocket"))
 		{
 			Int Chance = AttackByQuantity (Target,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,countorigin:True);
-			Chance += Random (0,32);chance = 9999999999;
+			Chance += Random (0,32);
+			If (MVP_BigGunDrone(Master) && MVP_BigGunDrone(Master).InCover) Chance += 25;
 			If (Random (0,512) < 4) Chance += 60; //Fuck it.
 			If (Master && Master.Health <= Master.WoundHealth) Chance += 25;
 			If (TargetLevel >= ThreatLevelThreshold) Chance += 40;
@@ -1319,7 +1408,12 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		}
 		[B, Proj] = A_SpawnItemEx ("MVP_BulletCasing",0,-6,16,FRandom(4,-4),FRandom(4,8),FRandom(3,8));
 		If (Master) //Recoil the drone back.
-			Master.Vel += KAI_Math.AngleToVector3D (Angle,Pitch,-0.25);
+		{
+			If (!(MVP_BigGunDrone(Master) && MVP_BigGunDrone(Master).InCover))
+				Master.Vel += KAI_Math.AngleToVector3D (Angle,Pitch,-0.25);
+			Else
+				Master.Vel += KAI_Math.AngleToVector3D (Angle,Pitch,-0.1);
+		}
 		Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
 		Frame = UpdateTurretElevation (9,5,7,7); //J, F, H, H
 	}
@@ -1344,6 +1438,8 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 				DoCombatTraverse();
 				RotateToVehicle();
 				MVP_GunDroneTurretChase();
+				If (Target && Master && KAI_Actor(Master) && !Master.Target) //Hull has no target, but we do.
+					KAI_Actor(Master).KAI_ShareTarget (Self,Target);
 				UpdateTurretSnapTimer();
 				Frame = UpdateTurretElevation (8,4,6,6); //I, E, G, G
 			}

@@ -901,6 +901,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 				Boom.Target = Self; //We exploded, this explosion is ours.
 				bFloatBob = False;
 				A_StopSound (CHAN_BODY);
+				A_StopSound (CHAN_VOICE);
 			}
 			PND2 Y 1 //Falling loop.
 			{
