@@ -122,21 +122,30 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		//I mean, autocannon shells are also fired at a higher muzzle velocity than bullets, yet the autocannon projectile is SLOWER instead of faster, but whatever.
 		FastSpeed 220;
 		DamageFunction (Random (10,20)); //The marines' rifles do 6 to 10 damage, so this is about double that. Why ? I don't fucking know, let's just say the marines use 5.56mm rounds or something.
-		XScale 0.1;
-		YScale 0.083333; //0.1 / 1.2
+		XScale 0.15;
+		YScale 0.125; //0.15 / 1.2
 		ProjectileKickback 16;
 		Decal "BulletChip";
 		DamageType "RifleBullet";
 		Obituary "%o found out that rifle rounds are more dangerous than in the movies";
 		BounceSound "SFX/BulletRicochet";
-		KAI_BaseProjectile.TrailSprite "MVP_Tracer";
-		KAI_BaseProjectile.InitialTrailsSkipped 2;
-		KAI_BaseProjectile.MaxTrails 64;
-		KAI_BaseProjectile.TrailLineSpacing 1;
 		+KAI_BaseProjectile.Deflectable;
 	}
 	
 	Bool HitLiquid;
+	KAI_TracerActor MTrail;
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		MTrail = KAI_TracerActor(Spawn ("MVP_ModelTracer",Pos));
+		KAI_TracerActor(MTrail).WarpOffsets = (-18,0,0);
+		MTrail.Master = MTrail.Target = Self;
+		MTrail.Angle = Angle;
+		MTrail.Pitch = Pitch;
+		MTrail.Scale *= 0.5;
+	}
 	
 	Void DoRifleSplash (Int LiquidType, Bool UpsideDown = False)
 	{
@@ -147,13 +156,6 @@ Class MVP_RifleBullet : MVP_BaseProjectile
 		Double Size = FRandom (0.2,0.3);
 		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
 		Splash.bXFlip = Random (False,True);
-	}
-	
-	Override Void TrailSpawn (VisualThinker Trail)
-	{
-		Super.TrailSpawn (Trail);
-		
-		Trail.Scale.X = Trail.Scale.Y = 0.25;
 	}
 	
 	//Mom, can we have MVP_50CalBullet ?
@@ -200,12 +202,23 @@ Class MVP_SmallRifleBullet : MVP_RifleBullet
 		Speed 170;
 		FastSpeed 200;
 		DamageFunction (Random (8,15));
-		XScale 0.2;
-		YScale 0.166666; //0.2 / 1.2
 		ProjectileKickback 10;
+		XScale 0.1;
+		YScale 0.083333; //0.1 / 1.2
 		Decal "BulletChip";
 		DamageType "SmallRifleBullet";
 		+KAI_BaseProjectile.Deflectable;
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		If (MTrail)
+		{
+			MTrail.Scale *= 0.65;
+			KAI_TracerActor(MTrail).WarpOffsets = (-12,0,0);
+		}
 	}
 }
 

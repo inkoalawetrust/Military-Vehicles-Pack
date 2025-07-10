@@ -109,6 +109,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		KAI_Chase_PreChecks();
 		If (IsDead (Target)) Target = Null;
 		KAI_Chase_Retarget(0,True);
+		If (!Target && Turret) KAI_ShareTarget (Turret,Turret.Target);
 		
 		Int KMTFlags = KMT_ZIGZAG;
 		
@@ -474,7 +475,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 		KAI_BaseTurret.FastAttackSpeed 200;
 		KAI_BaseTurret.CombatAngleTurnRate 60;
 		KAI_BaseTurret.CombatPitchTurnRate 60;
-		Obituary "%o was shot by a drone";
+		Obituary "%o was killed by an RC car";
 		KAI_BaseTurret.TurnSound "Vehicle/Drone/Turret";
 		
 		Tag "MUSC-4A Gun"; //Mult-utila ŝpurita ĉasio 4 "Artileriisto"
@@ -534,6 +535,13 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 		}
 	}
 	
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		If (Victim && Distance3D (Victim) >= 4096)
+			Return "%o was sniped by an RC car";
+		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
+	}
+	
 	Override Vector3 GetAttackLocation()
 	{
 		FLineTraceData Where;
@@ -567,6 +575,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 		KAI_Chase_PreChecks();
 		If (IsDead (Target)) Target = Null;
 		KAI_Chase_Retarget(0,True);
+		If (!Target && KAI_Actor(Master)) KAI_Actor(Master).KAI_ShareTarget (Master,Master.Target);
 		
 		ShouldAttack();
 		HandleChaseTimer();
@@ -673,6 +682,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 	}
 }
 
+//MAYDO: Give it headlights?
 Class MVP_BigGunDrone : MVP_GunDrone
 {
 	Default
@@ -776,6 +786,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		KAI_Chase_PreChecks();
 		If (IsDead (Target)) Target = Null;
 		KAI_Chase_Retarget(0,True);
+		If (!Target && Turret) KAI_ShareTarget (Turret,Turret.Target);
 		
 		Bool MovedAlready; Bool B;
 		Int KMTFlags = KMT_ZIGZAG;
@@ -855,6 +866,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		
 		//Reverse from nearest enemy. Reverse because well, they're close.
 		NearestEnemy = FindNearestEnemy (256);
+		
 		If (NearestEnemy)
 		{
 			RunAway = True;
@@ -1185,6 +1197,17 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		KAI_Actor.DeflectDamageFactor 0.6;
 		KAI_Actor.DeflectSlowDownFactor 0.75;
 		KAI_Actor.DeflectionFunnel (10,-10,10,-10);
+	}
+	
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		If (FireMode == MODE_SINGLE) //Was killed while the turret is in single fire mode.
+			Return "%o was sniped by ground drone";
+		
+		If (MOD == "Explosive")
+			Return "%o was wondering what that tube on the side of the robot was";
+		
+		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
 	}
 	
 	Override Void PostBeginPlay()

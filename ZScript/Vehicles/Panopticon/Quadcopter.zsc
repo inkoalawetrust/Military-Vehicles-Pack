@@ -987,6 +987,8 @@ Mixin Class MVP_DroneFunctions
 			{
 				ForEach (Mem : Grp.Members)
 				{
+					If (Mem == Self)
+						Continue;
 					//Group member that can attack (Presumably another drone).
 					If (Mem.Target && (Mem.MissileState || Mem.MeleeState) && !IsDead(Mem) && Mem.Target != Goal)
 					{
@@ -997,7 +999,7 @@ Mixin Class MVP_DroneFunctions
 					Else If (KAI_BaseVehicle(Mem))
 					{
 						Let Tur = KAI_BaseVehicle(Mem).Turret;
-						If (Tur && Tur.Target && !IsDead(Actor(Tur)) && Mem.Target != Goal)
+						If (Tur && Tur.Master != Self && Tur.Master != Whose && Tur.Target && !IsDead(Actor(Tur)) && Mem.Target != Goal)
 						{
 							console.printf ("%p (%s) is already targeting %p",Tur,tur.getclassname(),tur.target);
 							Taken.Push (Tur.Target);

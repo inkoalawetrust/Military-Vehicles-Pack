@@ -351,6 +351,29 @@ Class MVP_Tracer : KAI_Tracer
 	}
 }
 
+Class MVP_ModelTracer : KAI_TracerActor
+{
+	Default
+	{
+		//Alpha 0.95;
+		RenderStyle "Add";
+		+NeverRespawn;
+		+Bright;
+	}
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (!IsFrozen() && Master && GetAge() % 2 == 0)
+			{Angle = Master.Angle; Pitch = Master.Pitch;}
+	}
+	States
+	{
+		Spawn:
+			MVP1 B -1;
+			Stop;
+	}
+}
+
 //Note: This is a pistol that fires a specified line of fire raycast. Used to debug if the LineTracer in question returns BadLOF properly.
 Class MVP_LOFDebugGun : Pistol
 {
