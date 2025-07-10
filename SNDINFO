@@ -316,7 +316,7 @@ $Random MVPMarine/Death
 	
 	$Limit Vehicle/Drone/Buzz 0
 	$Limit Vehicle/Drone/Beep 8
-	$Limit Vehicle/Drone/Beep 0
+	$Limit Vehicle/Drone/Fly 0
 	$Limit Vehicle/Drone/FireGyro 0
 	
 	Vehicle/Drone/Speak1 "Sounds/Voices/Panopticon/speech.ogg"

@@ -20,7 +20,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		MaxStepHeight 8;
 		//MaxDropoffHeight 24; //Yes they can drive into pits they can't get out of and I think I'll keep it that way lmao.
 		Mass 40;
-		FriendlySeeBlocks 32;
+		FriendlySeeBlocks 48;
 		MaxTargetRange 8192;
 		RipLevelMin 2;
 		//+AvoidMelee; //We already do this.
@@ -453,7 +453,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 		Height 12;
 		DeathHeight 12;
 		Mass 20;
-		FriendlySeeBlocks 64;
+		FriendlySeeBlocks 48;
 		MaxTargetRange 8192;
 		RipLevelMin 2;
 		//+AvoidMelee; //We already do this.
@@ -1313,9 +1313,9 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		}
 		
 		Double Dist;
-		Double RocketDist = (MVP_BigGunDrone(Master) && MVP_BigGunDrone(Master).InCover) ? 6144 : 4096;
+		Double RocketDist = (MVP_BigGunDrone(Master) && MVP_BigGunDrone(Master).InCover) ? 8192 : 6144;
 		//Check if we should fire rockets. As long as it's not too far for the rockets or the LOF for them is bad.
-		If (Target && (Dist = Distance3D (Target)) <= 4096 && RocketDelay <= 0 && KAI_TurretCheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,(0,16,16),TLOF_OnlyAhead,"MVP_70mmRocket"))
+		If (Target && (Dist = Distance3D (Target)) <= RocketDist && RocketDelay <= 0 && KAI_TurretCheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,(0,16,16),TLOF_OnlyAhead,"MVP_70mmRocket"))
 		{
 			Int Chance = AttackByQuantity (Target,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,countorigin:True);
 			Chance += Random (0,32);
@@ -1330,9 +1330,7 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			If (!ImmuneToBlasts && Random (0,255) < 128)
 				Chance += 80;
 			
-			Int RNG = Random (80,180);
-			console.printf ("ROCKET CHANCE %d, RNG %d",chance,rng);
-			If (Chance >= RNG)
+			If (Chance >= Random (80,180))
 			{
 				FireMode = MODE_ROCKET;
 				SmokeCounter = 3;
@@ -1519,7 +1517,13 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			}
 			Goto See;
 		Fire.Rocket:
-			PND0 ################## 1 {Frame = UpdateTurretElevation (8,4,6,6); /*I, E, G, G*/} //Adjust for a bit.
+			PND0 # 0 A_StartSound ("Vehicle/Drone/Beep",CHAN_VOICE,CHANF_LOOPING); 
+			PND0 ################## 1
+			{
+				Frame = UpdateTurretElevation (8,4,6,6); /*I, E, G, G*/ //Adjust for a bit.
+				HazardInfo.EmitHazard (Self,128,HazardInfo.HAZARD_ACTOR,HazardInfo.HAZARD_MEDIUM,0,RocketHazard.CustomTags);
+			}
+			PND0 # 0 A_StopSound (CHAN_VOICE);
 			PND0 # 8 MVP_BigGunDroneShoot();
 			PND0 # 0
 			{
