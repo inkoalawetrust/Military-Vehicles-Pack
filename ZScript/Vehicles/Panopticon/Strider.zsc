@@ -1,0 +1,126 @@
+//TODO: Oh yeah, this should probably be a humanoid for all the jumping and crawling.
+
+//HACK: Fucking christ shut up about overriding Tick() you bastard.
+Class MVP_Humanoid : KAI_Humanoid
+{
+	Mixin MVP_DamageSmokeHandling;
+	//Mixin MVP_SharedFunctions;
+	//Mixin MVP_MarineFunctions;
+	Mixin MVP_GenericShit;
+}
+
+Class MVP_Strider : MVP_Humanoid
+{
+	Default
+	{
+		//$Title Strider
+		//$Category Vehicles/Panopticon
+		//$Sprite PNS3A1
+		Mass 100;
+		Health 600;
+		XScale 0.8;
+		YScale 0.666666; //0.8 / 1.2
+		Radius 24;
+		Height 88;
+		RipLevelMin 3;
+		Speed 8;
+		FriendlySeeBlocks 64;
+		MeleeRange 64;
+		Tag "R-11-B Paŝegulo";
+		
+		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
+		/*KAI_BaseVehicle.CrushDamage 8;
+		KAI_BaseVehicle.MaxCrushRadius 32;
+		KAI_BaseVehicle.MaxCrushHeight 32;
+		KAI_BaseVehicle.MaxCorpseRadius 32;
+		KAI_BaseVehicle.MaxCorpseHeight 32;*/
+		
+		//Damage factors that act as the vehicles "armor".
+		DamageFactor 0.75; //Generic damage factor for all damage.
+		DamageFactor "Melee", 0.3;
+		DamageFactor "Electric", 0.4;
+		DamageFactor "ExplosiveImpact", 0.7;
+		DamageFactor "Explosion", 0.7;
+		DamageFactor "Explosive", 0.7;
+		DamageFactor "Grenade", 0.7;
+		DamageFactor "HitScan", 0.7; //The generic damage type of hitscan attacks.
+		DamageFactor "Shrapnel", 0.4;
+		DamageFactor "Fire", 0.6;
+		DamageFactor "Crush", 1.3;
+		DamageFactor "Disintegrate", 1.5;
+		DamageFactor "Railgun", 2.0;
+		DamageFactor "Falling", 1.25;
+		
+		//Vehicle damage factors
+		DamageFactor "Autocannon", 0.8;
+		DamageFactor "LargeRifleBullet", 0.9;
+		DamageFactor "RifleBullet", 0.8;
+		DamageFactor "SmallRifleBullet", 0.6;
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		StriderMove.DetourFactor = 1.0;
+		StriderMove.Attempts = 32;
+		StriderMove.MaxSteps = 72;
+		StriderMove.RunRad = 394;
+		StriderMove.AngleLimit = 25;
+		
+		//DodgePos = (Double.NaN,Double.NaN,Double.NaN);
+		
+		A_StartSound ("Vehicle/Drone/Motor",CHAN_VOICE,CHANF_LOOPING,1,ATTN_STATIC);
+		If (KAIHandler) Yapper = KAIHandler.GetNPCVoice ("Panopticon");
+	}
+	
+	Protected Double LastTickFallVel;
+	
+	Override Void Tick()
+	{
+		If (Vel.Z <= 0) LastTickFallVel = Abs(Vel.Z);
+		Else LastTickFallVel = 0;
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		
+		//Run fall impact code.
+		//HACK: Yes this is a copy from KAI_BaseVehicle because it's like, the only feature 
+		If (Vel.Z ~== 0 && LastTickFallVel && LastTickFallVel >= 10)
+		{
+			//Get victims under the vehicle.
+			Array <Actor> IMFALLINGOVERHERE;
+			Vector3 RealPos = Pos;
+			SetOrigin (Pos.PlusZ(-LastTickFallVel),False); //Move down the vehicle as if it never stopped, to check for blocking actors in the way.
+			BlockThingsIterator Blockers = BlockThingsIterator.Create(Self);
+			While (Blockers.Next())
+			{
+				//Blocking actor found.
+				If (Blockers.Thing && Blockers.Thing != Self && IsCollidable(Blockers.Thing,Self) && CheckHitboxIntersection(Self,Blockers.Thing))
+					IMFALLINGOVERHERE.Push(Blockers.Thing);
+			}
+			SetOrigin (RealPos,False);
+			//OnGroundImpact(LastTickFallVel, IMFALLINGOVERHERE);
+			LastTickFallVel = 0;
+		}
+	}
+	
+	KAIMoveParams StriderMove;
+	KAI_Voice Yapper;
+	
+	States
+	{
+		Spawn:
+			PNS3 A 1 KAI_Look ();
+			Loop;
+		See:
+			PNS0 ABCDEF 4
+			{
+				If (Frame == 1 || Frame == 4) //Play stomp sound on frames where it steps on the ground.
+					A_StartSound ("Vehicle/Strider/Stomp",volume:FRandom(0.025,0.12));
+				
+				KAI_Wander (32,384,anglelimit:25);
+			}
+			Loop;
+	}
+}

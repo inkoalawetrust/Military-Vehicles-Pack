@@ -809,7 +809,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		Bool BigThreat = (ThreatLevelThreshold != THREAT_ASSESS && TargetLevel >= ThreatLevelThreshold); //Target's threat level is over the threshold.
 		
 		//Avoid melee attackers.
-		If (!LockedIn && !RunAway && Target && (bAvoidMelee || Level.Info.Flags3 & LEVEL3_AVOIDMELEE))
+		/*If (!LockedIn && !RunAway && Target && (bAvoidMelee || Level.Info.Flags3 & LEVEL3_AVOIDMELEE))
 		{
 			Bool IsMeleeAttacker;
 			If (!Target.Player && Target.MeleeState) //Melee NPC
@@ -822,7 +822,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			
 			RunAway = IsMeleeAttacker;
 			ReverseSteps = Random (2,8);
-		}
+		}*/
 		
 		If (Health > WoundHealth) //Ignore weak hazards if not weak yourself.
 		{

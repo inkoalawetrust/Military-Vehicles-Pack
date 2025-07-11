@@ -91,6 +91,133 @@ Mixin Class MVP_DamageSmokeHandling
 	}
 }
 
+//HACK: Generic copied stuff for not-vehicle vehicle things like the Strider.
+Mixin Class MVP_GenericShit
+{
+	String User_DefaultOrder; //The default order the vehicle follows upon spawning. It will not move upon spawning by default.
+	Bool User_SpawnMoving; //The vehicle will fully obey its' default order upon spawning. i.e wandering immediately on map start
+	Int DefaultOrder; //The default order mode.
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		If (!bFriendly) Species = 'MilitaryHostile';
+		
+		If ((!User_DefaultOrder || User_DefaultOrder ~== "" || User_DefaultOrder ~== " ") && bFriendly)
+		{
+			//This tries to pick a random visible player for the vehicle to follow, if no friendly players are in sight, the vehicle will wander instead.
+			Array <PlayerPawn> VisibleFriends;
+			//Find all visible players friendly to you.
+			For (Int I = 0; I < MAXPLAYERS; I++)
+			{
+				If (!PlayerInGame[I]) Continue;
+				
+				If (CheckSight (Players[I].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+					VisibleFriends.Push (Players[I].Mo);
+			}
+			
+			//Found at least one visible friendly player to follow.
+			If (VisibleFriends.Size())
+			{
+				SetFriendPlayer (VisibleFriends[Random (0, VisibleFriends.Size() - 1)].Player); //Randomly pick a visible friend to follow.
+				SetNPCOrder (ORDER_FOLLOW);
+				DefaultOrder = Order_Follow;
+			}
+			//No friendplayer, or they are out of sight
+			Else If (!FriendPlayer || FriendPlayer && !CheckSight (Players[FriendPlayer].Mo, SF_IGNOREVISIBILITY|SF_IGNOREWATERBOUNDARY))
+			{
+				SetNPCOrder (ORDER_WANDER);
+				DefaultOrder = ORDER_WANDER;
+				bDontFollowPlayers = True;
+			}
+		}
+		Else If (User_DefaultOrder ~== "Follow")
+		{
+			SetNPCOrder (ORDER_FOLLOW);
+			DefaultOrder = ORDER_FOLLOW;
+		}
+		Else If (User_DefaultOrder ~== "Wander")
+		{
+			SetNPCOrder (ORDER_WANDER);
+			DefaultOrder = ORDER_WANDER;
+			bDontFollowPlayers = True;
+		}
+		Else If (User_DefaultOrder ~== "Stay" || User_DefaultOrder ~== "Stand")
+		{
+			SetNPCOrder (ORDER_STAY);
+			DefaultOrder = ORDER_STAY;
+		}
+	}
+	
+	Override Bool IsActorHostile (Actor Other)
+	{
+		Return (Other && (IsHostile (Other) || !IsDead(Other) && IsTargetingAllies (Self, Other)));
+	}
+	
+	//High quality marine code rip.
+	Override Void AfterOrderChange (NPCOrders OldOrder, Bool Increment, Actor Commander, Bool IgnoreAllegiance, Bool FromACS)
+	{
+		//Have m̶a̶r̶i̶n̶e̶ vehicle idle to follow whatever actor, or if they are in the spawn state and set to wander aimlessly.
+		If ((User_SpawnMoving || GetAge() >= 1) && (CurrentOrder == ORDER_FOLLOW || CurrentOrder == ORDER_WANDER) && IsInState (Self,"Spawn"))
+			SetStateLabel ("Idle");
+		
+		//Make all actors in the groups you are follow your order, if you are leading.
+		ForEach (Group : Groups)
+		{
+			If (Group.Leader != Self) Continue;
+			ForEach (Member : Group.Members)
+			{
+				If (Member Is "KAI_Actor" && Member != Self)
+				{
+					If (KAI_DebugPrintMessages) console.printf ("setting order to %d for %p (%s)",currentorder,member,member.getclassname());
+					KAI_Actor(Member).SetNPCOrder (CurrentOrder,False,Self);
+					If (Member Is "MVP_BaseVehicle")
+					{
+						If ((KAI_Actor(Member).CurrentOrder == ORDER_FOLLOW || KAI_Actor(Member).CurrentOrder == ORDER_WANDER) && IsInState (Member,"Spawn"))
+							Member.SetStateLabel ("Idle");
+					}
+				}
+			}
+		}
+	}
+	
+	//MVP projectile deflections add slight variation to the parameters. Alongside playing deflection sounds and sparks.
+	Override Vector4 OnProjectileDeflect (Actor Projectile, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
+	{
+		Vector4 Ret = Super.OnProjectileDeflect (Projectile, FailChance, DamFac, VelFac, Funnel);
+		If (FailChance >= DeflectionChance) //Not happening.
+			Return Ret;
+		
+		VelFac *= FRandom (0.8,1.0);
+		DamFac *= FRandom (0.8,1.0);
+		Ret.XY *= FRandom (0.8,1.2);
+		Double VertRNG = FRandom (0.8,1.2);
+		Ret.Z *= VertRNG; Ret.W = VertRNG;
+		//MVP Specific effects.
+		TextureID NullTex;
+		For (Int I = 0; I < 24; I++)
+		{
+			Projectile.A_SpawnParticleEx (
+			"yellow",
+			NullTex,
+			STYLE_Add,
+			lifetime:23,
+			size:3,
+			xoff:FRandom (6,-6),
+			yoff:FRandom (6,-6),
+			zoff:FRandom (6,-6),
+			velx:FRandom (1,-1),
+			vely:FRandom (1,-1),
+			velz:FRandom (1,3),
+			accelz: FRandom (-0.1,-0.25)
+			);
+		}
+		A_StartSound (Projectile.BounceSound,flags:CHANF_OVERLAP,1,0.9); //Ricochet sound, uses the BounceSound property, naturally.
+		
+		Return Ret;
+	}
+}
+
 Mixin Class MVP_SharedFunctions
 {
 	String User_DefaultOrder; //The default order the vehicle follows upon spawning. It will not move upon spawning by default.
@@ -193,73 +320,6 @@ Mixin Class MVP_SharedFunctions
 					}
 				}
 			}
-		}
-	}
-	
-	//IDEA: Liquid splashes.
-	Override Void OnGroundImpact (Double ImpactVel, Array<Actor> InTheWay)
-	{
-		Super.OnGroundImpact(ImpactVel,InTheWay);
-		
-		//Get the total mass of the vehicle and all of its' turrets..
-		Int TotalMass = Mass;
-		KAI_BaseVehicle Cur = Turret;
-		KAI_BaseVehicle Prev;
-		Int Safety;
-		Do
-		{
-			If (!Cur)
-				Break;
-			TotalMass += Cur.Mass;
-			Prev = Cur;
-			Cur = Cur.Turret;
-			
-			If (Safety++ >= 10000) //Bad news if I make a vehicle with 10000 turrets on it.
-				Break;
-		}
-		While (Cur && Prev != Cur);
-		
-		//No actors that we were stopped by, so we probably hit level geometry.
-		If (!InTheWay.Size())
-		{
-			Double Force = TotalMass * ImpactVel;
-			//Impact sound
-			If (TotalMass >= 100)
-				A_StartSound ("SFX/MetalCrash",CHAN_AUTO,0,KAI_Math.LinearMap(Force,2500,2500000,0.075,1.0),0.65);
-			Else
-				A_StartSound ("SFX/MetalHit",CHAN_AUTO,volume:KAI_Math.LinearMap(Force,25,600,0.05,1));
-			//Impact quake
-			Double QuakeForce = KAI_Math.LinearMap(Force,50000,2500000,0.1,4.0);
-			Double QuakeRange = KAI_Math.LinearMap(Force,50000,2500000,256,1024);
-			Double QuakeThrust = KAI_Math.LinearMap(Force,50000,2500000,0.01,0.5);
-			A_QuakeEx (QuakeForce/4,QuakeForce/4,QuakeForce/1,50,QuakeRange,QuakeRange,flags:QF_SCALEDOWN|QF_GROUNDONLY|QF_AFFECTACTORS|QF_SHAKEONLY,
-			rollintensity:QuakeForce,thrustmultiplier:QuakeThrust);
-			//Impact dust
-			Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
-			//Pass parameters to spawner.
-			Duster.RadiusDamageFactor = 0;
-			Duster.ReactionTime = KAI_Math.LinearMap(Force,100,2500000,1,256);
-			Duster.Threshold = Radius*1.55;
-		}
-		//We hit some actors, crush them and lose some fall speed in exchange (Very realistic and sophisticated physics simulation).
-		Else
-		{
-			Double PostCrushVel = ImpactVel;
-			//Squish
-			Double VelReduction = KAI_Math.LinearMap (TotalMass,10,25000,10,0.25);
-			VelReduction = Clamp (VelReduction,0.25,INT.MAX);
-			ForEach (Bug : InTheWay)
-			{
-				Double Force = TotalMass * PostCrushVel;
-				Int ImpactDamage = Force/300;
-				Bug.DamageMobj (Self,Self,ImpactDamage,'Crush');
-				PostCrushVel -= VelReduction*(Bug.Mass/100); //Reduce fall speed for every bug squashed before applying it back in.
-				PostCrushVel = Clamp (PostCrushVel,0,INT.MAX);
-				//Play impact sound on each victim based on impact velocity.
-				Bug.A_StartSound (Bug.bNoBlood ? "SFX/MetalHit" : "SFX/FleshHit",CHAN_AUTO,CHANF_OVERLAP,KAI_Math.LinearMap(Force,100,2500000,0.075,1.0),0.65);
-			}
-			
-			Vel.Z = -PostCrushVel;
 		}
 	}
 	

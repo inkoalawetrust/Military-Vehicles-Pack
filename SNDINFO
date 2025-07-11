@@ -339,3 +339,34 @@ $Random MVPMarine/Death
 	$Limit Vehicle/Drone/Speak8 0
 	$Limit Vehicle/Drone/Speak9 0
 	$Limit Vehicle/Drone/Speak10 0
+	
+	//Strider drone
+	Vehicle/Strider/Motor1 "Sounds/Vehicles/Drones/Strider/StrMotor1.ogg"
+	Vehicle/Strider/Motor2 "Sounds/Vehicles/Drones/Strider/StrMotor2.ogg"
+	Vehicle/Strider/Motor3 "Sounds/Vehicles/Drones/Strider/StrMotor3.ogg"
+	Vehicle/Strider/Motor4 "Sounds/Vehicles/Drones/Strider/StrMotor4.ogg"
+	Vehicle/Strider/Motor5 "Sounds/Vehicles/Drones/Strider/StrMotor5.ogg"
+	Vehicle/Strider/Motor6 "Sounds/Vehicles/Drones/Strider/StrMotor6.ogg"
+	Vehicle/Strider/Stomp1 "Sounds/Vehicles/Drones/Strider/StrWalk1.ogg"
+	Vehicle/Strider/Stomp2 "Sounds/Vehicles/Drones/Strider/StrWalk2.ogg"
+	Vehicle/Strider/Stomp3 "Sounds/Vehicles/Drones/Strider/StrWalk3.ogg"
+	
+	$Random Vehicle/Strider/Motor
+	{
+		Vehicle/Strider/Motor1
+		Vehicle/Strider/Motor2
+		Vehicle/Strider/Motor3
+		Vehicle/Strider/Motor4
+		Vehicle/Strider/Motor5
+		Vehicle/Strider/Motor6
+	}
+	
+	$Random Vehicle/Strider/Stomp
+	{
+		Vehicle/Strider/Stomp1
+		Vehicle/Strider/Stomp2
+		Vehicle/Strider/Stomp3
+	}
+	
+	$Limit Vehicle/Strider/Motor 0
+	$Limit Vehicle/Strider/Stomp 0
