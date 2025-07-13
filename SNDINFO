@@ -350,6 +350,7 @@ $Random MVPMarine/Death
 	Vehicle/Strider/Stomp1 "Sounds/Vehicles/Drones/Strider/StrWalk1.ogg"
 	Vehicle/Strider/Stomp2 "Sounds/Vehicles/Drones/Strider/StrWalk2.ogg"
 	Vehicle/Strider/Stomp3 "Sounds/Vehicles/Drones/Strider/StrWalk3.ogg"
+	Vehicle/Strider/Alert "Sounds/Vehicles/Drones/Strider/StrAlert.ogg"
 	
 	$Random Vehicle/Strider/Motor
 	{
@@ -370,3 +371,4 @@ $Random MVPMarine/Death
 	
 	$Limit Vehicle/Strider/Motor 0
 	$Limit Vehicle/Strider/Stomp 0
+	$Limit Vehicle/Strider/Alert 0

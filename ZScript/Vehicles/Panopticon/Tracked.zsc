@@ -941,7 +941,6 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			Where.Z = GetZAt (Where.X,Where.Y,flags:GZF_ABSOLUTEPOS);
 			[B, DodgePos] = IsPosReachable (DodgePos);
 			DodgePos = B ? Where : DodgePos; //We can just go where we want, do that. If not, go to the closest position IsPosReachable() returned.
-			spawn ("kai_debugpoint",dodgepos);
 		}
 		
 		//Dodge projectile, if not busy already. So if we're already running from something else, stop the dodge.

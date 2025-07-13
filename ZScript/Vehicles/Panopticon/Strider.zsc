@@ -1,4 +1,10 @@
-//TODO: Oh yeah, this should probably be a humanoid for all the jumping and crawling.
+//IDEA:
+//Make a User_JumpRange for the maximum distance it can jump.
+//Make a function to get the dot product between its' facing direction and where it's velocity is taking it for changing the sprites dynamically in the jump loop.
+/*Make a jump function for going to arbitrary positions within range, and also a flag field that can be set for each jump and cleared on landing,
+such as a SJUMP_FACEDIRECTION flag for making it face the angle it's flying towards mid-flight when it's jumping to run away.*/
+
+//FIXME: The climb preperation frame (PNS1R1-8) has the foot spikes appearing over the top of the Striders' feet.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -18,16 +24,22 @@ Class MVP_Strider : MVP_Humanoid
 		//$Sprite PNS3A1
 		Mass 100;
 		Health 600;
+		WoundHealth 200;
 		XScale 0.8;
 		YScale 0.666666; //0.8 / 1.2
 		Radius 24;
 		Height 88;
+		DeathHeight 32;
 		RipLevelMin 3;
 		Speed 8;
 		FriendlySeeBlocks 64;
 		MeleeRange 64;
 		Tag "R-11-B Paŝegulo";
 		
+		+NoBlood;
+		+DontCorpse;
+		
+		MVP_Humanoid.SmokeDelay 4;
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		/*KAI_BaseVehicle.CrushDamage 8;
 		KAI_BaseVehicle.MaxCrushRadius 32;
@@ -70,7 +82,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		//DodgePos = (Double.NaN,Double.NaN,Double.NaN);
 		
-		A_StartSound ("Vehicle/Drone/Motor",CHAN_VOICE,CHANF_LOOPING,1,ATTN_STATIC);
+		A_StartSound ("Vehicle/Drone/Motor",CHAN_BODY,CHANF_LOOPING,1,ATTN_STATIC);
 		If (KAIHandler) Yapper = KAIHandler.GetNPCVoice ("Panopticon");
 	}
 	
@@ -105,8 +117,51 @@ Class MVP_Strider : MVP_Humanoid
 		}
 	}
 	
+	Override Bool SpawnDamageSmoke()
+	{
+		Bool Dead = IsDead(Self);
+		If (!DeathFlames && Dead) A_StopSound (CHAN_VOICE); //Flames stopped.
+		If (!DeathFlames && Dead|| !Super.SpawnDamageSmoke() && !Dead || bIceCorpse) Return False;
+		
+		If (DeathFlames)
+			DeathFlames--;
+		
+		If (Random (0,255) < 3)
+			Spawn ("MVP_Spark",Level.Vec3Offset(Pos,(FRandom (Radius,Radius),FRandom (Radius,-Radius),FRandom (0,Height))));
+		
+		console.printf ("got %d flames left",deathflames);
+		Int CardAng = GetNearestCardinalAngle(False);
+		Vector3 SpawnPos = !Dead ? Vec3Angle (32,CardAng) : Vec3Angle (32,CardAng+135);
+		If (IsInState (Self,"AltDeath"))
+			SpawnPos = Vec3Angle (48,CardAng-45);
+		
+		If (!Dead) //Spawn smoke behind engine
+			SpawnPos.XY = KAI_Math.RotateAround (Pos.XY,SpawnPos.XY,SpriteRotation);
+		Let FX = Dead ? "MVP_BrightFireParticle" : "MVP_DamageSmoke";
+		Int Times = !Dead ? 1 : 3;
+		For (Int I; I < Times; I++)
+		{
+			If (!Dead)
+				SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-16,16),FRandom(-16,16),72));
+			Else
+				SpawnPos = Level.Vec3Offset (SpawnPos,(FRandom(-16,16),FRandom(-16,16),24));
+			
+			For (Int I; I < 4; I++)
+			{
+				Actor Smoke = Spawn (FX,SpawnPos);
+				Smoke.Roll = FRandom(-180,180);
+				If (!Dead) Smoke.A_SetScale (FRandom(0.25,0.8));
+				Else Smoke.A_SetScale (FRandom(0.25,0.5));
+				Smoke.Vel.Z = !Dead ? FRandom (1,4) : FRandom (4,8);
+			}
+		}
+		
+		Return True;
+	}
+	
 	KAIMoveParams StriderMove;
 	KAI_Voice Yapper;
+	Int DeathFlames;
 	
 	States
 	{
@@ -117,10 +172,229 @@ Class MVP_Strider : MVP_Humanoid
 			PNS0 ABCDEF 4
 			{
 				If (Frame == 1 || Frame == 4) //Play stomp sound on frames where it steps on the ground.
-					A_StartSound ("Vehicle/Strider/Stomp",volume:FRandom(0.025,0.12));
+					A_StartSound ("Vehicle/Strider/Stomp",volume:FRandom(0.05,0.15));
 				
 				KAI_Wander (32,384,anglelimit:25);
 			}
 			Loop;
+		//TODO: Add running death state later.
+		Death:
+			PNS9 A 8
+			{
+				Tics = Random (4,10);
+				If (Random (1,4) == 2)
+					DeathFlames = Random (80,150)*10;
+				
+				A_StopSound (CHAN_BODY);
+				A_StartSound ("SFX/Fire",CHAN_VOICE,CHANF_LOOPING,0.5,1.1);
+				Actor Boom = Spawn ("MVP_Explosion",Pos.PlusZ(48));
+				Boom.Scale *= FRandom (1.8f,2.2f);
+				Boom.SetDamage (192);
+				Boom.MaxTargetRange = 256;
+				Boom.MeleeRange = Radius+64;
+				Boom.bNoGravity = True;
+				Boom.bGetOwner = True;
+				Boom.Target = Self; //Does it even matter if we're gone? Very philosophical.
+				
+				SmokeCounter = Random (8,16);
+				Bool B; Actor Debris;
+				For (Int I; I <= SmokeCounter; I++)
+				{
+					[B, Debris] = A_SpawnItemEx ("MVP_DiCokkaDebris",FRandom (Radius,-Radius),FRandom(Radius,-Radius),FRandom (Height-24,Height+24),FRandom (-6,6),FRandom (-6,6),FRandom (2,8));
+					If (Debris)
+					{
+						Debris.Scale *= FRandom (0.1,0.8);
+						Debris.bXFlip = Random (False,True);
+					}
+				}
+				
+				If (Random (True, False) == True)
+					Return FindState ("AltDeath");
+				Return State (Null);
+			}
+			PNS9 B 4;
+			PNS9 C 3;
+			PNS9 D -1
+			{
+				A_StartSound ("SFX/MetalHit");
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+				//Pass parameters to spawner.
+				Duster.RadiusDamageFactor = 0;
+				Duster.ReactionTime = 32;
+				Duster.Threshold = Radius*2.25;
+				Duster.Scale *= 0.25;
+			}
+			Stop;
+		//URGENT: TODO: Fix the fucking cropping. Fucking great, can't wait for my entire system to break a THIRD time because of the Strider sprites!!!!!
+		AltDeath:
+			PNS9 EF 4;
+			PNS9 G -1
+			{
+				A_StartSound ("SFX/MetalHit");
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",(Vec2Angle(24,Angle),Pos.Z));
+				//Pass parameters to spawner.
+				Duster.RadiusDamageFactor = 0;
+				Duster.ReactionTime = 32;
+				Duster.Threshold = Radius*2.25;
+				Duster.Scale *= 0.5;
+			}
+			Stop;
+		XDeath:
+			PNS9 K 8
+			{
+				Tics = Random (4,10);
+				
+				A_StopSound (CHAN_BODY);
+				Actor Boom = Spawn ("MVP_Explosion",Pos.PlusZ(48));
+				Boom.Scale *= FRandom (2.75f,3.5f);
+				Boom.SetDamage (256);
+				Boom.MaxTargetRange = 384;
+				Boom.MeleeRange = Radius+64;
+				Boom.bNoGravity = True;
+				Boom.bGetOwner = True;
+				Boom.Target = Self; //Does it even matter if we're gone? Very philosophical.
+				
+				Bool Alt = Random (True, False);
+				Bool B; Actor Debris;
+				//No gibs.
+				if (false == true)
+				//If (Random (True,False) == True)
+				{
+					SmokeCounter = Random (48,64);
+					
+					For (Int I; I <= SmokeCounter; I++)
+					{
+						[B, Debris] = A_SpawnItemEx ("MVP_DiCokkaDebris",FRandom (Radius,-Radius),FRandom(Radius,-Radius),FRandom (Height-24,Height+24),FRandom (-6,6),FRandom (-6,6),FRandom (2,8));
+						If (Debris)
+						{
+							Debris.Scale *= FRandom (0.1,0.8);
+							Debris.bXFlip = Random (False,True);
+						}
+					}
+				}
+				Else
+				{
+					If (!Alt)
+					{
+						[B, Debris] =  A_SpawnItemEx ("MVP_StriderHeadGib",zofs:64,FRandom (4,-4),FRandom (-4,-8),FRandom (6,16));
+						If (Debris)
+						{
+							Debris.SmokeCounter = Random (2,6);
+							Debris.Master = Self;
+						}
+					}
+					[B, Debris] =  A_SpawnItemEx ("MVP_StriderArmGib",zofs:64,FRandom (-6,-16),FRandom (-6,-12),FRandom (2,8));
+					If (Debris)
+					{
+						Debris.SmokeCounter = Random (2,6);
+						Debris.Master = Self;
+					}
+				}
+				
+				If (Alt)
+					Return FindState ("AltXDeath");
+				Return State (Null);
+			}
+			PNS9 LM 4;
+			PNS9 N -1
+			{
+				A_StartSound ("SFX/MetalHit");
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",(Vec2Angle(-24,Angle),Pos.Z));
+				//Pass parameters to spawner.
+				Duster.RadiusDamageFactor = 0;
+				Duster.ReactionTime = 32;
+				Duster.Threshold = Radius*2.25;
+				Duster.Scale *= 0.5;
+			}
+			Stop;
+		AltXDeath:
+			PNS9 OPQ 3;
+			PNS9 R -1;
+			Stop;
+	}
+}
+
+Class MVP_StriderHeadGib : Actor
+{
+	Default
+	{
+		Radius 24;
+		Height 32;
+		XScale 0.8;
+		YScale 0.666666; //0.8 / 1.2
+		Mass 250;
+		+Solid;
+		//+NoBlockmap;
+		+BloodlessImpact;
+		+Blasted;
+	}
+	
+	Override Bool CanCollideWith (Actor Other, Bool Passive)
+	{
+		If (Other && (Other Is GetClassName() || Other == Master))
+			Return False;
+		Return Super.CanCollideWith (Other, Passive);
+	}
+	
+	States
+	{
+		Spawn:
+			PNS9 STU 4
+			{
+				Tics = SmokeCounter;
+				If (!TestMobjZ(True) || GetZAt ()+1 >= Pos.Z)
+					Return FindState("Death");
+				
+				Return State(Null);
+			}
+			Loop;
+		Death:
+			PNS9 V -1
+			{
+				A_StartSound ("SFX/MetalHit");
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",pOS);
+				//Pass parameters to spawner.
+				Duster.RadiusDamageFactor = 0;
+				Duster.ReactionTime = 32;
+				Duster.Threshold = Radius*2.25;
+				Duster.Scale *= 0.5;
+			}
+			Stop;
+	}
+}
+
+Class MVP_StriderArmGib : MVP_StriderHeadGib
+{
+	Default
+	{
+		Radius 12;
+		Height 16;
+		Mass 50;
+	}
+	States
+	{
+		Spawn:
+			PNS9 XYY 4
+			{
+				Tics = SmokeCounter;
+				If (!TestMobjZ(True) || GetZAt ()+1 >= Pos.Z)
+					Return FindState("Death");
+				
+				Return State(Null);
+			}
+			Loop;
+		Death:
+			PNS9 Z -1
+			{
+				SpriteOffset.Y -= 3;
+				A_StartSound ("SFX/MetalHit");
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",pOS);
+				//Pass parameters to spawner.
+				Duster.RadiusDamageFactor = 0;
+				Duster.ReactionTime = 32;
+				Duster.Threshold = Radius*1.5;
+				Duster.Scale *= 0.5;
+			}
+			Stop;
 	}
 }
