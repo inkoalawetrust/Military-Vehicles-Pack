@@ -845,7 +845,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 				NewPosStepCount++;
 				Return;
 			}
-			Else
+			Else If (!NewPosStepCount)
 			{
 				CoverPos = (Double.NaN,Double.NaN,Double.NaN);
 				DodgePos = (Double.NaN,Double.NaN,Double.NaN);
@@ -856,12 +856,18 @@ Class MVP_BigGunDrone : MVP_GunDrone
 				SetStateLabel ("Idle.Cover");
 				Return;
 			}
+			Else
+			{
+				CoverPos = (Double.NaN,Double.NaN,Double.NaN);
+				DodgePos = (Double.NaN,Double.NaN,Double.NaN);
+				NewPosStepCount = 0;
+			}
 		}
 		Else If (!User_NoCover && Turret)
 		{
 			//Find nearby cover.
 			Double TurOfs = MVP_BigGunDroneTurret(Turret) ? MVP_BigGunDroneTurret(Turret).FireOfs.Z : 0;
-			CoverPos = KAI_FindNearbyCover(384,Radius*2,Turret.Target,128,False,(72,192),(Height+TurOfs,Height),from:Turret);
+			CoverPos = KAI_FindNearbyCover(384,Radius*2,Turret.Target,False,128,(72,192),(Height+TurOfs,Height),from:Turret);
 		}
 		
 		//Reverse from nearest enemy. Reverse because well, they're close.
@@ -959,7 +965,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			LastProj = Null;
 		}
 		
-		//Run away from threat, be it the target itself, a hazard, or a nearby enemy./
+		//Run away from threat, be it the target itself, a hazard, or a nearby enemy.
 		If (!LockedIn && RunAway)
 		{
 			Vector3 RunPos = (!Haz && Target) ? Target.Pos : GetHazardOriginPos(Haz);
@@ -968,11 +974,6 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			
 			If (Target && RunPos == Target.Pos && BigThreat) //Just drive away from very dangerous enemies.
 				ReverseSteps = 0;
-			
-			If (ReverseSteps > 0)
-				ReverseSteps--;
-			
-			Console.Printf ("reversesteps %u",reversesteps);
 			
 			If (ReverseSteps <= 0)
 				KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags,targpos:RunPos,DroneMove);
@@ -995,6 +996,11 @@ Class MVP_BigGunDrone : MVP_GunDrone
 				//Speed /= 1.55;
 				Angle += 180;
 			}
+			
+			If (ReverseSteps > 0)
+				ReverseSteps--;
+			
+			Console.Printf ("reversesteps %u",reversesteps);
 			
 			MovedAlready = True;
 		}
