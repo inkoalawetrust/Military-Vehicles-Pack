@@ -7,7 +7,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		//$Sprite MVPEF1
 		Health 60;
 		WoundHealth 30;
-		GibHealth 60;
+		GibHealth 50;
 		Speed 6;
 		FastSpeed 8;
 		XScale 0.4;
