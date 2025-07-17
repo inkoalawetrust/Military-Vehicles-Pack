@@ -4,7 +4,7 @@
 //The AltDeath frame of the Strider fully fallen is cropped wrong.
 
 //TODO:
-//Make the strider run when its' target is too far.
+//Make the strider run when its' target is too far. Or when running away instead of jumping.
 //Don't forget to add the striders' ramming attack.
 //Make it able to climb and crouch.
 
@@ -67,6 +67,8 @@ Class MVP_Strider : MVP_Humanoid
 		FastSpeed 14;
 		FriendlySeeBlocks 64;
 		MeleeRange 64;
+		MaxStepHeight 32;
+		MaxDropoffHeight 32; //This is different from the striders' ability to climb down to areas it has the range to jump back up from. TODO: Actually write that.
 		Tag "R-11-B Paŝegulo";
 		
 		+NoBlood;
@@ -124,10 +126,12 @@ Class MVP_Strider : MVP_Humanoid
 		
 		If (User_JumpRange == 0)
 			User_JumpRange = 512;
+		If (User_JumpHeight == 0)
+			User_JumpHeight = 256;
+		If (User_DodgeRange == 0)
+			User_DodgeRange = 512;
 		If (User_ChaseTime == 0)
 			User_ChaseTime = User_ChaseTime = (35/4)*30;
-		//URGENT: DEBUG
-		User_NoCover = True;
 	}
 	
 	Protected Double LastTickFallVel;
@@ -246,14 +250,170 @@ Class MVP_Strider : MVP_Humanoid
 		Return True;
 	}
 	
-	Void MVP_StriderJump (Vector3 Where, JFlags Flags = 0)
+	Override Void Die (Actor Source, Actor Inflictor, Int DMGFlags, Name MeansOfDeath)
 	{
-		If (Level.Vec3Diff (Pos,Where).Length() > User_JumpRange) //Too far to jump.
-			Return;
+		Super.Die (Source, Inflictor, DMGFlags, MeansOfDeath);
+		
+		bNoFriction = Default.bNoFriction; //Do friction again.
+	}
+	
+	Override Bool OnWander()
+	{
+		KAI_Look(LOF_NOJUMP,FOV: CurrentOrder == ORDER_STAY ? 360 : 0,extraflags:KAIL_CHASETARGET);
+		If (Target)
+		{
+			SetState(SeeState);
+			Return False;
+		}
+		
+		//Dodge projectiles by jumping out of the way.
+		/*Actor Proj;
+		If ((Proj = MVP_DroneDodge(User_DodgeRange,LastProj)))
+		{
+			LastProj = Proj;
+			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
+			Vector3 Where = Delta >= -2 ? (Vec2Angle(256,AngleTo(Proj)+90),0) : (Vec2Angle(256,AngleTo(Proj)-90),0);
+			
+			Vector3 DodgePos = (Double.NaN,Double.NaN,Double.NaN);
+			Where.Z = GetZAt (Where.X,Where.Y,flags:GZF_ABSOLUTEPOS);
+			Bool B;
+			[B, DodgePos] = IsPosReachable (DodgePos);
+			DodgePos = B ? Where : DodgePos; //We can just go where we want, do that. If not, go to the closest position IsPosReachable() returned.
+			KAI_DebugPointDelay.KAI_TempPointSpawn(dodgepos,70*2);
+			MVP_StriderJump (DodgePos,SJUMP_FAST);
+			Return False;
+		}*/
+		If (MVP_StriderDodge())
+			Return False;
+		
+		//Hazard handling.
+		If (Health > WoundHealth) //Ignore weak hazards if not weak yourself, and also projectile attack hazards. We try to dodge those instead.
+		{
+			For (Int I = Hazards.Size()-1; I >= 0; I--)
+			{
+				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_LOW)
+					Hazards.Delete(I);
+				
+				ForEach (CurTag : Hazards[I].CustomTags)
+				{
+					If (CurTag ~== "Bullet" || CurTag ~== "Projectile")
+						Hazards.Delete(I);
+				}
+			}
+		}
+		
+		HazardInfo Haz = GetStrongestHazard(Hazards);
+		If (Haz)
+		{
+			Double RealStep = MaxStepHeight;
+			MaxStepHeight = User_JumpRange;
+			MVP_StriderJump (FindRandomMovePos (GetHazardOriginPos(Haz),64,384));
+			MaxStepHeight = RealStep;
+			Return False;
+		}
+		
+		//Idle around, with 360 vision and looking all around.
+		If (CurrentOrder == ORDER_STAY)
+		{
+			Tics = 8;
+			Sprite = GetSpriteIndex ('PNS3');
+			A_StartSound ("Vehicle/Drone/Turret",CHAN_AUTO,volume:0.5,ATTN_STATIC);
+			Return False;
+		}
+		
+		Vector3 FolPos = (Double.NaN, Double.NaN, Double.NaN); Actor Followee;
+		If (CurrentOrder == ORDER_FOLLOW)
+			[FolPos, Followee] = HandleFollowingActor (FolPos,True); //NOTE: We turn bDontFollowPlayers on between KAI_Wander calls so lonely drones in a swarm don't do that.
+		
+		//If (Random(0,2048) == Random (0,2048) && Yapper)
+		//	MVP_QuadcopterSpeak();
+		
+		//Follow something instead.
+		If (CurrentOrder == ORDER_FOLLOW)
+		{
+			If (!KAI_Math.IsEmptyVector3(FolPos))
+			{
+				//Don't dogpile.
+				If (Followee && Distance3DSquared(Followee) >= (FollowDist+Followee.Radius)*(FollowDist+Followee.Radius))
+				{
+					If (Followee) FolPos.Z = Followee.Pos.Z+(Followee.Height/2);
+					KAI_MoveTowards (FolPos,StriderMove.DetourFactor,StriderMove.AngleLimit);
+					Return False;
+				}
+				Else If (Followee)
+				{
+					A_StopSound (CHAN_BODY);
+					Frame = 0; //Stay at PND0A when stationary.
+					Return False;
+				}
+			}
+		}
+		
+		Return True;
+	}
+	
+	/*IDEA: Make a CanJumpFrom() function that first checks random positions away from the target to jump to, and if that fails, tries to chart a path straight
+	away from the target.*/
+	Vector3 MVP_StriderJumpFromPos (Vector3 Avoid, Int Attempts, Double Dist)
+	{
+		Double RealStep = MaxStepHeight;
+		MaxStepHeight = User_JumpHeight;
+		Vector3 Away = FindRandomMovePos (Avoid,Attempts,Dist);
+		If (Away.Z > Pos.Z+MaxStepHeight)
+			Away = (Double.NaN,Double.NaN,Double.NaN);
+		
+		//Random move away failed, chart a path that's at most dist away instead.
+		If (KAI_Math.IsEmptyVector3 (Away))
+		{
+			Vector2 Path = AngleToVector (GetAngleToPos(Avoid,0)-180,Dist);
+			//Path = Level.Vec2Offset (Pos.XY,Path);
+			Double Distance = Path.Length();
+			Path /= Distance;
+			
+			Vector2 Cur;
+			Double ZAt;
+			//console.printf ("own pos is %d %d",pos.xy);
+			//Go from the furthest point away from the Avoid pos in.
+			For (Int I = Distance; I >= 0; I -= 16)
+			{
+				Cur = Level.Vec2Offset(Pos.XY, Path*I);
+				console.printf ("curpos is %d %d",cur);
+				ZAt = GetZAt(Cur.X,Cur.Y,flags:GZF_ABSOLUTEPOS);
+				KAI_DebugPointDelay.KAI_TempPointSpawn((cur,zat),70*2);
+				//If (IsPosReachable ((Cur,ZAt)))
+				If (ZAt <= Pos.Z+MaxStepHeight)
+				{
+					Away = (Cur,ZAt);
+					Break;
+				}
+			}
+			
+			If (Level.Vec3Diff (Pos,Away).Length() <= (Radius*2)+MeleeRange)
+				Away = (Double.NaN,Double.NaN,Double.NaN);
+		}
+		
+		MaxStepHeight = RealStep;
+		Return Away;
+	}
+	
+	Bool MVP_StriderJump (Vector3 Where, JFlags Flags = 0)
+	{
+		If (Level.Vec2Diff (Pos.XY,Where.XY).Length() > User_JumpRange || Where.Z > Pos.Z+User_JumpHeight) //Too far to jump.
+		{
+			console.printf ("can't jump to %.2f %.2f %.2f",where);
+			console.printf ("too far, distance is %.2f, limit %.2f",Level.Vec2Diff (Pos.XY,Where.XY).Length(),user_jumprange);
+			console.printf ("too high?, %d, where.z is %.2f with a total height of %.2f, limit %.2f",(Where.Z > Pos.Z+User_JumpHeight),where.z,pos.z+user_jumpheight,user_jumpheight);
+			actor fail = KAI_DebugPointDelay.KAI_TempPointSpawn(where,70*2);
+			fail.a_settranslation ('kai_debugred');
+			Return False;
+		}
 		
 		JumpFlags = Flags;
 		JumpPos = Where;
+		bNoFriction = True; //Go exactly where you're supposed to.
+		KAI_DebugPointDelay.KAI_TempPointSpawn(where,70*2);
 		SetStateLabel ("Jump");
+		Return True;
 	}
 	
 	//TODO: Add handling moving away from things by jumping.
@@ -300,14 +460,23 @@ Class MVP_Strider : MVP_Humanoid
 			RunAway = IsMeleeAttacker;
 		}
 		
-		If (Health > WoundHealth) //Ignore weak hazards if not weak yourself.
+		If (Health > WoundHealth) //Ignore weak hazards if not weak yourself, and also projectile attack hazards. We try to dodge those instead.
 		{
 			For (Int I = Hazards.Size()-1; I >= 0; I--)
 			{
-				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_MEDIUM)
+				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_LOW)
 					Hazards.Delete(I);
+				
+				ForEach (CurTag : Hazards[I].CustomTags)
+				{
+					If (CurTag ~== "Bullet" || CurTag ~== "Projectile")
+						Hazards.Delete(I);
+				}
 			}
 		}
+		
+		If (MVP_StriderDodge())
+			Return;
 		
 		//Cover located, go there
 		//TODO: Make it dodge by ducking when in cover.
@@ -320,27 +489,25 @@ Class MVP_Strider : MVP_Humanoid
 				NewPosStepCount++;
 				Return;
 			}
-			Else If (!NewPosStepCount)
-			{
-				CoverPos = (Double.NaN,Double.NaN,Double.NaN);
-				//DodgePos = (Double.NaN,Double.NaN,Double.NaN);
-				NewPosStepCount = 0;
-				A_FaceTarget();
-				A_StopSound (CHAN_BODY);
-				SetStateLabel ("Idle.Cover");
-				Return;
-			}
 			Else
 			{
 				CoverPos = (Double.NaN,Double.NaN,Double.NaN);
-				//DodgePos = (Double.NaN,Double.NaN,Double.NaN);
-				NewPosStepCount = 0;
+				If (NewPosStepCount > 128)
+					NewPosStepCount = 0;
+				Else
+				{
+					NewPosStepCount = 0;
+					A_FaceTarget();
+					A_StopSound (CHAN_BODY);
+					SetStateLabel ("Idle.Cover");
+					Return;
+				}
 			}
 		}
 		//Find nearby cover.
 		Else If (!User_NoCover)
 		{
-			CoverPos = KAI_FindNearbyCover(384,Radius*2,Target,False,128,(72,192),(64,48),(Radius,30,100),Self);
+			CoverPos = KAI_FindNearbyCover(384,Radius*2,Target,False,256,(72,192),(64,40),(Radius,30,100),Self);
 		}
 		
 		/*NearestEnemy = FindNearestEnemy (256);
@@ -355,7 +522,7 @@ Class MVP_Strider : MVP_Humanoid
 		If (!RunAway) Haz = GetStrongestHazard(Hazards); //Avoid strongest hazard around if not already busy with backing off from a nearby enemy.
 		
 		//Keep different distances for targets, by reversing
-		If (!LockedIn && !RunAway && Target && Target != Goal)
+		If (!LockedIn && !RunAway && TargetInSight && Target && Target != Goal)
 		{
 			Double Dist = 0;
 			Switch (TargetLevel)
@@ -413,25 +580,16 @@ Class MVP_Strider : MVP_Humanoid
 			ReverseSteps = 0; //Just run away. //MAYDO: Or jump away.
 		}
 		
-		//Dodge projectiles by jumping out of the way.
-		//TODO: Change this to something for the Strider.
-		/*Actor Proj;
-		If (!RunAway && KAI_Math.IsEmptyVector3 (DodgePos) && !LockedIn && (Proj = MVP_DroneDodge(User_DodgeRange,LastProj)))
-		{
-			LastProj = Proj;
-			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
-			Vector3 Where = Delta >= -2 ? (Vec2Angle(128,Angle+90),0) : (Vec2Angle(128,Angle-90),0);
-			Where.Z = GetZAt (Where.X,Where.Y,flags:GZF_ABSOLUTEPOS);
-			[B, DodgePos] = IsPosReachable (DodgePos);
-			DodgePos = B ? Where : DodgePos; //We can just go where we want, do that. If not, go to the closest position IsPosReachable() returned.
-		}*/
-		
-		//Run away from threat, be it the target itself, a hazard, or a nearby enemy.
+		//Run away from threat, be it the target itself, a hazard.
 		If (!LockedIn && RunAway)
 		{
 			Vector3 RunPos = (!Haz && Target) ? Target.Pos : GetHazardOriginPos(Haz);
-			//If (NearestEnemy)
-			//	RunPos = NearestEnemy.Pos;
+			//IDEA: Change the MaxStepHeight temporarily to allow it to jump to positions within jumping range.
+			If (Haz)
+			{
+				MVP_StriderJump (MVP_StriderJumpFromPos (GetHazardOriginPos(Haz),32,384),SJUMP_STEER);
+				Return;
+			}
 			
 			If (Target && RunPos == Target.Pos && BigThreat) //Just run away from very dangerous enemies if you haven't jumped.
 				ReverseSteps = 0;
@@ -486,6 +644,48 @@ Class MVP_Strider : MVP_Humanoid
 		HandleChaseTimer();
 	}
 	
+	Bool MVP_StriderDodge()
+	{
+		//Dodge projectiles by jumping out of the way.
+		Actor Proj;
+		Bool B;
+		If ((Proj = MVP_DroneDodge(User_DodgeRange,LastProj)))
+		{
+			LastProj = Proj;
+			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
+			
+			Vector3 Block;
+			
+			Vector3 Left = (Vec2Angle(256,AngleTo(Proj)+90),0);
+			Left.Z = GetZAt (Left.X,Left.Y,flags:GZF_ABSOLUTEPOS);
+			[B, Block] = IsPosReachable (Left);
+			//We can't really go to the left.
+			If (!B && Level.Vec3Diff(Pos,Block).Length() <= (Radius*2)+MeleeRange)
+				Left = (Double.NaN,Double.NaN,Double.NaN);
+			
+			Vector3 Right = (Vec2Angle(256,AngleTo(Proj)-90),0);
+			Right.Z = GetZAt (Right.X,Right.Y,flags:GZF_ABSOLUTEPOS);
+			[B, Block] = IsPosReachable (Right);
+			//We can't really go to the left.
+			If (!B && Level.Vec3Diff(Pos,Block).Length() <= (Radius*2)+MeleeRange)
+				Right = (Double.NaN,Double.NaN,Double.NaN);
+			
+			//Only dodge if both positions aren't blocked.
+			If (!KAI_Math.IsEmptyVector3(Left) || !KAI_Math.IsEmptyVector3(Right))
+			{
+				Vector3 DodgePos = Delta >= -2 ? Left : Right;
+				If (KAI_Math.IsEmptyVector3(Left))
+					DodgePos = Right;
+				If (KAI_Math.IsEmptyVector3(Right))
+					DodgePos = Left;
+				
+				MVP_StriderJump (DodgePos,SJUMP_FAST);
+				Return True;
+			}
+		}
+		Return False;
+	}
+	
 	//Strider loves lean(ing)
 	//Returns one of the sprite frames passed, and also a JumpDir
 	Int, Int MVP_StriderLean (Int Forward, Int Left, Int Right, Int Back, Bool IgnoreVel = False)
@@ -535,6 +735,16 @@ Class MVP_Strider : MVP_Humanoid
 	Vector3 CoverPos;
 	UInt8 RevFrame, Rev;
 	UInt8 ReverseSteps;
+	Actor LastProj;
+	
+	//Cover variables
+	Const COVER_WAIT = 350;
+	Const COVER_DUCKTIME = 70;
+	Int OuttaSightTime; //How long has the target been out of sight while behind cover?
+	Int DuckTime; //Dodging by ducking down.
+	
+	Mixin MVP_DroneVirtuals;
+	Mixin MVP_DroneFunctions;
 	
 	//Jumping variables.
 	Vector3 JumpPos;
@@ -556,12 +766,16 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		SJUMP_FACEDIRECTION = 1 << 0, //Change angle over time while in the air to face where you're jumping to.
 		SJUMP_FAST			= 1 << 1, //Jump faster. Used for running jumps and dodges.
+		SJUMP_STEER			= 1 << 2, //Steer yourself to the JumpPos on descent.
 	}
 	
-	Double User_JumpRange;
+	Double User_JumpRange, User_JumpHeight;
+	Double User_DodgeRange;
 	Double User_RetreatDistance;
 	Int User_ChaseTime;
 	Bool User_NoCover;
+	
+	Const STRIDER_CROUCHHEIGHT = 64;
 	
 	States
 	{
@@ -575,18 +789,78 @@ Class MVP_Strider : MVP_Humanoid
 			{
 				MVP_StriderFootsteps();
 				MVP_StriderChase();
-				/*//Debug wandering and random jumping.
-				KAI_Wander (32,384,anglelimit:25);
+				//Debug wandering and random jumping.
+				/*KAI_Wander (32,384,anglelimit:25);
 				if (random (0,255) < 8)
 				{
 					vector3 where = FindRandomMovePos (self.pos,8,checkrad:384);
 					//where = vec3angle (randompick(256,-256),RandomPick(90,-90,0,0));
-					KAI_DebugPointDelay.KAI_TempPointSpawn(where,35);
+					KAI_DebugPointDelay.KAI_TempPointSpawn(where,70*2);
 					MVP_StriderJump (where);
 				}*/
 			}
 			Loop;
-		
+		Idle:
+			PNS0 ABCDEF 4
+			{
+				If (CurrentOrder != ORDER_STAY) MVP_StriderFootsteps();
+				KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit);
+			}
+			Loop;
+		//Idle.Stand: //Spinny 360 head state.
+		Idle.Cover:
+			PNS1 UVW 4 A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+			PNS1 W 0 A_StopSound (CHAN_WEAPON);
+			//IDEA: This is copied from the tracked drone hull. Maybe replace it with a dedicated chase method for when behind cover?
+			PNS1 W 1 //NOTE: We need this delay or otherwise the cover loop quits regardless.
+			{
+				Actor Proj;
+				console.printf ("ducktime %d",ducktime);
+				If (--DuckTime <= 0 && (Proj = MVP_DroneDodge(User_DodgeRange)))
+				{
+					DuckTime = COVER_DUCKTIME;
+					A_SetSize (newheight:STRIDER_CROUCHHEIGHT);
+					Return State (Null);
+				}
+				
+				If (DuckTime > 0)
+					Frame = 26;
+				Else
+					A_SetSize (newheight:Default.Height);
+
+				If (IsDead (Target))
+				{
+					Target = Null;
+					LookForPlayers (True);
+				}
+				
+				If (!CheckSight (Target, SF_IGNOREWATERBOUNDARY) && OuttaSightTime++ > COVER_WAIT)
+				{
+					OuttaSightTime = 0;
+					Return FindState ("Idle.Cover.End",True);
+				}
+				
+				If (User_NoCover)
+					Return FindState ("Idle.Cover.End",True);
+				
+				Return State (Null);
+			}
+			PNS1 W 0
+			{
+				//Stop hiding if the target is behind the cover, another enemy is too close, or if there's no target left.
+				Bool InCover = KAI_HasCoverHere(Target,True,64,(72,192),(64,40),(Radius,30,100),Self);
+				Actor NearestEnemy = FindNearestEnemy (192);
+				
+				If (!InCover || !Target || NearestEnemy && NearestEnemy != Target || GetStrongestHazard(Hazards) && GetStrongestHazard(Hazards).Level >= HazardInfo.HAZARD_MEDIUM)
+					Return FindState ("Idle.Cover.End",True);
+				
+				Return State(Null);
+			}
+			Goto Idle.Cover+4;
+		Idle.Cover.End:
+			PNS1 VU 4 A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+			PNS1 U 0 A_StopSound (CHAN_WEAPON);
+			Goto See;
 		//JUMP STATES
 		//You can check if the strider is jumping by seeing if they are in any Jump.##### state.
 		Jump:
@@ -594,14 +868,14 @@ Class MVP_Strider : MVP_Humanoid
 				#### # Random(5,12) Fast
 				{
 					If (JumpFlags & SJUMP_FAST)
-						Tics = Random (3,7);
+						Tics = Random (2,6);
 					
 					[Frame, JumpDir] = MVP_StriderLean (24, 7, 6, 0, True); //Y, H, G, A
 					Sprite = MVP_StriderLeanIndex (JumpDir);
 
 					A_StartSound ("Vehicle/Strider/Motor",flags:CHANF_OVERLAP);
 				}
-				#### Y 0 KAI_JumpTo (JumpPos,maxlength:User_JumpRange);
+				#### Y 0 KAI_JumpTo (JumpPos,-32,maxlength:User_JumpRange);
 			Jump.Loop:
 				#### # 1
 				{
@@ -622,17 +896,17 @@ Class MVP_Strider : MVP_Humanoid
 				Goto Jump.Loop+1;
 			Jump.Loop.Down:
 				//Coming down frame.
+				//IDEA: Add slight guidance to the JumpPos?
 				#### # 1
 				{
 					If (JumpFlags & SJUMP_FACEDIRECTION && !KAI_Math.IsEmptyVector3 (JumpPos))
 						{Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);console.printf ("aiming to %.2f %.2f %.2f",jumppos);}
+					If (JumpFlags & SJUMP_STEER && !KAI_Math.IsEmptyVector3 (JumpPos))
+						Vel.XY += AngleToVector (GetAngleToPos(JumpPos,0),1);
 					[Frame, JumpDir] = MVP_StriderLean (26, 8, 10, 3); //[, I, K, D
 					Sprite = MVP_StriderLeanIndex (JumpDir);
 					If (bOnMobj || Pos.Z <= FloorZ || Pos.Z <= GetZAt ()) //The eagle has landed.
-					{
-						bNoFriction = Default.bNoFriction; //Do friction again.
 						Return FindState ("Jump.End",True);
-					}
 					Return State (Null);
 				}
 				Loop;
@@ -642,6 +916,8 @@ Class MVP_Strider : MVP_Humanoid
 					If (JumpFlags & SJUMP_FAST)
 						Tics = 4;
 					
+					bNoFriction = Default.bNoFriction; //Do friction again.
+					
 					Frame = MVP_StriderLean (28, 13, 12, 5, True); //], N, M, F
 					Sprite = MVP_StriderLeanIndex (JumpDir);
 					
@@ -649,6 +925,7 @@ Class MVP_Strider : MVP_Humanoid
 					JumpDir = 0;
 					JumpPos = (Double.NaN,Double.NaN,Double.NaN);
 					NextMovePos = (Double.NaN,Double.NaN,Double.NaN);
+					//CoverPos = (Double.NaN,Double.NaN,Double.NaN);
 				}
 				Goto See;
 		//TODO: Add running death state later.

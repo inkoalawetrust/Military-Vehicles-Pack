@@ -828,7 +828,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		{
 			For (Int I = Hazards.Size()-1; I >= 0; I--)
 			{
-				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_MEDIUM)
+				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_LOW)
 					Hazards.Delete(I);
 			}
 		}
@@ -837,7 +837,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		If (!KAI_Math.IsEmptyVector3(CoverPos) && !User_NoCover)
 		{
 			If (!KAI_Math.IsEmptyVector3 (CoverPos) && NewPosStepCount <= 128 && Level.Vec3Diff (Pos,CoverPos).Length() >= 24)
-			{//console.printf ("distance to cover is %.2f",Level.Vec3Diff (Pos,DodgePos).Length());
+			{console.printf ("distance to cover is %.2f",Level.Vec3Diff (Pos,DodgePos).Length());
 				//Speed += 2;
 				KAI_MoveTowards (CoverPos,DroneMove.DetourFactor/2,DroneMove.AngleLimit); //No zigzag.
 				//Speed -= 2;
@@ -845,22 +845,21 @@ Class MVP_BigGunDrone : MVP_GunDrone
 				NewPosStepCount++;
 				Return;
 			}
-			Else If (!NewPosStepCount)
-			{
-				CoverPos = (Double.NaN,Double.NaN,Double.NaN);
-				DodgePos = (Double.NaN,Double.NaN,Double.NaN);
-				NewPosStepCount = 0;
-				InCover = True; //We are now in cover.
-				A_FaceTarget();
-				A_StopSound (CHAN_BODY);
-				SetStateLabel ("Idle.Cover");
-				Return;
-			}
 			Else
 			{
 				CoverPos = (Double.NaN,Double.NaN,Double.NaN);
 				DodgePos = (Double.NaN,Double.NaN,Double.NaN);
-				NewPosStepCount = 0;
+				If (NewPosStepCount > 128)
+					NewPosStepCount = 0;
+				Else
+				{
+					NewPosStepCount = 0;
+					InCover = True; //We are now in cover.
+					A_FaceTarget();
+					A_StopSound (CHAN_BODY);
+					SetStateLabel ("Idle.Cover");
+					Return;
+				}
 			}
 		}
 		Else If (!User_NoCover && Turret)
@@ -883,16 +882,16 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		If (!RunAway) Haz = GetStrongestHazard(Hazards); //Avoid strongest hazard around if not already busy with backing off from a nearby enemy.
 		
 		//Keep different distances for targets.
-		If (!LockedIn && !RunAway && Target && Target != Goal)
+		If (!LockedIn && !RunAway && TargetInSight && Target && Target != Goal)
 		{
 			Double Dist = 0;
 			Switch (TargetLevel)
 			{
-				Case THREAT_UNSTOPPABLE:
+				/*Case THREAT_UNSTOPPABLE:
 					Dist = 1024;
-					Break;
+					Break;*/
 				Case THREAT_SUPERDANGER:
-					Dist = 896;
+					Dist = 768;
 					Break;
 				Case THREAT_VERYDANGEROUS:
 					Dist = 640;
@@ -975,8 +974,9 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			If (Target && RunPos == Target.Pos && BigThreat) //Just drive away from very dangerous enemies.
 				ReverseSteps = 0;
 			
+			//BUG: For reasons unbeknowst to man, this KAI_MoveAway() call tends to return positions CLOSER to the threat than further, ONLY this call.
 			If (ReverseSteps <= 0)
-				KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags,targpos:RunPos,DroneMove);
+				KAI_MoveAway (Null,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit,targpos:RunPos,DroneMove);
 			Else //Reverse away from threat.
 			{
 				KMTFlags &= ~(KMT_ZIGZAG); //Don't zigzag when backing off.
@@ -1035,6 +1035,8 @@ Class MVP_BigGunDrone : MVP_GunDrone
 	UInt8 ReverseSteps;
 	Bool InCover;
 	Vector3 CoverPos;
+	Const COVER_WAIT = 350;
+	Int OuttaSightTime; //How long has the target been out of sight while behind cover?
 	
 	Bool User_NoCover;
 	
@@ -1047,11 +1049,14 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		Idle.Cover:
 			PND0 A 1 //NOTE: We need this delay or otherwise the cover loop quits regardless.
 			{
-				If (IsDead (Target))
+				Bool InSight;
+				If (IsDead (Target) || !(InSight = CheckSight (Target, SF_IGNOREWATERBOUNDARY)) && OuttaSightTime++ > COVER_WAIT)
 				{
 					Target = Null;
 					LookForPlayers (True);
 				}
+				Else If (InSight)
+					OuttaSightTime = 0;
 				//KAI_Chase_Retarget(CHF_DONTI,True);
 				
 				If (!Turret || User_NoCover)
@@ -1068,12 +1073,12 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			}
 			PND0 A 1
 			{
-				//Stop hiding if the target is behind the cover, another enemy is too close, or if there's no target left.
+				//Stop hiding if the target is behind the cover, another enemy is too close, there's no target left, or a hazard is in range.
 				Double TurOfs = MVP_BigGunDroneTurret(Turret) ? MVP_BigGunDroneTurret(Turret).FireOfs.Z : 0;console.printf ("target %p",target);
 				InCover = KAI_HasCoverHere(Target,72,True,(72,192),(Height+MVP_BigGunDroneTurret(Turret).FireOfs.Z,Height),from:Turret);
 				NearestEnemy = FindNearestEnemy (128);
 				
-				If (!InCover || NearestEnemy || !Target && !Turret.Target)
+				If (!InCover || NearestEnemy || !Target && !Turret.Target || GetStrongestHazard(Hazards) && GetStrongestHazard(Hazards).Level >= HazardInfo.HAZARD_MEDIUM)
 				{
 					DodgePos = (Double.NaN,Double.NaN,Double.NaN);
 					CoverPos = (Double.NaN,Double.NaN,Double.NaN);

@@ -300,7 +300,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Double HazardDist = GetHazardDistance (Haz); //Get distance to nearest hazard that you're in range of.
 		
 		//Keep different distances for targets under the threshold.
-		If (!LockedIn && !RunAway && Target && (TargetLevel < ThreatLevelThreshold || RunRange != -1))
+		If (!LockedIn && !RunAway && TargetInSight && Target && (TargetLevel < ThreatLevelThreshold || RunRange != -1))
 		{
 			Double Dist = 0;
 			Switch (TargetLevel)
