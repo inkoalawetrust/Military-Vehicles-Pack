@@ -4,7 +4,6 @@
 //The AltDeath frame of the Strider fully fallen is cropped wrong.
 
 //TODO:
-//Make the strider run when its' target is too far. Or when running away instead of jumping.
 //Don't forget to add the striders' ramming attack.
 //Make it able to climb and crouch.
 
@@ -70,6 +69,7 @@ Class MVP_Strider : MVP_Humanoid
 		MaxStepHeight 32;
 		MaxDropoffHeight 32; //This is different from the striders' ability to climb down to areas it has the range to jump back up from. TODO: Actually write that.
 		Tag "R-11-B Paŝegulo";
+		SeeSound "Vehicle/Strider/Alert";
 		
 		+NoBlood;
 		+DontCorpse;
@@ -77,6 +77,7 @@ Class MVP_Strider : MVP_Humanoid
 		MVP_Humanoid.SmokeDelay 4;
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
+		KAI_Actor.ActorFollowDist 192;
 		
 		//Damage factors that act as the vehicles "armor".
 		DamageFactor 0.75; //Generic damage factor for all damage.
@@ -112,7 +113,8 @@ Class MVP_Strider : MVP_Humanoid
 		StriderMove.MaxSteps = 72;
 		StriderMove.RunRad = 394;
 		StriderMove.AngleLimit = 25;
-		//IDEA: Make it run behind corners.
+		StriderMove.CornerDiv = 8;
+		StriderMove.CornerDist = 192;
 		
 		JumpPos = (Double.NaN,Double.NaN,Double.NaN);
 		CoverPos = (Double.NaN,Double.NaN,Double.NaN);
@@ -223,7 +225,7 @@ Class MVP_Strider : MVP_Humanoid
 		If (Random (0,255) < 3)
 			Spawn ("MVP_Spark",Level.Vec3Offset(Pos,(FRandom (Radius,Radius),FRandom (Radius,-Radius),FRandom (0,Height))));
 		
-		console.printf ("got %d flames left",deathflames);
+		
 		Int CardAng = GetNearestCardinalAngle(False);
 		Vector3 SpawnPos = !Dead ? Vec3Angle (32,CardAng) : Vec3Angle (32,CardAng+135);
 		If (IsInState (Self,"AltDeath"))
@@ -289,11 +291,15 @@ Class MVP_Strider : MVP_Humanoid
 		}
 		
 		HazardInfo Haz = GetStrongestHazard(Hazards);
-		//TODO: Make an Idle.Run: for running from and TO things.
 		If (Haz)
 		{
 			If (MVP_StriderJump (MVP_StriderJumpFromPos (GetHazardOriginPos(Haz),32,384)))
 				Return False;
+			Else If (!RunSteps) //Jumping away from the hazard failed, just try running off.
+			{
+				MVP_StartRun (Random(16,32));
+				Return False;
+			}
 		}
 		
 		//Idle around, with 360 vision and looking all around.
@@ -317,27 +323,34 @@ Class MVP_Strider : MVP_Humanoid
 		{
 			If (!KAI_Math.IsEmptyVector3(FolPos))
 			{
+				Double Dist = Distance3D(Followee);
 				//Don't dogpile.
-				If (Followee && Distance3DSquared(Followee) >= (FollowDist+Followee.Radius)*(FollowDist+Followee.Radius))
+				If (Followee && Dist >= (FollowDist+Followee.Radius))
 				{
+					If (Dist >= (FollowDist*2))
+						MVP_StartRun (6);
+					
 					If (Followee) FolPos.Z = Followee.Pos.Z+(Followee.Height/2);
 					KAI_MoveTowards (FolPos,StriderMove.DetourFactor,StriderMove.AngleLimit);
+					MVP_StriderFootsteps(RunSteps);
 					Return False;
 				}
 				Else If (Followee)
 				{
-					A_StopSound (CHAN_BODY);
-					Frame = 0; //Stay at PND0A when stationary.
+					Tics = 8;
+					Sprite = GetSpriteIndex ('PNS3');
+					A_StartSound ("Vehicle/Drone/Turret",CHAN_AUTO,volume:0.5,ATTN_STATIC);
+					KAI_Look(0,FOV: 360,extraflags:KAIL_CHASETARGET); //NOTE: Look all around, yes, twice, whatever.
 					Return False;
 				}
 			}
 		}
 		
+		MVP_StriderFootsteps(RunSteps);
+		
 		Return True;
 	}
 	
-	/*IDEA: Make a CanJumpFrom() function that first checks random positions away from the target to jump to, and if that fails, tries to chart a path straight
-	away from the target.*/
 	Vector3 MVP_StriderJumpFromPos (Vector3 Avoid, Int Attempts, Double Dist)
 	{
 		Double RealStep = MaxStepHeight;
@@ -382,7 +395,9 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Bool MVP_StriderJump (Vector3 Where, Double Velocity = -17.5, JFlags Flags = 0)
 	{
-		If (Level.Vec2Diff (Pos.XY,Where.XY).Length() > User_JumpRange || Where.Z > Pos.Z+User_JumpHeight) //Too far to jump.
+		//Too far or crammed to jump.
+		If (GetZAt(flags:GZF_CEILING)-(Pos.Z+Height) < Height/2 || 
+		Level.Vec2Diff (Pos.XY,Where.XY).Length() > User_JumpRange || Where.Z > Pos.Z+User_JumpHeight) 
 		{
 			console.printf ("can't jump to %.2f %.2f %.2f",where);
 			console.printf ("too far, distance is %.2f, limit %.2f",Level.Vec2Diff (Pos.XY,Where.XY).Length(),user_jumprange);
@@ -605,11 +620,11 @@ Class MVP_Strider : MVP_Humanoid
 				RunSteps = 0;
 				KMTFlags &= ~(KMT_ZIGZAG); //Don't zigzag when backing off.
 				Frame = RevFrame;
-				If (Rev++ >= 3) //Every 4 tics, switch frame.
+				If (Rev++ >= FRAME_D) //Every 4 tics, switch frame.
 				{
 					//Rev = 0;
-					If (RevFrame == 0)
-						RevFrame = 5;
+					If (RevFrame == FRAME_A)
+						RevFrame = FRAME_F;
 					Else
 						RevFrame--;
 				}
@@ -657,7 +672,10 @@ Class MVP_Strider : MVP_Humanoid
 	Bool MVP_StartRun (Int Steps)
 	{
 		RunSteps = Steps;
-		SetStateLabel ("See.Run");
+		If (IsInState (Self,"See"))
+			SetStateLabel ("See.Run");
+		Else If (IsInState (Self,"Idle"))
+			SetStatelabel ("Idle.Run");
 		Return True;
 	}
 	
@@ -705,7 +723,7 @@ Class MVP_Strider : MVP_Humanoid
 	
 	//Strider loves lean(ing)
 	//Returns one of the sprite frames passed, and also a JumpDir
-	Int, Int MVP_StriderLean (Int Forward, Int Left, Int Right, Int Back, Bool IgnoreVel = False)
+	Int, Int MVP_StriderLean (Int Forward, Int Left, Int Right, Int Back, Bool IgnoreVel = False, Bool FlipSides = False)
 	{
 		Double Dir = Vel.XY.Unit() Dot AngleToVector (Angle);
 		If (IgnoreVel)
@@ -717,7 +735,8 @@ Class MVP_Strider : MVP_Humanoid
 			Return Forward, JDIR_NORMAL;
 		Else If (Dir <= 0.5 && Dir >= -0.5) //Facing orthogonally, or in actual english, to the side
 		{
-			If (DeltaAngle (Angle,GetAngleToPos(JumpPos,0)) < 20)
+			Int Diff = FlipSides ? -20 : 20;
+			If (DeltaAngle (Angle,GetAngleToPos(JumpPos,0)) < Diff)
 				Return Left, JDIR_LEFT;
 			Else
 				Return Right, JDIR_RIGHT;
@@ -742,12 +761,12 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		If (Running)
 		{
-			If (Frame == 7 || Frame == 10) //Play stomp sound on frames where it steps on the ground.
+			If (Frame == FRAME_H || Frame == FRAME_K) //Play stomp sound on frames where it steps on the ground.
 				A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.1,0.3));
 			Return;
 		}
 		
-		If (Frame == 1 || Frame == 4) //Play stomp sound on frames where it steps on the ground.
+		If (Frame == FRAME_B || Frame == FRAME_D) //Play stomp sound on frames where it steps on the ground.
 			A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.075,0.2));
 	}
 	
@@ -804,8 +823,24 @@ Class MVP_Strider : MVP_Humanoid
 	
 	States
 	{
+		StriderSprites: //Do I even need to do this still? Not in the mood to find out.
+			PNS1 ABCDEFGHIJKLMNOPQRSTUVWXYZ[] 0;
 		Spawn:
-			PNS3 A 1 KAI_Look ();
+			PNS3 A 1
+			{
+				KAI_Look (LOF_NOJUMP);
+				If (Target)
+				{
+					Int Chance = (Distance3D(Target) <= 1024) ? 64 : 8;
+					If (Target.CurSector.LightLevel <= 104)
+						Chance += 32;
+					If (Random (0,255) < Chance)
+						A_StartSound (SeeSound,CHAN_VOICE,attenuation: 0.6);
+					Return SeeState;
+				}
+				
+				Return State (Null);
+			}
 			Loop;
 		See:
 			PNS0 ABCDEF 4
@@ -843,8 +878,24 @@ Class MVP_Strider : MVP_Humanoid
 		Idle:
 			PNS0 ABCDEF 4
 			{
-				If (CurrentOrder != ORDER_STAY) MVP_StriderFootsteps(False);
+				//If (CurrentOrder != ORDER_STAY) MVP_StriderFootsteps(False);
 				KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit);
+			}
+			Loop;
+		Idle.Run:
+			PNS0 GHIJKL 2
+			{
+				//If (CurrentOrder != ORDER_STAY) MVP_StriderFootsteps(True);
+				Speed *= STRIDER_RUNFACTOR;
+				KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit);
+				Speed /= STRIDER_RUNFACTOR;
+				
+				If (RunSteps > 0)
+					RunSteps--;
+				If (RunSteps <= 0)
+					Return FindState ("Idle",True); //Back to walking.
+				
+				Return State (Null);
 			}
 			Loop;
 		//Idle.Stand: //Spinny 360 head state.
@@ -855,7 +906,7 @@ Class MVP_Strider : MVP_Humanoid
 			PNS1 W 1 //NOTE: We need this delay or otherwise the cover loop quits regardless.
 			{
 				Actor Proj;
-				console.printf ("ducktime %d",ducktime);
+				
 				If (--DuckTime <= 0 && (Proj = MVP_DroneDodge(User_DodgeRange)))
 				{
 					DuckTime = COVER_DUCKTIME;
@@ -910,7 +961,7 @@ Class MVP_Strider : MVP_Humanoid
 					If (JumpFlags & SJUMP_FAST)
 						Tics = Random (2,6);
 					
-					[Frame, JumpDir] = MVP_StriderLean (24, 7, 6, 0, True); //Y, H, G, A
+					[Frame, JumpDir] = MVP_StriderLean (FRAME_Y, FRAME_H, FRAME_G, FRAME_A, True); //Y, H, G, A
 					Sprite = MVP_StriderLeanIndex (JumpDir);
 
 					A_StartSound ("Vehicle/Strider/Motor",flags:CHANF_OVERLAP);
@@ -919,7 +970,7 @@ Class MVP_Strider : MVP_Humanoid
 			Jump.Loop:
 				#### # 1
 				{
-					[Frame, JumpDir] = MVP_StriderLean (25, 10, 8, 1); //Z, K, I, B
+					[Frame, JumpDir] = MVP_StriderLean (FRAME_Z, FRAME_K, FRAME_I, FRAME_B); //Z, K, I, B
 					Sprite = MVP_StriderLeanIndex(JumpDir);
 				}
 				#### # 1
@@ -927,7 +978,7 @@ Class MVP_Strider : MVP_Humanoid
 					[Frame, JumpDir] = MVP_StriderLean (25, 10, 8, 1); //Z, K, I, B
 					Sprite = MVP_StriderLeanIndex(JumpDir);
 					If (JumpFlags & SJUMP_FACEDIRECTION && !KAI_Math.IsEmptyVector3 (JumpPos))
-						{Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);console.printf ("aiming to %.2f %.2f %.2f",jumppos);}
+						Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);
 					//Going down, or maybe we already landed.
 					If (Vel.Z <= -2 || bOnMobj || Pos.Z <= FloorZ || Pos.Z <= GetZAt ())
 						Return FindState ("Jump.Loop.Down",True);
@@ -936,14 +987,13 @@ Class MVP_Strider : MVP_Humanoid
 				Goto Jump.Loop+1;
 			Jump.Loop.Down:
 				//Coming down frame.
-				//IDEA: Add slight guidance to the JumpPos?
 				#### # 1
 				{
 					If (JumpFlags & SJUMP_FACEDIRECTION && !KAI_Math.IsEmptyVector3 (JumpPos))
-						{Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);console.printf ("aiming to %.2f %.2f %.2f",jumppos);}
+						Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);
 					If (JumpFlags & SJUMP_STEER && !KAI_Math.IsEmptyVector3 (JumpPos))
 						Vel.XY += AngleToVector (GetAngleToPos(JumpPos,0),1);
-					[Frame, JumpDir] = MVP_StriderLean (26, 8, 10, 3); //[, I, K, D
+					[Frame, JumpDir] = MVP_StriderLean (FRAME_BRACKETOPEN,FRAME_I, FRAME_K, FRAME_D); //[, I, K, D
 					Sprite = MVP_StriderLeanIndex (JumpDir);
 					If (bOnMobj || Pos.Z <= FloorZ || Pos.Z <= GetZAt ()) //The eagle has landed.
 						Return FindState ("Jump.End",True);
@@ -955,11 +1005,31 @@ Class MVP_Strider : MVP_Humanoid
 				{
 					If (JumpFlags & SJUMP_FAST)
 						Tics = 4;
-					
+					console.printf ("landed");
 					bNoFriction = Default.bNoFriction; //Do friction again.
 					
-					Frame = MVP_StriderLean (28, 13, 12, 5, True); //], N, M, F
 					Sprite = MVP_StriderLeanIndex (JumpDir);
+					Frame = MVP_StriderLean (FRAME_BRACKETCLOSE, FRAME_N, FRAME_M, FRAME_F, flipsides: True); //], N, M, F
+					
+					console.printf ("sprite: %s",texman.getname(curstate.getspritetexture(0,spritenum:sprite,frame)));
+		Switch (jumpDir)
+		{
+			Case JDIR_LEFT:
+				console.printf ("left");
+				break;
+			Case JDIR_RIGHT:
+			console.printf ("right");
+			break;
+			Case JDIR_BACK:
+			console.printf ("back");
+			break;
+				case jdir_normal:
+				console.printf ("front");
+				break;
+				default:
+				console.printf ("what the fuck, dir is %d ?",jumpdir);
+				break;
+				}
 					
 					JumpFlags = 0;
 					JumpDir = 0;
@@ -968,7 +1038,6 @@ Class MVP_Strider : MVP_Humanoid
 					//CoverPos = (Double.NaN,Double.NaN,Double.NaN);
 				}
 				Goto See;
-		//TODO: Add running death state later.
 		Death:
 			PNS9 A 8
 			{
@@ -999,6 +1068,13 @@ Class MVP_Strider : MVP_Humanoid
 					}
 				}
 				
+				If (RunSteps)
+				{
+					Vel.XY += AngleToVector (Angle,Speed*STRIDER_RUNFACTOR*2);
+					RunSteps = 0;
+					Return FindState ("RunDeath");
+				}
+				
 				If (Random (True, False) == True)
 					Return FindState ("AltDeath");
 				Return State (Null);
@@ -1006,6 +1082,22 @@ Class MVP_Strider : MVP_Humanoid
 			PNS9 B 4;
 			PNS9 C 3;
 			PNS9 D -1
+			{
+				If (GetZAt() <= Pos.Z)
+				{
+					A_StartSound ("SFX/MetalHit");
+					Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+					//Pass parameters to spawner.
+					Duster.RadiusDamageFactor = 0;
+					Duster.ReactionTime = 32;
+					Duster.Threshold = Radius*2.25;
+					Duster.Scale *= 0.25;
+				}
+			}
+			Stop;
+		RunDeath:
+			PNS9 HI 4;
+			PNS9 J -1
 			{
 				If (GetZAt() <= Pos.Z)
 				{
