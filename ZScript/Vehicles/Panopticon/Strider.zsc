@@ -611,9 +611,19 @@ Class MVP_Strider : MVP_Humanoid
 		//Move to target.
 		If (!MovedAlready && Target && Target != Goal && !LockedIn)
 		{
-			If (DistToTarget >= 768 && !Crouching && !RunSteps) //Target too far, run to them.
+			If (DistToTarget >= 768 && !Crouching && !RunSteps && CheckSight(Target,SF_IGNOREWATERBOUNDARY)) //Target too far, run to them.
 			{
 				MVP_StartRun (Random(32,64));
+				Int Chance = DistToTarget >= 3072 ? 8 : 2;
+				If (Random (0,512) < Chance) //May leapfrog towards enemy. Especially when really far but still in sight.
+				{
+					console.printf ("jumping to my enemy, angle to target is %.2f",angle);
+					Angle = GetAngleToPos (Target.Pos,StriderMove.AngleLimit*2);
+					JumpPos.XY = AngleToVector (Angle, MVP_GetStriderVal(STRIDER_JUMPRANGE));
+					JumpPos.XY = Level.Vec2Offset (Pos.XY,JumpPos.XY);
+					JumpPos.Z = GetZAt(JumpPos.X,JumpPos.Y);
+					MVP_StriderJump (Target.Pos,flags:SJUMP_RUNNING|SJUMP_FAST,True);
+				}
 				Return;
 			}
 			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
@@ -838,11 +848,11 @@ Class MVP_Strider : MVP_Humanoid
 		Return Away;
 	}
 	
-	Bool MVP_StriderJump (Vector3 Where, Double Velocity = 0, JFlags Flags = 0)
+	Bool MVP_StriderJump (Vector3 Where, Double Velocity = 0, JFlags Flags = 0, Bool IgnoreDist = False)
 	{
 		//Too far or crammed to jump.
 		If (GetZAt(flags:GZF_CEILING)-(Pos.Z+Height) < Height/2 || 
-		Level.Vec2Diff (Pos.XY,Where.XY).Length() > MVP_GetStriderVal(STRIDER_JUMPRANGE) || Where.Z > Pos.Z+MVP_GetStriderVal(STRIDER_JUMPHEIGHT)) 
+		!IgnoreDist && (Level.Vec2Diff (Pos.XY,Where.XY).Length() > MVP_GetStriderVal(STRIDER_JUMPRANGE) || Where.Z > Pos.Z+MVP_GetStriderVal(STRIDER_JUMPHEIGHT))) 
 		{
 			console.printf ("can't jump to %.2f %.2f %.2f",where);
 			console.printf ("too far, distance is %.2f, limit %.2f",Level.Vec2Diff (Pos.XY,Where.XY).Length(),MVP_GetStriderVal(STRIDER_JUMPRANGE));
@@ -867,8 +877,10 @@ Class MVP_Strider : MVP_Humanoid
 	
 	//Strider loves lean(ing)
 	//Returns one of the sprite frames passed, and also a JumpDir
-	Int, Int MVP_StriderLean (Int Forward, Int Left, Int Right, Int Back, Bool IgnoreVel = False, Bool FlipSides = False)
+	Int, Int MVP_StriderLean (Int Forward, Int Left, Int Right, Int Back, Bool IgnoreVel = False, Bool FlipSides = False, Int Running = 0)
 	{
+		If (JumpFlags & SJUMP_RUNNING) //Running jump.
+			Return Running, JDIR_NORMAL;
 		Double Dir = Vel.XY.Unit() Dot AngleToVector (Angle);
 		If (IgnoreVel)
 			Dir = AngleToVector (GetAngleToPos(JumpPos,0)) Dot AngleToVector (Angle);
@@ -891,6 +903,9 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Protected Int MVP_StriderLeanIndex (Int Dir)
 	{
+		If (JumpFlags & SJUMP_RUNNING) //Doing running jump.
+			Return GetSpriteIndex ('PNS1');
+		
 		Switch (Dir)
 		{
 			Case JDIR_LEFT:
@@ -1002,6 +1017,7 @@ Class MVP_Strider : MVP_Humanoid
 		SJUMP_FAST			= 1 << 1, //Jump faster. Used for running jumps and dodges.
 		SJUMP_STEER			= 1 << 2, //Steer yourself to the JumpPos on descent.
 		SJUMP_CLIMB			= 1 << 3, //Jump straight up to the climb position. And also only use the generic jump sprites. Used in conjunction with SJUMP_STEER.
+		SJUMP_RUNNING		= 1 << 4, //We are leaping to a position on loop.
 	}
 	
 	//Used by the different jump modes.
@@ -1212,7 +1228,7 @@ Class MVP_Strider : MVP_Humanoid
 					If (JumpFlags & SJUMP_FAST)
 						Tics = Random (2,6);
 					
-					[Frame, JumpDir] = MVP_StriderLean (FRAME_Y, FRAME_H, FRAME_G, FRAME_A, True); //Y, H, G, A
+					[Frame, JumpDir] = MVP_StriderLean (FRAME_Y, FRAME_H, FRAME_G, FRAME_A, True,running: FRAME_Q); //Y, H, G, A
 					Sprite = MVP_StriderLeanIndex (JumpDir);
 
 					A_StartSound ("Vehicle/Strider/Motor",flags:CHANF_OVERLAP);
@@ -1227,12 +1243,12 @@ Class MVP_Strider : MVP_Humanoid
 			Jump.Loop:
 				#### # 1
 				{
-					[Frame, JumpDir] = MVP_StriderLean (FRAME_Z, FRAME_K, FRAME_I, FRAME_B); //Z, K, I, B
+					[Frame, JumpDir] = MVP_StriderLean (FRAME_Z, FRAME_K, FRAME_I, FRAME_B,running: FRAME_O); //Z, K, I, B
 					Sprite = MVP_StriderLeanIndex(JumpDir);
 				}
 				#### # 1
 				{
-					[Frame, JumpDir] = MVP_StriderLean (25, 10, 8, 1); //Z, K, I, B
+					[Frame, JumpDir] = MVP_StriderLean (FRAME_Z, FRAME_K, FRAME_I, FRAME_B,running: FRAME_O); //Z, K, I, B
 					Sprite = MVP_StriderLeanIndex(JumpDir);
 					If (JumpFlags & SJUMP_FACEDIRECTION && !KAI_Math.IsEmptyVector3 (JumpPos))
 						Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);
@@ -1250,10 +1266,30 @@ Class MVP_Strider : MVP_Humanoid
 						Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);
 					If (JumpFlags & SJUMP_STEER && !KAI_Math.IsEmptyVector3 (JumpPos))
 						Vel.XY += AngleToVector (GetAngleToPos(JumpPos,0),1);
-					[Frame, JumpDir] = MVP_StriderLean (FRAME_BRACKETOPEN,FRAME_I, FRAME_K, FRAME_D); //[, I, K, D
+					[Frame, JumpDir] = MVP_StriderLean (FRAME_BRACKETOPEN,FRAME_I, FRAME_K, FRAME_D,running: FRAME_P); //[, I, K, D
 					Sprite = MVP_StriderLeanIndex (JumpDir);
+					
 					If (bOnMobj || Pos.Z <= FloorZ || Pos.Z <= GetZAt ()) //The eagle has landed.
-						Return FindState ("Jump.End",True);
+					{
+						//We are leaping towards our JumpPos, so do that until the RunSteps run out. Or the target is now in range or out of sight.
+						If (JumpFlags & SJUMP_RUNNING && RunSteps > 0 && !IsDead(Target) &&
+						!(Target && (Distance3D(Target) <= 768 || !CheckSight(Target,SF_IGNOREWATERBOUNDARY))))
+						{
+							If (RunSteps >= 5)
+								RunSteps -= 5;
+							Else
+								RunSteps = 0;
+							Angle = GetAngleToPos (Target.Pos,StriderMove.AngleLimit*2);
+							console.printf ("leapfrogging to %.2f %.2f %.2f, angle is %.2f, run steps %u",jumppos,angle,runsteps);
+							JumpPos.XY = AngleToVector (Angle, MVP_GetStriderVal(STRIDER_JUMPRANGE));
+							JumpPos.XY = Level.Vec2Offset (Pos.XY,JumpPos.XY);
+							JumpPos.Z = GetZAt(JumpPos.X,JumpPos.Y);
+							Return FindState ("Jump");
+						}
+						Else
+							Return FindState ("Jump.End",True);
+					}
+					
 					Return State (Null);
 				}
 				Loop;
@@ -1269,7 +1305,7 @@ Class MVP_Strider : MVP_Humanoid
 						GiveInventory ("MVP_DropoffToken",1);
 					
 					Sprite = MVP_StriderLeanIndex (JumpDir);
-					Frame = MVP_StriderLean (FRAME_BRACKETCLOSE, FRAME_N, FRAME_M, FRAME_F, flipsides: True); //], N, M, F
+					Frame = MVP_StriderLean (FRAME_BRACKETCLOSE, FRAME_N, FRAME_M, FRAME_F, flipsides: True,running: FRAME_Q); //], N, M, F
 					
 					JumpFlags = 0;
 					JumpDir = 0;
