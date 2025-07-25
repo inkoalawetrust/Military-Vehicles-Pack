@@ -6,9 +6,10 @@
 //TODO:
 //Don't forget to add the striders' ramming attack.
 //Add leapfrogging to a destination, particularly when chasing, and/or as an alternative to a normal run to that point?
-//Add a jumping SpecialSpot.
-/*Get rid of User_JumpRange and User_JumpHeight. KAI_JumpTo() basically needs hardcoded velocity values to not under or overshoot because it sucks.
-Maybe replace them with a User_JumpMode variable that goes like: -1 None, 0 Pick default, 1 Standard (Default), 2 High*/
+
+//IDEA:
+//Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
+//Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -131,10 +132,8 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		Super.UserVariableDefaults();
 		
-		If (User_JumpRange == 0)
-			User_JumpRange = 512;
-		If (User_JumpHeight == 0)
-			User_JumpHeight = 256;
+		If (User_JumpMode == 0)
+			User_JumpMode = 1; //Default jump ranges.
 		If (User_DodgeRange == 0)
 			User_DodgeRange = 512;
 		If (User_RetreatDistance == 0)
@@ -248,6 +247,8 @@ Class MVP_Strider : MVP_Humanoid
 			
 			For (Int I; I < 4; I++)
 			{
+				If (!Level.IsPointInLevel (SpawnPos))
+					Continue;
 				Actor Smoke = Spawn (FX,SpawnPos);
 				Smoke.Roll = FRandom(-180,180);
 				If (!Dead) Smoke.A_SetScale (FRandom(0.25,0.8));
@@ -693,7 +694,7 @@ Class MVP_Strider : MVP_Humanoid
 		If (ReverseSteps == 0 && Crouching && Sprite == GetSpriteIndex ('PNS0')) //Offset into the crouching animation.
 			Frame += STRIDER_CROUCHFRAMEOFFSET;
 		
-		Double JumpFac = (User_JumpHeight/Height)+0.1; //The multiplier of the striders' to use for jumping up and down ledges, should be basically exactly the User_JumpHeight.
+		Double JumpFac = (MVP_GetStriderVal(STRIDER_JUMPHEIGHT)/Height)+0.1; //The multiplier of the striders' to use for jumping up and down ledges, should be basically exactly the striders' jump height.
 		
 		If (!Crouching &&
 		//DO NOT CLIMB OVER YOUR COVER
@@ -707,11 +708,63 @@ Class MVP_Strider : MVP_Humanoid
 		
 		//Jump over gaps.
 		Vector2 JumpPosition = (Double.NaN,Double.NaN);
-		If (!Crouching) JumpPosition = KAI_GetJumpPosition (User_JumpRange,Angle);
+		Double ZAt = Double.NaN;
+		Double JumpVel =  MVP_GetStriderVal(STRIDER_VELOCITY);
+		If (!Crouching)
+		{
+			Double Range = MVP_GetStriderVal(STRIDER_JUMPRANGE);
+			
+			//KLUDGE: Oh right! We can't make this work simply because the nodes can be in arbitrary positions and KAI_JumpTo() can't solve for ANY component of a ballistic formula!
+			/*If (Target && Distance3D (Target) > Range && !IsPosReachable (Target.Pos)) //Parkour to an enemy by jumping to the node closest to them in range (But ONLY on the Z axis).
+			{
+				Array <Actor> Nodes;
+				ForEach (Node : BlockThingsIterator.Create(Target,Distance2D(Target)))
+				{
+					Node = MVP_StriderJumpSpot(Node);
+					//Node is too far away or too high up (Or, down?) to jump to. Or it's lower
+					If (!Node || Distance3D(Node) > Range || Abs(Node.Z - Pos.Z) > MVP_GetStriderVal(STRIDER_JUMPHEIGHT))
+						Continue;
+					
+					//This node is useless, it's already in the same vertical plane as us.
+					If (Abs (Node.Pos.Z - Pos.Z) <= MaxStepHeight)
+						Continue;
+					
+					Nodes.Push(Node);
+					Break;
+				}
+				If (Nodes.Size())
+				{
+					
+					Double NearestDistance = INT.MAX;
+					
+					Actor ClosestNode;
+					For (Int I = Nodes.Size()-1; I >= 0; I--)
+					{
+						Double CurrentDistance = Abs (Target.Pos.Z - Nodes[I].Pos.Z);//Level.Vec3Diff(Pos,TempList[I].Pos).LengthSquared();
+						If (NearestDistance > CurrentDistance && CurrentDistance <= Range)
+						{
+							NearestDistance = CurrentDistance;
+							ClosestNode = Nodes[I];
+						}
+					}
+		
+					If (ClosestNode)
+					{
+						JumpPosition = ClosestNode.Pos.XY;
+						ZAt = ClosestNode.Pos.Z;
+						JumpVel *= 2;
+					}
+				}
+			}*/
+			
+			//Didn't find jump node, so just look for a gap.
+			If (JumpPosition != JumpPosition)
+				JumpPosition = KAI_GetJumpPosition (Range,Angle);
+		}
 		If (JumpPosition == JumpPosition && Level.Vec2Diff (Pos.XY,JumpPosition).Length() > 8 && !IsInState (Self,"Idle.Cover")) //We have a valid position we must jump to, AKA the returned vector isn't null.
 		{
-			Double ZAt = GetZAt(JumpPosition.X,JumpPosition.Y,flags:GZF_ABSOLUTEPOS);
-			If (MVP_StriderJump ((JumpPosition,ZAt),flags:SJUMP_STEER|SJUMP_FACEDIRECTION))
+			If (ZAt != ZAt) ZAt = GetZAt(JumpPosition.X,JumpPosition.Y,flags:GZF_ABSOLUTEPOS);
+			If (MVP_StriderJump ((JumpPosition,ZAt),JumpVel,SJUMP_STEER|SJUMP_FACEDIRECTION))
 				Return True;
 		}
 		
@@ -746,7 +799,7 @@ Class MVP_Strider : MVP_Humanoid
 	Vector3 MVP_StriderJumpFromPos (Vector3 Avoid, Int Attempts, Double Dist)
 	{
 		Double RealStep = MaxStepHeight;
-		MaxStepHeight = User_JumpHeight;
+		MaxStepHeight = MVP_GetStriderVal(STRIDER_JUMPHEIGHT);
 		Vector3 Away = FindRandomMovePos (Avoid,Attempts,Dist);
 		If (Away.Z > Pos.Z+MaxStepHeight)
 			Away = (Double.NaN,Double.NaN,Double.NaN);
@@ -785,15 +838,16 @@ Class MVP_Strider : MVP_Humanoid
 		Return Away;
 	}
 	
-	Bool MVP_StriderJump (Vector3 Where, Double Velocity = -17.5, JFlags Flags = 0)
+	Bool MVP_StriderJump (Vector3 Where, Double Velocity = 0, JFlags Flags = 0)
 	{
 		//Too far or crammed to jump.
 		If (GetZAt(flags:GZF_CEILING)-(Pos.Z+Height) < Height/2 || 
-		Level.Vec2Diff (Pos.XY,Where.XY).Length() > User_JumpRange || Where.Z > Pos.Z+User_JumpHeight) 
+		Level.Vec2Diff (Pos.XY,Where.XY).Length() > MVP_GetStriderVal(STRIDER_JUMPRANGE) || Where.Z > Pos.Z+MVP_GetStriderVal(STRIDER_JUMPHEIGHT)) 
 		{
 			console.printf ("can't jump to %.2f %.2f %.2f",where);
-			console.printf ("too far, distance is %.2f, limit %.2f",Level.Vec2Diff (Pos.XY,Where.XY).Length(),user_jumprange);
-			console.printf ("too high?, %d, where.z is %.2f with a total height of %.2f, limit %.2f",(Where.Z > Pos.Z+User_JumpHeight),where.z,pos.z+user_jumpheight,user_jumpheight);
+			console.printf ("too far, distance is %.2f, limit %.2f",Level.Vec2Diff (Pos.XY,Where.XY).Length(),MVP_GetStriderVal(STRIDER_JUMPRANGE));
+			double high = MVP_GetStriderVal(STRIDER_JUMPheight);
+			console.printf ("too high?, %d, where.z is %.2f with a total height of %.2f, limit %.2f",(Where.Z > Pos.Z+high),where.z,pos.z+high,high);
 			actor fail = KAI_DebugPointDelay.KAI_TempPointSpawn(where,70*2);
 			fail.a_settranslation ('kai_debugred');
 			Return False;
@@ -801,7 +855,10 @@ Class MVP_Strider : MVP_Humanoid
 		
 		JumpFlags = Flags;
 		JumpPos = Where;
-		JumpSpeed = Velocity;
+		If (Velocity == 0)
+			JumpSpeed = MVP_GetStriderVal(STRIDER_VELOCITY);
+		Else
+			JumpSpeed = Velocity;
 		bNoFriction = True; //Go exactly where you're supposed to.
 		KAI_DebugPointDelay.KAI_TempPointSpawn(where,70*2);
 		SetStateLabel ("Jump");
@@ -864,6 +921,44 @@ Class MVP_Strider : MVP_Humanoid
 			A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.075,0.2));
 	}
 	
+	//Get the hardcoded jump values of the strider. HACK: This only exists because KAI_JumpTo() sucks.
+	Double MVP_GetStriderVal (JumpVals What)
+	{
+		If (User_JumpMode == -1) //Nope
+			Return -1;
+		//MAYDO: Change the jump range to 640MU (20 meters), and accordingly change the height too of course.
+		If (User_JumpMode == 1) //Normal params
+		{
+			Switch (What)
+			{
+				Case STRIDER_JUMPRANGE:
+					Return 512;
+				Case STRIDER_JUMPHEIGHT:
+					Return 256;
+				Case STRIDER_VELOCITY:
+					Return -17.5;
+				Default:
+					Return -1;
+			}
+		}
+		If (User_JumpMode == 2) //Extreme params
+		{
+			Switch (What)
+			{
+				Case STRIDER_JUMPRANGE:
+					Return 1024;
+				Case STRIDER_JUMPHEIGHT:
+					Return 512;
+				Case STRIDER_VELOCITY:
+					Return -35;
+				Default:
+					Return -1;
+			}
+		}
+		
+		Return -1;
+	}
+	
 	KAIMoveParams StriderMove;
 	KAI_Voice Yapper;
 	Int DeathFlames;
@@ -909,7 +1004,15 @@ Class MVP_Strider : MVP_Humanoid
 		SJUMP_CLIMB			= 1 << 3, //Jump straight up to the climb position. And also only use the generic jump sprites. Used in conjunction with SJUMP_STEER.
 	}
 	
-	Double User_JumpRange, User_JumpHeight;
+	//Used by the different jump modes.
+	Enum JumpVals
+	{
+		STRIDER_JUMPRANGE,
+		STRIDER_JUMPHEIGHT,
+		STRIDER_VELOCITY,
+	}
+	
+	UInt8 User_JumpMode; //-1 None, 0 Pick default, 1 Standard (Default), 2 High
 	Double User_DodgeRange;
 	Double User_RetreatDistance;
 	Int User_ChaseTime;
@@ -1117,7 +1220,7 @@ Class MVP_Strider : MVP_Humanoid
 				#### Y 0
 				{
 					If (!(JumpFlags & SJUMP_CLIMB))
-						KAI_JumpTo (JumpPos,JumpSpeed,User_JumpRange);
+						KAI_JumpTo (JumpPos,JumpSpeed,MVP_GetStriderVal(STRIDER_JUMPRANGE));
 					Else
 						Vel.Z += JumpSpeed; //Jump straight up to climb.
 				}
@@ -1154,6 +1257,7 @@ Class MVP_Strider : MVP_Humanoid
 					Return State (Null);
 				}
 				Loop;
+			//MAYDO: Make it lose momentum or have a massive friction penalty once landed so it doesn't slide off thin surface?
 			Jump.End: //All comes back here.
 				#### # 8
 				{
@@ -1347,6 +1451,20 @@ Class MVP_Strider : MVP_Humanoid
 			PNS9 OPQ 3;
 			PNS9 R -1;
 			Stop;
+	}
+}
+
+//Strider jump hint node, used for example to make it jump up a rooftop if one is nearby, and closer in height to the target than the striders' current position.
+Class MVP_StriderJumpSpot : SpecialSpot
+{
+	Default
+	{
+		//$Title Strider Jump Spot
+		//$Category ZDoom
+		//$Sprite MVPEG0
+		//IDEA: Maybe use the height and radius fields for something? Like "if the area around this spot isn't clear of obstacles, don't jump here"?
+		XScale 0.5;
+		YScale 0.416666; //0.5 / 1.2
 	}
 }
 
