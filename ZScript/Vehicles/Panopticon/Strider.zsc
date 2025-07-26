@@ -5,9 +5,15 @@
 
 //TODO:
 //Don't forget to add the striders' ramming attack.
-//Add leapfrogging to a destination, particularly when chasing, and/or as an alternative to a normal run to that point?
+//Make the strider still dodge when in the middle of firing its' guns. And also make it fire its' machine gun if dodging while attacking.
+//Speaking of which, just generally make it able to also attack mid-dodge, even if it weren't attacking already.
+
+//MAYDO:
+//Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed.
 
 //IDEA:
+//Make it jump straight up to crush enemies beneath it when surrounded.
+//For the plain machine gun, add fire modes like on the marines and tracked drone, but maybe based on just distance instead.
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
 
@@ -82,6 +88,8 @@ Class MVP_Strider : MVP_Humanoid
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
 		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
 		KAI_Actor.ActorFollowDist 192;
+		KAI_Actor.Inaccuracy (12,12,12);
+		KAI_Actor.InaccuracyFrequency 0.6;
 		
 		//Damage factors that act as the vehicles "armor".
 		DamageFactor 0.75; //Generic damage factor for all damage.
@@ -111,6 +119,7 @@ Class MVP_Strider : MVP_Humanoid
 		Super.PostBeginPlay();
 		
 		SearchTime = User_ChaseTime;
+		//FireDelay = Random (1,2)*GameTicRate;
 		
 		StriderMove.DetourFactor = 0.6;
 		StriderMove.Attempts = 32;
@@ -126,6 +135,18 @@ Class MVP_Strider : MVP_Humanoid
 		
 		A_StartSound ("Vehicle/Drone/Motor",CHAN_BODY,CHANF_LOOPING,1,ATTN_STATIC);
 		If (KAIHandler) Yapper = KAIHandler.GetNPCVoice ("Panopticon");
+		
+		MissileState = FindState ("Fire",True); //Fallback state, picks a random attack and amount.
+		AttackStates.Push (FindState("Fire.Start",True));
+		AttackStates.Push (FindState("Fire.MG",True));
+		AttackStates.Push (FindState("Fire.Minigun",True));
+		AttackStates.Push (FindState("Fire.Rocket",True));
+		AttackStates.Push (FindState("Fire.Grenade",True));
+		
+		//Melee state is just called "Melee", no need to custom set it, and it functions like Fire:.
+		AttackStates.Push (FindState("Melee.Kick",True));
+		AttackStates.Push (FindState("Melee.Stomp",True));
+		AttackStates.Push (FindState("Melee.Ram",True)); //Special attack where the strider runs up to the target to ram it.
 	}
 	
 	Override Void UserVariableDefaults()
@@ -152,6 +173,38 @@ Class MVP_Strider : MVP_Humanoid
 		Super.Tick();
 		
 		If (IsFrozen()) Return;
+		
+		If (FireDelay >= 1)
+			FireDelay--;
+		
+		//Target prediction during attack states.
+		If (!IsDead(Self) && IsInAttackState())
+		{
+			Double ProjSpeed, FastProjSpeed;
+			Switch (AttackType)
+			{
+				Case ATTACK_MACHINEGUN:
+					ProjSpeed = GetDefaultByType("MVP_RifleBullet").Speed;
+					FastProjSpeed = GetDefaultByType("MVP_RifleBullet").FastSpeed;
+					Break;
+				Case ATTACK_MINIGUN:
+					ProjSpeed = GetDefaultByType("MVP_SmallRifleBullet").Speed;
+					FastProjSpeed = GetDefaultByType("MVP_SmallRifleBullet").FastSpeed;
+					Break;
+				Case ATTACK_ROCKETS:
+					ProjSpeed = GetDefaultByType("MVP_70mmRocket").Speed;
+					FastProjSpeed = GetDefaultByType("MVP_70mmRocket").FastSpeed;
+					Break;
+				/*Case ATTACK_GRENADE:
+					ProjSpeed = GetDefaultByType("MVP_40mmGrenade").Speed;
+					FastProjSpeed = GetDefaultByType("MVP_40mmGrenade").FastSpeed;
+					Break;*/
+			}
+			Vector3 FirePos = MVP_StriderAttackPos (AttackType);
+			AimAtTarget (6,6,z_ofs:GetFAFAimPos(Target,FirePos)-FirePos.Z,attackspeed:ProjSpeed,fastattackspeed:FastProjSpeed);
+			if (target)
+				kai_lofraycast.visualizetracepath (Pos,level.vec3offset(pos,kai_math.angletovector3d(angle,-pitch,distance3d(target))),distance3d(target));
+		}
 		
 		//Run fall impact code.
 		//HACK: Yes this is a copy from KAI_BaseVehicle because it's like, the only feature 
@@ -186,7 +239,7 @@ Class MVP_Strider : MVP_Humanoid
 				//Impact dust
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
 				//Pass parameters to spawner.
-				Duster.RadiusDamageFactor = 0;
+				Duster.RadiusDamageFactor = 4;
 				Duster.ReactionTime = KAI_Math.LinearMap(Force,100,25000,1,256);
 				Duster.Threshold = Radius*1.55;
 				Duster.Scale *= 0.5;
@@ -228,7 +281,6 @@ Class MVP_Strider : MVP_Humanoid
 		If (Random (0,255) < 3)
 			Spawn ("MVP_Spark",Level.Vec3Offset(Pos,(FRandom (Radius,Radius),FRandom (Radius,-Radius),FRandom (0,Height))));
 		
-		
 		Int CardAng = GetNearestCardinalAngle(False);
 		Vector3 SpawnPos = !Dead ? Vec3Angle (32,CardAng) : Vec3Angle (32,CardAng+135);
 		If (IsInState (Self,"AltDeath"))
@@ -266,6 +318,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		bNoFriction = Default.bNoFriction; //Do friction again.
 		bNoGravity = Default.bNoGravity; //Do gravity again.
+		InCover = False;
 	}
 	
 	Override Bool OnWander()
@@ -370,6 +423,42 @@ Class MVP_Strider : MVP_Humanoid
 		Return True;
 	}
 	
+	Override Bool ShouldAttack (Bool NoStateJump)
+	{
+		If (!Target || Target == Goal || FireDelay != 0) Return False; //Don't attack if you have no target or just following a goal.
+		If (!CanAttack() || !CanBeTargeted(Self,Target) || IsInanimateObject (Target)) Return False;
+		
+		Int Threat = AssessThreatLevel (Target);
+		Double Dist = Distance3D (Target);
+		Bool InSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY); //IDEA: Try to make the grenade launcher fire at out of sight target?
+		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN); //The position we're firing from.
+		
+		//Fire miniguns if close enough. Especially for very dangerous enemies.
+		//TODO: ADD LOF CHECKS!
+		Int MinigunChance = (Threat >= ThreatLevelThreshold) ? 192 : 128;
+		If (InSight && Random (0,255) < MinigunChance &&
+		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFAimPos(Target,FirePos),DHC_THRUHOSTILES) >= 40)
+		{
+			Inaccuracy = (32,32,32);
+			AttackType = ATTACK_MINIGUN;
+			Shots = Random (192,255);
+			console.printf ("firing miniguns");
+			If (!NoStateJump) SetStateLabel ("Fire.Start");
+			Return True;
+		}
+		//Fire more accurate machine gun otherwise.
+		Else If (InSight)
+		{
+			AttackType = ATTACK_MACHINEGUN;
+			Shots = Random (15,30);
+			console.printf ("firing machine gun");
+			If (!NoStateJump) SetStateLabel ("Fire.Start");
+			Return True;
+		}
+		
+		Return False;
+	}
+	
 	Void MVP_StriderChase()
 	{
 		KAI_Chase_PreChecks();
@@ -460,6 +549,8 @@ Class MVP_Strider : MVP_Humanoid
 					Return;
 				}
 				
+				//MAYDO: Make the strider able to attack when heading to cover as long as it's not running there?
+				
 				KAI_MoveTowards (CoverPos,StriderMove.DetourFactor/2,StriderMove.AngleLimit); //No zigzag.
 				
 				KAI_DebugPointDelay.KAI_TempPointSpawn(coverpos,8);
@@ -476,6 +567,7 @@ Class MVP_Strider : MVP_Humanoid
 					NewPosStepCount = 0;
 					A_FaceTarget();
 					A_StopSound (CHAN_BODY);
+					InCover = True;
 					SetStateLabel ("Idle.Cover");
 					Return;
 				}
@@ -486,14 +578,6 @@ Class MVP_Strider : MVP_Humanoid
 		{
 			CoverPos = KAI_FindNearbyCover(384,Radius*2,Target,False,256,(72,192),(64,40),(Radius,30,100),Self);
 		}
-		
-		/*NearestEnemy = FindNearestEnemy (256);
-		
-		If (NearestEnemy)
-		{
-			RunAway = True;
-			ReverseSteps = Random (2,8);
-		}*/
 		
 		HazardInfo Haz;
 		If (!RunAway) Haz = GetStrongestHazard(Hazards); //Avoid strongest hazard around if not already busy with backing off from a nearby enemy.
@@ -640,6 +724,8 @@ Class MVP_Strider : MVP_Humanoid
 			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d, reactiontime %d",goal.pos,movedalready,b,reactiontime);
 		}
 		
+		If (ShouldAttack ())
+			Return;
 		HandleChaseTimer();
 	}
 	
@@ -974,6 +1060,40 @@ Class MVP_Strider : MVP_Humanoid
 		Return -1;
 	}
 	
+	//Get the relative coordinates from where an attack on the strider comes out of.
+	//TODO: Add offsets for firing while crouching.
+	//PLAYTEST: TEST THESE TO MAKE SURE THEY MATCH.
+	Vector3 MVP_StriderAttackPos (StriderAttacks Type)
+	{
+		Switch (Type)
+		{
+			Case ATTACK_NONE:
+				Return (Double.NaN,Double.NaN,Double.NaN);
+			Case ATTACK_MACHINEGUN:
+				Return (0,0,64);
+			Case ATTACK_MINIGUN: //Just flip this after each shot by doing Abs(X), same with the rockets.
+				Return (0,-12,80);
+			Case ATTACK_ROCKETS:
+				Return (0,-12,72);
+			Case ATTACK_GRENADE:
+				Return (0,0,88);
+			Default:
+				Return (Double.NaN,Double.NaN,Double.NaN);
+		}
+	}
+	
+	Int UpdateStriderElevation (Int FaceDown, Int FaceStraight, Int FaceUp)
+	{
+		If (Pitch >= 6 && Pitch >= 0)
+			Return FaceDown;
+		Else If (Pitch < 6 && Pitch >= -15)
+			Return FaceStraight;
+		Else If (Pitch < -14)
+			Return FaceUp;
+		
+		Return FaceStraight;
+	}
+	
 	KAIMoveParams StriderMove;
 	KAI_Voice Yapper;
 	Int DeathFlames;
@@ -983,11 +1103,28 @@ Class MVP_Strider : MVP_Humanoid
 	UInt8 ReverseSteps; //How many steps to walk backwards for.
 	UInt8 RunSteps; //How many steps to stay in one of the Run substates for.
 	Bool Crouching;
-	Actor LastProj;
+	Actor LastProj; //Last projectile dodged.
+	
+	UInt8 AttackType; //What do we attack with currently?
+	Int Shots; //How many times to use our attack before stopping?
+	UInt8 FireDelay;
+	
+	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
+	{
+		ATTACK_NONE,
+		ATTACK_MACHINEGUN,
+		ATTACK_MINIGUN,
+		ATTACK_ROCKETS,
+		ATTACK_GRENADE,
+		ATTACK_PUNT, //Old punt
+		ATTACK_STOMP,
+		ATTACK_RAMMING,
+	}
 	
 	//Cover variables
 	Const COVER_WAIT = 350;
 	Const COVER_DUCKTIME = 70;
+	Bool InCover;
 	Int OuttaSightTime; //How long has the target been out of sight while behind cover?
 	Int DuckTime; //Dodging by ducking down.
 	
@@ -1199,7 +1336,203 @@ Class MVP_Strider : MVP_Humanoid
 			Goto Idle.Cover+4;
 		Idle.Cover.End:
 			PNS1 VU 4 A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
-			PNS1 U 0 A_StopSound (CHAN_WEAPON);
+			PNS1 U 0
+			{
+				A_StopSound (CHAN_WEAPON);
+				InCover = False;
+			}
+			Goto See;
+		Fire: //Pick a random ranged attack type and begin blasting.
+			TNT1 A 0
+			{
+				AttackType = Random (ATTACK_MACHINEGUN,ATTACK_GRENADE);
+				
+				If (AttackType == ATTACK_MACHINEGUN)
+				{
+					Shots = Random (10,30);
+					AttackType = ATTACK_MACHINEGUN;
+				}
+				Else If (AttackType == ATTACK_MINIGUN)
+				{
+					Shots = Random (192,255);
+					AttackType = ATTACK_MINIGUN;
+				}
+				Else
+					Shots = 3;
+				
+				//Return FindStateByString (Attack,True);
+			}
+		Fire.Start:
+			PNS1 U 0
+			{
+				If (AttackType == ATTACK_GRENADE) //Skip straight to firing grenades.
+					Return FindState ("Fire.Grenade",True);
+				If (AttackType == ATTACK_NONE) //Womp womp.
+					Return SeeState;
+				
+				If (InCover) //Skip the preperation if we're already behind cover.
+					Return A_Jump (256,4);
+				Return State (Null);
+			}
+			PNS1 UVW 4 Fast
+			{
+				A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+				If (AttackType == ATTACK_MACHINEGUN) //Open faster for the machine gun.
+					Tics = 2;
+			}
+			PNS1 W 0
+			{
+				A_StopSound (CHAN_WEAPON);
+				Switch (AttackType)
+				{
+					Case ATTACK_MACHINEGUN:
+						Return FindState ("Fire.MG",True);
+					Case ATTACK_MINIGUN:
+						Return FindState ("Fire.Minigun",True);
+					Case ATTACK_ROCKETS:
+						Return FindState ("Fire.Rocket",True);
+				}
+
+				Return State (Null);
+			}
+		Fire.MG:
+			PNS1 X 2 Light ("StriderFiringLight")
+			{
+				A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.5);
+				Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
+				Bool B; Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",FireOfs.Z,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				AddProjectileSpread (Proj,(0.75,-0.75),(0.75,-0.75));
+				[B, Proj] = A_SpawnItemEx ("MVP_BulletCasing",0,0,FireOfs.Z,FRandom(4,-4),FRandom(4,8),FRandom(3,8));
+				Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
+				
+				Frame = UpdateStriderElevation(FRAME_S,FRAME_X,FRAME_P);
+				If (Frame != FRAME_X)
+					Sprite = GetSpriteIndex ('PNS2');
+			}
+			PNS1 W 3
+			{
+				//TODO: Add dodge check.
+				//MAYDO: Make this check into a function so the minigun loop can use it too.
+				
+				//Out of ammo.
+				If (Shots-- <= 1)
+				{
+					Shots = 0;
+					FireDelay = Clamp (GameTicRate*Random(1,6),0,UInt8.MAX);
+					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 16 && MVP_GunDrone(Master) && MVP_GunDrone(Master).Yapper)
+						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_GunDrone(Master).Yapper);
+					Return FindState ("Fire.End",True);
+				}
+				
+				//If (FireMode == MODE_AUTO)
+				{
+					//If you have no target, or it's dead.
+					If (!Target || IsDead (Target))
+					{
+						A_ClearTarget();
+						LookForPlayers (True); //Look for a new target.
+					}
+					
+					//TODO: Make these generic NPC functions ugh.
+					/*If (!KAI_TurretRefire (48,"See",True,16) && !KAI_TurretCheckLOF (Target,0,0,MVP_StriderAttackPos (ATTACK_MACHINEGUN),0,"MVP_RifleBullet")))
+					{
+						A_ClearTarget();
+						FindState ("Fire.End",True);
+					}*/
+				}
+				
+				HandleChaseTimer();
+				
+				Frame = UpdateStriderElevation (FRAME_R,FRAME_W,FRAME_O);
+				If (Frame != FRAME_W)
+					Sprite = GetSpriteIndex ('PNS2');
+				Return State (Null);
+			}
+			Loop;
+		//TODO: VERY WIP.
+		Fire.Minigun:
+			PNS2 A 1 Light ("StriderFiringLight")
+			{
+				A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.5);
+				A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.5);
+				Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_MINIGUN);
+				Bool B; Actor Proj;
+				
+				Proj = A_SpawnProjectile ("MVP_SmallRifleBullet",FireOfs.Z,FireOfs.Y,flags:CMF_AIMDIRECTION,Pitch);
+				AddProjectileSpread (Proj,(0.75,-0.75),(0.75,-0.75));
+				Proj = A_SpawnProjectile ("MVP_SmallRifleBullet",FireOfs.Z,Abs(FireOfs.Y),flags:CMF_AIMDIRECTION,Pitch);
+				AddProjectileSpread (Proj,(0.75,-0.75),(0.75,-0.75));
+				
+				//Casings fall straight down
+				[B, Proj] = A_SpawnItemEx ("MVP_BulletCasing",0,FireOfs.Y,FireOfs.Z,FRandom(1,-1),FRandom(1,-1),0);
+				Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
+				[B, Proj] = A_SpawnItemEx ("MVP_BulletCasing",0,Abs(FireOfs.Y),FireOfs.Z,FRandom(1,-1),FRandom(1,-1),0);
+				Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
+				
+				Frame = UpdateStriderElevation (FRAME_T,FRAME_A,FRAME_Q);
+			}
+			PNS2 B 1
+			{
+				//TODO: Add dodge check.
+				//MAYDO: Make this check into a function so the minigun loop can use it too.
+				
+				//Out of ammo.
+				Shots -= 2;
+				If (Shots <= 0)
+				{
+					Shots = 0;
+					FireDelay = Clamp (GameTicRate*Random(1,6),0,UInt8.MAX);
+					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 16 && MVP_GunDrone(Master) && MVP_GunDrone(Master).Yapper)
+						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_GunDrone(Master).Yapper);
+					Return FindState ("Fire.End",True);
+				}
+				
+				//If (FireMode == MODE_AUTO)
+				{
+					//If you have no target, or it's dead.
+					If (!Target || IsDead (Target))
+					{
+						A_ClearTarget();
+						LookForPlayers (True); //Look for a new target.
+					}
+					
+					//TODO: Make these generic NPC functions ugh.
+					/*If (!KAI_TurretRefire (48,"See",True,16) && !KAI_TurretCheckLOF (Target,0,0,MVP_StriderAttackPos (ATTACK_MACHINEGUN),0,"MVP_RifleBullet")))
+					{
+						A_ClearTarget();
+						FindState ("Fire.End",True);
+					}*/
+				}
+				
+				HandleChaseTimer();
+				
+				Frame = UpdateStriderElevation (FRAME_R,FRAME_W,FRAME_O);
+				Return State (Null);
+			}
+			Loop;
+		Fire.End:
+			PNS1 VU 4 Fast
+			{
+				A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+				If (AttackType == ATTACK_MACHINEGUN) //CLOSE faster for the machine gun.
+					Tics = 2;
+			}
+			PNS1 U 0
+			{
+				A_StopSound (CHAN_WEAPON);
+				AttackType = ATTACK_NONE;
+				Inaccuracy = Default.Inaccuracy;
+				InaccuracyFrequency = Default.InaccuracyFrequency;
+			}
+			Goto See;
+		Melee:
+			TNT1 A 0
+			{
+				If (Random (False, True) == True)
+					Return FindState ("Melee.Stomp");
+				Return State (Null); //Fall into kick state.
+			}
+		Melee.Kick:
 			Goto See;
 		Climb:
 			PNS1 R 6 Fast Slow
