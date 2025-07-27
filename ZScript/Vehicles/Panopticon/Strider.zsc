@@ -200,10 +200,22 @@ Class MVP_Strider : MVP_Humanoid
 					FastProjSpeed = GetDefaultByType("MVP_40mmGrenade").FastSpeed;
 					Break;*/
 			}
-			Vector3 FirePos = MVP_StriderAttackPos (AttackType);
-			AimAtTarget (6,6,z_ofs:GetFAFAimPos(Target,FirePos)-FirePos.Z,attackspeed:ProjSpeed,fastattackspeed:FastProjSpeed);
+			Actor RealTarg = Target;
+			Int Turn = 6;
+			If (JumpFlags & SJUMP_STRAFE) //Currently strafing.
+			{
+				Target = JumpTarget;
+				//Turn = StriderMove.AngleLimit;
+			}
+			//HACK: Bizzare hack to account for the striders firing way off their origin, fun part is that this happens in ALL actors I'm pretty sure!
+			Int FAF = GetFAFAimPos(Target,MVP_StriderAttackPos (AttackType));
+			Double AimOfs = GetFAFPosOffset(Target,FAF);
+			SetZ (Pos.Z+AimOfs);
+			AimAtTarget (Turn,Turn,flags:FAF,attackspeed:ProjSpeed,fastattackspeed:FastProjSpeed);
+			SetZ (Pos.Z-AimOfs);
 			if (target)
 				kai_lofraycast.visualizetracepath (Pos,level.vec3offset(pos,kai_math.angletovector3d(angle,-pitch,distance3d(target))),distance3d(target));
+			Target = RealTarg;
 		}
 		
 		//Run fall impact code.
@@ -316,6 +328,12 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		Super.Die (Source, Inflictor, DMGFlags, MeansOfDeath);
 		
+		A_RemoveLight ('StrafeLight');
+		If (JumpFlags & SJUMP_STRAFE)
+		{
+			AttackStates.Delete (AttackStates.Find(FindState("Jump.Loop",True)));
+			AttackStates.Delete (AttackStates.Find(FindState("Jump.Loop.Down",True)));
+		}
 		bNoFriction = Default.bNoFriction; //Do friction again.
 		bNoGravity = Default.bNoGravity; //Do gravity again.
 		InCover = False;
@@ -434,10 +452,9 @@ Class MVP_Strider : MVP_Humanoid
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN); //The position we're firing from.
 		
 		//Fire miniguns if close enough. Especially for very dangerous enemies.
-		//TODO: ADD LOF CHECKS!
 		Int MinigunChance = (Threat >= ThreatLevelThreshold) ? 192 : 128;
-		If (InSight && Random (0,255) < MinigunChance &&
-		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFAimPos(Target,FirePos),DHC_THRUHOSTILES) >= 40)
+		If (InSight && Random (0,255) < MinigunChance && KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
+		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFAimPos(Target,FirePos),DHC_THRUHOSTILES) >= 30)
 		{
 			Inaccuracy = (32,32,32);
 			AttackType = ATTACK_MINIGUN;
@@ -446,8 +463,9 @@ Class MVP_Strider : MVP_Humanoid
 			If (!NoStateJump) SetStateLabel ("Fire.Start");
 			Return True;
 		}
+		FirePos = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
 		//Fire more accurate machine gun otherwise.
-		Else If (InSight)
+		If (InSight && KAI_CheckLOF (Target,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(Target,FirePos)))
 		{
 			AttackType = ATTACK_MACHINEGUN;
 			Shots = Random (15,30);
@@ -741,7 +759,7 @@ Class MVP_Strider : MVP_Humanoid
 		Return True;
 	}
 	
-	Bool MVP_StriderDodge()
+	Bool MVP_StriderDodge (Bool AlwaysStrafe = False)
 	{
 		//Dodge projectiles by jumping out of the way.
 		Actor Proj;
@@ -776,7 +794,11 @@ Class MVP_Strider : MVP_Humanoid
 				If (KAI_Math.IsEmptyVector3(Right))
 					DodgePos = Left;
 				
-				MVP_StriderJump (DodgePos,flags:SJUMP_FAST);
+				Int Chance = Health > WoundHealth ? 24 : 48; //More likely to strafe fire when close to dying.
+				Int Strafe = (Random (0,255) < Chance) ? SJUMP_STRAFE : 0;
+				If (AlwaysStrafe)
+					Strafe = SJUMP_STRAFE;
+				MVP_StriderJump (DodgePos,flags:SJUMP_FAST|Strafe,enemy:Target);
 				Return True;
 			}
 		}
@@ -934,7 +956,7 @@ Class MVP_Strider : MVP_Humanoid
 		Return Away;
 	}
 	
-	Bool MVP_StriderJump (Vector3 Where, Double Velocity = 0, JFlags Flags = 0, Bool IgnoreDist = False)
+	Bool MVP_StriderJump (Vector3 Where, Double Velocity = 0, JFlags Flags = 0, Bool IgnoreDist = False, Actor Enemy = Null)
 	{
 		//Too far or crammed to jump.
 		If (GetZAt(flags:GZF_CEILING)-(Pos.Z+Height) < Height/2 || 
@@ -949,6 +971,11 @@ Class MVP_Strider : MVP_Humanoid
 			Return False;
 		}
 		
+		If (Flags & SJUMP_STRAFE) //If strafe firing while jumping, don't leapfrog or face your jumping direction to not mess that up.
+		{
+			Flags &= ~ (SJUMP_FACEDIRECTION|SJUMP_RUNNING);
+			JumpTarget = Enemy;
+		}
 		JumpFlags = Flags;
 		JumpPos = Where;
 		If (Velocity == 0)
@@ -1094,6 +1121,52 @@ Class MVP_Strider : MVP_Humanoid
 		Return FaceStraight;
 	}
 	
+	Void MVP_StriderStrafeAttack (Bool GoingDown = False)
+	{
+		//Strafe fire as long as you aren't facing forward. Aiming at the JumpTarget is automatic.
+		//TODO: I forgot because I lost this shit in a power outage and the temperature is 40 fucking degrees outside.
+		If (JumpFlags & SJUMP_STRAFE && FireDelay <= 0 && (JumpDir == JDIR_BACK || JumpDir == JDIR_LEFT || JumpDir == JDIR_RIGHT))
+		{
+			Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
+			If (KAI_CheckLOF (Target,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(Target,FirePos)))
+			{
+				Tics = 2;
+				A_AttachLightDef ('StrafeLight',"StriderFiringLight");
+				//A_RemoveLight ('StrafeLight');
+				A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.5);
+				Bool B; Actor Proj = A_SpawnProjectile ("MVP_RifleBullet",FirePos.Z,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				AddProjectileSpread (Proj,(1.25,-1.25),(1.25,-1.25));
+				[B, Proj] = A_SpawnItemEx ("MVP_BulletCasing",0,0,FirePos.Z,FRandom(4,-4),FRandom(4,8),FRandom(3,8));
+				Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
+				
+				Switch (JumpDir)
+				{
+					Case JDIR_BACK:
+						Frame = !GoingDown ? FRAME_C : FRAME_E;
+						Break;
+					Case JDIR_LEFT:
+						Frame = !GoingDown ? FRAME_J : FRAME_L;
+						Break;
+					Case JDIR_LEFT:
+						Frame = !GoingDown ? FRAME_L : FRAME_J;
+						Break;
+				}
+				
+				FireDelay = 4; //This is automatically reduced every tick.
+			}
+		}
+		If (FireDelay > 0)
+			A_RemoveLight ('StrafeLight');
+	}
+	
+	Void MVP_StriderEndFire()
+	{
+		A_StopSound (CHAN_WEAPON);
+		AttackType = ATTACK_NONE;
+		Inaccuracy = Default.Inaccuracy;
+		InaccuracyFrequency = Default.InaccuracyFrequency;
+	}
+	
 	KAIMoveParams StriderMove;
 	KAI_Voice Yapper;
 	Int DeathFlames;
@@ -1136,7 +1209,7 @@ Class MVP_Strider : MVP_Humanoid
 	Double JumpSpeed; //Passed to KAI_JumpTo()/
 	Int JumpFlags; //Flags used for every jump in progress. Then cleared once the jump's done.
 	Int JumpDir; //The direction the strider is jumping at.
-	//Actor JumpTarget; //Who to fire at while mid-jump.
+	Actor JumpTarget; //Who to fire at while mid-jump.
 	Const STRIDER_FALLTHRESHOLD = 8; //Minimum negative Z vel need to produce impact effects.
 	
 	Enum JumpDirs //The direction it starts off jumping to, determined by the angle difference between where it wants to go and its' angle at the time of jumping.
@@ -1155,6 +1228,7 @@ Class MVP_Strider : MVP_Humanoid
 		SJUMP_STEER			= 1 << 2, //Steer yourself to the JumpPos on descent.
 		SJUMP_CLIMB			= 1 << 3, //Jump straight up to the climb position. And also only use the generic jump sprites. Used in conjunction with SJUMP_STEER.
 		SJUMP_RUNNING		= 1 << 4, //We are leaping to a position on loop.
+		SJUMP_STRAFE		= 1 << 5, //The strider can also fire while leaping sideways or backwards.
 	}
 	
 	//Used by the different jump modes.
@@ -1411,7 +1485,12 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			PNS1 W 3
 			{
-				//TODO: Add dodge check.
+				If (MVP_StriderDodge (True))
+				{
+					MVP_StriderEndFire();
+					Return State (Null);
+				}
+				
 				//MAYDO: Make this check into a function so the minigun loop can use it too.
 				
 				//Out of ammo.
@@ -1433,12 +1512,12 @@ Class MVP_Strider : MVP_Humanoid
 						LookForPlayers (True); //Look for a new target.
 					}
 					
-					//TODO: Make these generic NPC functions ugh.
-					/*If (!KAI_TurretRefire (48,"See",True,16) && !KAI_TurretCheckLOF (Target,0,0,MVP_StriderAttackPos (ATTACK_MACHINEGUN),0,"MVP_RifleBullet")))
+					Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
+					If (KAI_NPCRefire (16,"Fire.End",True,16) || !KAI_CheckLOF (Target,60,0,FireOfs,0,"MVP_RifleBullet",GetFAFAimPos(Target,FireOfs)))
 					{
 						A_ClearTarget();
-						FindState ("Fire.End",True);
-					}*/
+						Return FindState ("Fire.End",True);
+					}
 				}
 				
 				HandleChaseTimer();
@@ -1473,8 +1552,11 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			PNS2 B 1
 			{
-				//TODO: Add dodge check.
-				//MAYDO: Make this check into a function so the minigun loop can use it too.
+				If (MVP_StriderDodge (True))
+				{
+					MVP_StriderEndFire();
+					Return State (Null);
+				}
 				
 				//Out of ammo.
 				Shots -= 2;
@@ -1496,17 +1578,18 @@ Class MVP_Strider : MVP_Humanoid
 						LookForPlayers (True); //Look for a new target.
 					}
 					
-					//TODO: Make these generic NPC functions ugh.
-					/*If (!KAI_TurretRefire (48,"See",True,16) && !KAI_TurretCheckLOF (Target,0,0,MVP_StriderAttackPos (ATTACK_MACHINEGUN),0,"MVP_RifleBullet")))
+					Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_MINIGUN);
+					If (KAI_NPCRefire (88,"Fire.End",True,16) || !KAI_CheckLOF (Target,600,128,FireOfs,0,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FireOfs)))
 					{
 						A_ClearTarget();
-						FindState ("Fire.End",True);
-					}*/
+						Return FindState ("Fire.End",True);
+					}
 				}
 				
 				HandleChaseTimer();
 				
-				Frame = UpdateStriderElevation (FRAME_R,FRAME_W,FRAME_O);
+				Frame = UpdateStriderElevation (FRAME_R,FRAME_B,FRAME_O);
+				
 				Return State (Null);
 			}
 			Loop;
@@ -1517,13 +1600,7 @@ Class MVP_Strider : MVP_Humanoid
 				If (AttackType == ATTACK_MACHINEGUN) //CLOSE faster for the machine gun.
 					Tics = 2;
 			}
-			PNS1 U 0
-			{
-				A_StopSound (CHAN_WEAPON);
-				AttackType = ATTACK_NONE;
-				Inaccuracy = Default.Inaccuracy;
-				InaccuracyFrequency = Default.InaccuracyFrequency;
-			}
+			PNS1 U 0 MVP_StriderEndFire();
 			Goto See;
 		Melee:
 			TNT1 A 0
@@ -1561,6 +1638,12 @@ Class MVP_Strider : MVP_Humanoid
 					If (JumpFlags & SJUMP_FAST)
 						Tics = Random (2,6);
 					
+					If (JumpFlags & SJUMP_STRAFE)
+					{
+						AttackStates.Push(FindState("Jump.Loop",True));
+						AttackStates.Push(FindState("Jump.Loop.Down",True));
+					}
+					
 					[Frame, JumpDir] = MVP_StriderLean (FRAME_Y, FRAME_H, FRAME_G, FRAME_A, True,running: FRAME_Q); //Y, H, G, A
 					Sprite = MVP_StriderLeanIndex (JumpDir);
 
@@ -1583,11 +1666,16 @@ Class MVP_Strider : MVP_Humanoid
 				{
 					[Frame, JumpDir] = MVP_StriderLean (FRAME_Z, FRAME_K, FRAME_I, FRAME_B,running: FRAME_O); //Z, K, I, B
 					Sprite = MVP_StriderLeanIndex(JumpDir);
+					
 					If (JumpFlags & SJUMP_FACEDIRECTION && !KAI_Math.IsEmptyVector3 (JumpPos))
 						Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);
+					
+					MVP_StriderStrafeAttack ();
+					
 					//Going down, or maybe we already landed.
 					If (Vel.Z <= -2 || bOnMobj || Pos.Z <= FloorZ || Pos.Z <= GetZAt ())
 						Return FindState ("Jump.Loop.Down",True);
+					
 					Return State (Null);
 				}
 				Goto Jump.Loop+1;
@@ -1601,6 +1689,8 @@ Class MVP_Strider : MVP_Humanoid
 						Vel.XY += AngleToVector (GetAngleToPos(JumpPos,0),1);
 					[Frame, JumpDir] = MVP_StriderLean (FRAME_BRACKETOPEN,FRAME_I, FRAME_K, FRAME_D,running: FRAME_P); //[, I, K, D
 					Sprite = MVP_StriderLeanIndex (JumpDir);
+					
+					MVP_StriderStrafeAttack (True);
 					
 					If (bOnMobj || Pos.Z <= FloorZ || Pos.Z <= GetZAt ()) //The eagle has landed.
 					{
@@ -1633,6 +1723,12 @@ Class MVP_Strider : MVP_Humanoid
 					If (JumpFlags & SJUMP_FAST)
 						Tics = 4;
 					
+					If (JumpFlags & SJUMP_STRAFE)
+					{
+						AttackStates.Delete (AttackStates.Find(FindState("Jump.Loop",True)));
+						AttackStates.Delete (AttackStates.Find(FindState("Jump.Loop.Down",True)));
+					}
+					
 					bNoFriction = Default.bNoFriction; //Do friction again.
 					If (JumpFlags & SJUMP_CLIMB) //Do Zandronum moment
 						GiveInventory ("MVP_DropoffToken",1);
@@ -1644,6 +1740,7 @@ Class MVP_Strider : MVP_Humanoid
 					JumpDir = 0;
 					JumpPos = (Double.NaN,Double.NaN,Double.NaN);
 					NextMovePos = (Double.NaN,Double.NaN,Double.NaN);
+					JumpTarget = Null;
 					//CoverPos = (Double.NaN,Double.NaN,Double.NaN);
 				}
 				Goto See;

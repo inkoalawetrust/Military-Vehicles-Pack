@@ -495,6 +495,7 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 				}
 			}
 			GXPL ABCDEFGHIJLMNO 2 Bright {If (Light) Light.Args[3] -= 9.14;}
+			TNT1 A 0 {If (Light) Light.Destroy();}
 			Stop;
 		Death.Air:
 			TNT1 A 0
@@ -529,6 +530,7 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 				}
 			}
 			GAXP ABCDEFGHIJ 2 Bright {If (Light) Light.Args[3] -= 12.8;}
+			TNT1 A 0 {If (Light) Light.Destroy();}
 			Stop;
 	}
 }
