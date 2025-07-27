@@ -5,8 +5,6 @@
 
 //TODO:
 //Don't forget to add the striders' ramming attack.
-//Make the strider still dodge when in the middle of firing its' guns. And also make it fire its' machine gun if dodging while attacking.
-//Speaking of which, just generally make it able to also attack mid-dodge, even if it weren't attacking already.
 
 //MAYDO:
 //Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed.
@@ -261,12 +259,12 @@ Class MVP_Strider : MVP_Humanoid
 			{
 				Double PostCrushVel = LastTickFallVel;
 				//Squish
-				Double VelReduction = KAI_Math.LinearMap (Mass,10,25000,10,0.25);
+				Double VelReduction = KAI_Math.LinearMap (Mass,10,2500,10,0.25);
 				VelReduction = Clamp (VelReduction,0.25,INT.MAX);
 				ForEach (Bug : IMFALLINGOVERHERE)
 				{
 					Double Force = Mass * PostCrushVel;
-					Int ImpactDamage = Force/300;
+					Int ImpactDamage = Force/25;
 					Bug.DamageMobj (Self,Self,ImpactDamage,'Crush');
 					PostCrushVel -= VelReduction*(Bug.Mass/100); //Reduce fall speed for every bug squashed before applying it back in.
 					PostCrushVel = Clamp (PostCrushVel,0,INT.MAX);
@@ -552,6 +550,17 @@ Class MVP_Strider : MVP_Humanoid
 		If (MVP_StriderParkour ()) //General handling of climbing, crouching, jumping down, yadda yadda.
 			MovedAlready = True;
 		
+		//If surrounded by melee-only enemies and you have enough space, jump up sometimes to crush them.
+		If (Random (0,255) < 4 && (GetZAt (flags:GZF_CEILING) - Pos.Z+Height) >= 128 && MVP_IsSurrounded())
+		{
+			//CREDIT: RaveYard for the formula.
+			Double JumpHeight = Abs(Pos.Z - Pos.Z+Height)+128;
+			Double JumpVel = 0.5 * (sqrt(GetGravity()) * sqrt(GetGravity() + 8 * JumpHeight) + GetGravity());
+			console.printf ("jumping up with a velocity of %.2f",jumpvel);
+			MVP_StriderJump (Pos.PlusZ(128),JumpVel,SJUMP_CLIMB);
+			Return;
+		}
+		
 		//Cover located, go there, unless an enemy that can see us (Covered by FindNearestEnemy()) is there.
 		If (!KAI_Math.IsEmptyVector3(CoverPos) && !User_NoCover && !MovedAlready)
 		{
@@ -745,6 +754,26 @@ Class MVP_Strider : MVP_Humanoid
 		If (ShouldAttack ())
 			Return;
 		HandleChaseTimer();
+	}
+	
+	//Strider is currently surrounded by melee-only enemies, and is also trying to traverse away. AKA, almost certainly overwhelmed by melee enemies.
+	Bool MVP_IsSurrounded (Double Range = 128, Int TheThreshold = 6)
+	{
+		If (MoveCount <= 0)
+			Return False;
+		
+		Array <Actor> Enemies;
+		Int MeleeShits;
+		LookForEnemiesEx (Enemies,Range,False,True);
+		
+		ForEach (Mobj : Enemies)
+		{
+			If (IsDead (Mobj) || Distance2DSquared(Mobj) > Range*Range || Mobj.Pos.Z > Pos.Z+Height|| !(Mobj.MeleeState && !Mobj.MissileState)) Continue;
+			
+			MeleeShits++;
+		}
+		
+		Return MeleeShits >= TheThreshold;
 	}
 	
 	Bool MVP_StartRun (Int Steps)
