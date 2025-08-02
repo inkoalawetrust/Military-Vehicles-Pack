@@ -249,13 +249,14 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		//If we're set to run away from targets over our threat threshold that get too close, do so.
 		Double RunRange = User_RetreatDistance;
 		Int TargetLevel;
+		Bool TargetInSight;
 		If (Target)
 		{
 			RunRange += Target.Radius;
 			TargetLevel = AssessThreatLevel(Target, True);
+			TargetInSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 		}
 		
-		Bool TargetInSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 		Bool LockedIn = bChaseGoal && Goal; //Don't run away if you have a target but are also patrolling in bChaseGoal mode. Since you do that by just flying around.
 		Bool BigThreat = (ThreatLevelThreshold != THREAT_ASSESS && TargetLevel >= ThreatLevelThreshold); //Target's threat level is over the threshold.
 		If (RunRange != -1 && !bNoFear && Target && Target != Goal && !LockedIn && !RunAway && BigThreat && RunRange > 0 && Distance3DSquared(Target) <= RunRange*RunRange && TargetInSight)
@@ -807,12 +808,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			Loop;
 		Idle:
 			PND2 A 0 A_JumpIf (Landed,"Idle.Ground");
-			PND2 ABC 1
-			{
-				Bool FuckYou = bDontFollowPlayers; bDontFollowPlayers = True;
-				KAI_Wander (detourfactor:DetourFactor,anglelimit:TurnHorz,flags:KMT_3D,TurnVert);
-				bDontFollowPlayers = FuckYou;
-			}
+			PND2 ABC 1 KAI_Wander (detourfactor:DetourFactor,anglelimit:TurnHorz,flags:KMT_3D,TurnVert);
 			Goto Idle+1;
 		Idle.Ground:
 			PND2 OPQR 4
@@ -1094,6 +1090,13 @@ Class MVP_DroneSwarm : KAI_NPCGroup
 	{
 		Super.HandleGroupEvent (EventType, Affected);
 		
+		//Womp womp
+		If (GetNPCGroupFlags() == NPCGRP_EVERYONEDIED)
+		{
+			Destroy();
+			Return;
+		}
+		
 		//Every time the membership status of the group changes, check if there's any loitering drones in it to assign them to quadcopters randomly.
 		//Also handle distinguishing said quadcopters.
 		If (EventType == GRPEVNT_JOIN || EventType == GRPEVNT_LEFT || EventType == GRPEVNT_DEATH || EventType == GRPEVNT_ERASED)
@@ -1109,10 +1112,7 @@ Class MVP_DroneSwarm : KAI_NPCGroup
 			ForEach (Loit : Members)
 			{
 				If (Loit Is "MVP_KamikazeDrone" && Quadcopters.Size())
-				{
 					Loit.Master = Quadcopters[Random(0,Quadcopters.Size()-1)];
-					console.printf ("randomly assigned %p to follow a quadcopter",loit);
-				}
 			}
 		}
 	}

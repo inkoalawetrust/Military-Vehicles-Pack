@@ -2,15 +2,23 @@
 //The climb preperation frame (PNS1R1-8) has the foot spikes appearing over the top of the Striders' feet.
 //IIRC one of the grenade frames is missing brightmaps.
 //The AltDeath frame of the Strider fully fallen is cropped wrong.
+//BUG:
+//Seems like the strider sometimes stops attacking and just walks around despite having a target.
+//I noticed that when following me idly while crouching, it was running all the crouch logic except for using the right sprites.
 
 //TODO:
-//Don't forget to add the striders' ramming attack.
+//Add kicking (Generic) and stomping (Smol victims) attacks before adding the rest of the ranged attacks. Don't forget to make old punt victims +BLASTED.
+	//On this note, also add a random straight up kick variant, and make it a lot less random if the thing it's punting can actually take fall damage :>
+//Add hazard zone tagged as crushing when the strider is jumping, that is positioned to where it's going with a short trace.
+//Generally add hazard zones for attacks.
+//Make it do the "jump back from threats" thing while firing its' MG or minigun as well.
 
 //MAYDO:
+//Make it automatically go to Jump.Loop.Down: when falling fast enough.
 //Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed.
 
 //IDEA:
-//Make it jump straight up to crush enemies beneath it when surrounded.
+//Make it optionally crouch walk when targeting a player for as long as the player can't see them and they're out of their FOV. Yes, literally sneaking up on them.
 //For the plain machine gun, add fire modes like on the marines and tracked drone, but maybe based on just distance instead.
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
@@ -175,11 +183,14 @@ Class MVP_Strider : MVP_Humanoid
 		If (FireDelay >= 1)
 			FireDelay--;
 		
+		Bool IsDead = IsDead(Self);
+		Bool IsAttacking = IsInAttackState();
+		
 		//Target prediction during attack states.
-		If (!IsDead(Self) && IsInAttackState())
+		If (!IsDead && IsAttacking)
 		{
 			Double ProjSpeed, FastProjSpeed;
-			Switch (AttackType)
+			Switch (AttackType) //Change speed generically based on attack.
 			{
 				Case ATTACK_MACHINEGUN:
 					ProjSpeed = GetDefaultByType("MVP_RifleBullet").Speed;
@@ -216,9 +227,12 @@ Class MVP_Strider : MVP_Humanoid
 			Target = RealTarg;
 		}
 		
+		If (LastTickFallVel >= STRIDER_FALLTHRESHOLD*2 && !IsDead && !IsAttacking && !IsInState(Self,"Jump.Loop.Down")){console.printf ("jeronimo");
+			SetStateLabel ("Jump.Loop.Down");}
+		
 		//Run fall impact code.
 		//HACK: Yes this is a copy from KAI_BaseVehicle because it's like, the only feature 
-		If (Vel.Z ~== 0 && LastTickFallVel && LastTickFallVel >= STRIDER_FALLTHRESHOLD && !IsDead(Self))
+		If (Vel.Z ~== 0 && LastTickFallVel && LastTickFallVel >= STRIDER_FALLTHRESHOLD && !IsDead)
 		{
 			//Get victims under the vehicle.
 			Array <Actor> IMFALLINGOVERHERE;
@@ -394,6 +408,8 @@ Class MVP_Strider : MVP_Humanoid
 			Return False;
 		}
 		
+		MVP_UseCrouchAnim();
+		
 		Vector3 FolPos = (Double.NaN, Double.NaN, Double.NaN); Actor Followee;
 		If (CurrentOrder == ORDER_FOLLOW)
 			[FolPos, Followee] = HandleFollowingActor (FolPos,True); //NOTE: We turn bDontFollowPlayers on between KAI_Wander calls so lonely drones in a swarm don't do that.
@@ -490,14 +506,15 @@ Class MVP_Strider : MVP_Humanoid
 		Double RunRange = User_RetreatDistance;
 		Int TargetLevel;
 		Double DistToTarget;
+		Bool TargetInSight;
 		If (Target)
 		{
 			RunRange += Target.Radius;
 			TargetLevel = AssessThreatLevel(Target, True);
 			DistToTarget = Distance3D(Target);
+			TargetInSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 		}
 		
-		Bool TargetInSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 		If (ReverseSteps > 0) RunAway = True;
 		Bool LockedIn = bChaseGoal && Goal; //Don't run away if you have a target but are also patrolling in bChaseGoal mode. Since you do that by just flying around.
 		Bool BigThreat = (ThreatLevelThreshold != THREAT_ASSESS && TargetLevel >= ThreatLevelThreshold); //Target's threat level is over the threshold.
@@ -551,6 +568,7 @@ Class MVP_Strider : MVP_Humanoid
 			MovedAlready = True;
 		
 		//If surrounded by melee-only enemies and you have enough space, jump up sometimes to crush them.
+		//TODO: Make it also keep jumping up and down if it's standing on top of an enemy.
 		If (Random (0,255) < 4 && (GetZAt (flags:GZF_CEILING) - Pos.Z+Height) >= 128 && MVP_IsSurrounded())
 		{
 			//CREDIT: RaveYard for the formula.
@@ -1058,6 +1076,47 @@ Class MVP_Strider : MVP_Humanoid
 		Return GetSpriteIndex ('PNS0');
 	}
 	
+	Int UpdateStriderElevation (Int FaceDown, Int FaceStraight, Int FaceUp)
+	{
+		If (Pitch >= 6 && Pitch >= 0)
+			Return FaceDown;
+		Else If (Pitch < 6 && Pitch >= -15)
+			Return FaceStraight;
+		Else If (Pitch < -14)
+			Return FaceUp;
+		
+		Return FaceStraight;
+	}
+	
+	Void MVP_UseCrouchAnim()
+	{
+		//HACK: Because, of course, we can't do a simple offset on the reverse walk animator OR ELSE IT READS OTHER LOADED FRAMES IN MEMORY!!!!!!!!!!!!!!
+		If (Crouching)
+		{
+			Switch (Frame)
+			{
+				Case FRAME_F:
+					Frame = FRAME_R;
+					Break;
+				Case FRAME_E:
+					Frame = FRAME_Q;
+					Break;
+				Case FRAME_D:
+					Frame = FRAME_P;
+					Break;
+				Case FRAME_C:
+					Frame = FRAME_O;
+					Break;
+				Case FRAME_B:
+					Frame = FRAME_N;
+					Break;
+				Case FRAME_A:
+					Frame = FRAME_M;
+					Break;
+			}
+		}
+	}
+	
 	Protected Void MVP_StriderFootsteps (Bool Running)
 	{
 		If (Running)
@@ -1070,7 +1129,7 @@ Class MVP_Strider : MVP_Humanoid
 		If (Crouching)
 		{
 			If (Frame == FRAME_M || Frame == FRAME_O)
-				A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.05,0.1),0.75);
+				A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.05,0.1),1.25);
 			Return;
 		}
 		
@@ -1117,8 +1176,7 @@ Class MVP_Strider : MVP_Humanoid
 	}
 	
 	//Get the relative coordinates from where an attack on the strider comes out of.
-	//TODO: Add offsets for firing while crouching.
-	//PLAYTEST: TEST THESE TO MAKE SURE THEY MATCH.
+	//PLAYTEST: Test the firing offsets (Crouched and uncrouched) for the rocket and grenade launchers.
 	Vector3 MVP_StriderAttackPos (StriderAttacks Type)
 	{
 		Switch (Type)
@@ -1126,38 +1184,34 @@ Class MVP_Strider : MVP_Humanoid
 			Case ATTACK_NONE:
 				Return (Double.NaN,Double.NaN,Double.NaN);
 			Case ATTACK_MACHINEGUN:
-				Return (0,0,64);
+				Return !Crouching ? (0,0,64) : (0,0,48);
 			Case ATTACK_MINIGUN: //Just flip this after each shot by doing Abs(X), same with the rockets.
-				Return (0,-12,80);
+				Return !Crouching ? (0,-12,80) : (0,-12,64);
 			Case ATTACK_ROCKETS:
-				Return (0,-12,72);
+				Return !Crouching ? (0,-12,72) : (0,-12,56);
 			Case ATTACK_GRENADE:
-				Return (0,0,88);
+				Return !Crouching ? (0,0,88) : (0,0,72);
 			Default:
 				Return (Double.NaN,Double.NaN,Double.NaN);
 		}
 	}
 	
-	Int UpdateStriderElevation (Int FaceDown, Int FaceStraight, Int FaceUp)
-	{
-		If (Pitch >= 6 && Pitch >= 0)
-			Return FaceDown;
-		Else If (Pitch < 6 && Pitch >= -15)
-			Return FaceStraight;
-		Else If (Pitch < -14)
-			Return FaceUp;
-		
-		Return FaceStraight;
-	}
-	
 	Void MVP_StriderStrafeAttack (Bool GoingDown = False)
 	{
 		//Strafe fire as long as you aren't facing forward. Aiming at the JumpTarget is automatic.
-		//TODO: I forgot because I lost this shit in a power outage and the temperature is 40 fucking degrees outside.
 		If (JumpFlags & SJUMP_STRAFE && FireDelay <= 0 && (JumpDir == JDIR_BACK || JumpDir == JDIR_LEFT || JumpDir == JDIR_RIGHT))
 		{
+			//No jump target, look for another one.
+			If (IsDead(JumpTarget))
+			{console.printf ("current jumptarget %p died",jumptarget);
+				Vector3 Real = Pos;
+				If (JumpTarget) SetOrigin (JumpTarget.Pos,True);
+				Else If (Target) SetOrigin (Target.Pos,True);
+				JumpTarget = FindNearestEnemy (512);
+				SetOrigin (Real,True);console.printf ("attacking %p instead",jumptarget);
+			}
 			Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
-			If (KAI_CheckLOF (Target,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(Target,FirePos)))
+			If (KAI_CheckLOF (JumpTarget,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(JumpTarget,FirePos)))
 			{
 				Tics = 2;
 				A_AttachLightDef ('StrafeLight',"StriderFiringLight");
@@ -1209,12 +1263,12 @@ Class MVP_Strider : MVP_Humanoid
 	
 	UInt8 AttackType; //What do we attack with currently?
 	Int Shots; //How many times to use our attack before stopping?
-	UInt8 FireDelay;
+	UInt8 FireDelay; //Time before we can fire again. Used by SJUMP_STRAFE as a delay in the jump loop between shots instead.
 	
 	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
 	{
 		ATTACK_NONE,
-		ATTACK_MACHINEGUN,
+		ATTACK_MACHINEGUN, //TODO: Add separate fire modes for single shots, bursts, and full auto, like the marines and large gun drone do.
 		ATTACK_MINIGUN,
 		ATTACK_ROCKETS,
 		ATTACK_GRENADE,
@@ -1305,32 +1359,7 @@ Class MVP_Strider : MVP_Humanoid
 				RunSteps = 0;
 				MVP_StriderChase();
 				MVP_StriderFootsteps(False);
-				
-				//HACK: Because, of course, we can't do a simple offset on the reverse walk animator OR ELSE IT READS OTHER LOADED FRAMES IN MEMORY!!!!!!!!!!!!!!
-				If (Crouching)
-				{
-					Switch (Frame)
-					{
-						Case FRAME_F:
-							Frame = FRAME_R;
-							Break;
-						Case FRAME_E:
-							Frame = FRAME_Q;
-							Break;
-						Case FRAME_D:
-							Frame = FRAME_P;
-							Break;
-						Case FRAME_C:
-							Frame = FRAME_O;
-							Break;
-						Case FRAME_B:
-							Frame = FRAME_N;
-							Break;
-						Case FRAME_A:
-							Frame = FRAME_M;
-							Break;
-					}
-				}
+				MVP_UseCrouchAnim();
 				
 				//Debug wandering and random jumping.
 				/*KAI_Wander (32,384,anglelimit:25);
@@ -1479,7 +1508,10 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			PNS1 UVW 4 Fast
 			{
-				A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+				If (Crouching) //No prepare animation for the crouch firing.
+					Frame = FRAME_BRACKETOPEN;
+				Else
+					A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
 				If (AttackType == ATTACK_MACHINEGUN) //Open faster for the machine gun.
 					Tics = 2;
 			}
@@ -1508,9 +1540,18 @@ Class MVP_Strider : MVP_Humanoid
 				[B, Proj] = A_SpawnItemEx ("MVP_BulletCasing",0,0,FireOfs.Z,FRandom(4,-4),FRandom(4,8),FRandom(3,8));
 				Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
 				
-				Frame = UpdateStriderElevation(FRAME_S,FRAME_X,FRAME_P);
-				If (Frame != FRAME_X)
-					Sprite = GetSpriteIndex ('PNS2');
+				If (!Crouching)
+				{
+					Frame = UpdateStriderElevation(FRAME_S,FRAME_X,FRAME_P);
+					If (Frame != FRAME_X)
+						Sprite = GetSpriteIndex ('PNS2');
+				}
+				Else
+				{
+					Frame = UpdateStriderElevation(FRAME_BRACKETOPEN,FRAME_BRACKETOPEN,FRAME_U);
+					If (Frame == FRAME_U)
+						Sprite = GetSpriteIndex ('PNS2');
+				}
 			}
 			PNS1 W 3
 			{
@@ -1521,6 +1562,18 @@ Class MVP_Strider : MVP_Humanoid
 				}
 				
 				//MAYDO: Make this check into a function so the minigun loop can use it too.
+				
+				//Jump away from nearby enemies when we can.
+				Actor Near;
+				If (!bNoFear && Random (0,255) < 32 && (Near = FindNearestEnemy (Radius+128)))
+				{
+					If (MVP_StriderJump (MVP_StriderJumpFromPos (Near.Pos,32,384),flags:SJUMP_STRAFE,enemy:Near))
+					{
+						MVP_StriderEndFire();
+						FireDelay = 0;
+						Return State(Null);
+					}
+				}
 				
 				//Out of ammo.
 				If (Shots-- <= 1)
@@ -1551,13 +1604,21 @@ Class MVP_Strider : MVP_Humanoid
 				
 				HandleChaseTimer();
 				
-				Frame = UpdateStriderElevation (FRAME_R,FRAME_W,FRAME_O);
-				If (Frame != FRAME_W)
-					Sprite = GetSpriteIndex ('PNS2');
+				If (!Crouching)
+				{
+					Frame = UpdateStriderElevation (FRAME_R,FRAME_W,FRAME_O);
+					If (Frame != FRAME_W)
+						Sprite = GetSpriteIndex ('PNS2');
+				}
+				Else
+				{
+					Frame = UpdateStriderElevation (FRAME_Y,FRAME_Y,FRAME_V);
+					If (Frame == FRAME_V)
+						Sprite = GetSpriteIndex ('PNS2');
+				}
 				Return State (Null);
 			}
 			Loop;
-		//TODO: VERY WIP.
 		Fire.Minigun:
 			PNS2 A 1 Light ("StriderFiringLight")
 			{
@@ -1577,7 +1638,14 @@ Class MVP_Strider : MVP_Humanoid
 				[B, Proj] = A_SpawnItemEx ("MVP_BulletCasing",0,Abs(FireOfs.Y),FireOfs.Z,FRandom(1,-1),FRandom(1,-1),0);
 				Proj.Scale.X = 0.125; Proj.Scale.Y = 0.104166;
 				
-				Frame = UpdateStriderElevation (FRAME_T,FRAME_A,FRAME_Q);
+				If (!Crouching)
+					Frame = UpdateStriderElevation (FRAME_T,FRAME_A,FRAME_Q);
+				Else
+				{
+					Frame = UpdateStriderElevation(FRAME_BRACKETOPEN,FRAME_BRACKETOPEN,FRAME_U);
+					If (Frame == FRAME_BRACKETOPEN)
+						Sprite = GetSpriteIndex ('PNS1');
+				}
 			}
 			PNS2 B 1
 			{
@@ -1585,6 +1653,18 @@ Class MVP_Strider : MVP_Humanoid
 				{
 					MVP_StriderEndFire();
 					Return State (Null);
+				}
+				
+				//Rarely jump away from the target when we can.
+				Actor Near;
+				If (!bNoFear && Random (0,255) < 2 && Target && Distance3D(Target) <= 128+Radius)
+				{
+					If (MVP_StriderJump (MVP_StriderJumpFromPos (Target.Pos,32,384),flags:SJUMP_STRAFE,enemy:Target))
+					{
+						MVP_StriderEndFire();
+						FireDelay = 0;
+						Return State(Null);
+					}
 				}
 				
 				//Out of ammo.
@@ -1617,7 +1697,14 @@ Class MVP_Strider : MVP_Humanoid
 				
 				HandleChaseTimer();
 				
-				Frame = UpdateStriderElevation (FRAME_R,FRAME_B,FRAME_O);
+				If (!Crouching)
+					Frame = UpdateStriderElevation (FRAME_R,FRAME_B,FRAME_O);
+				Else
+				{
+					Frame = UpdateStriderElevation(FRAME_Z,FRAME_Z,FRAME_W);
+					If (Frame == FRAME_Z)
+						Sprite = GetSpriteIndex ('PNS1');
+				}
 				
 				Return State (Null);
 			}
@@ -1625,7 +1712,10 @@ Class MVP_Strider : MVP_Humanoid
 		Fire.End:
 			PNS1 VU 4 Fast
 			{
-				A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+				If (Crouching) //No prepare animation for the crouch firing.
+					Frame = FRAME_BRACKETOPEN;
+				Else
+					A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
 				If (AttackType == ATTACK_MACHINEGUN) //CLOSE faster for the machine gun.
 					Tics = 2;
 			}

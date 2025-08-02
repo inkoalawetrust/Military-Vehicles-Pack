@@ -1,3 +1,5 @@
+//FIXME: At least on the big hull, it seems to sometimes just wander off aimlessly. Even though both hull and turret have the same sight range.
+
 Class MVP_GunDrone : MVP_BaseVehicle
 {
 	Default
@@ -381,12 +383,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 			PND0 ABCD 2 MVP_GunDroneChase();
 			Goto See+1;
 		Idle:
-			PND0 ABCD 2
-			{
-				Bool FuckYou = bDontFollowPlayers; bDontFollowPlayers = True;
-				KAI_Wander (DroneMove.Attempts,DroneMove.RunRad*2,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit);
-				bDontFollowPlayers = FuckYou;
-			}
+			PND0 ABCD 2 KAI_Wander (DroneMove.Attempts,DroneMove.RunRad*2,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit);
 			Loop;
 		Death:
 			PNDD A -1
@@ -798,13 +795,14 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		//If we're set to run away from targets over our threat threshold that get too close, do so.
 		Double ReverseRange = User_RetreatDistance;
 		Int TargetLevel;
+		Bool TargetInSight;
 		If (Target)
 		{
 			ReverseRange += Target.Radius;
 			TargetLevel = AssessThreatLevel(Target, True);
+			TargetInSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 		}
 		
-		Bool TargetInSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 		Bool LockedIn = bChaseGoal && Goal; //Don't run away if you have a target but are also patrolling in bChaseGoal mode.
 		Bool BigThreat = (ThreatLevelThreshold != THREAT_ASSESS && TargetLevel >= ThreatLevelThreshold); //Target's threat level is over the threshold.
 		
@@ -1468,6 +1466,7 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			{
 				DoCombatTraverse();
 				RotateToVehicle();
+				RetargetVehicleHull (); //NOTE: Separate from the shared chase function to keep the small gun drone cheap.
 				MVP_GunDroneTurretChase();
 				If (Target && Master && KAI_Actor(Master) && !Master.Target) //Hull has no target, but we do.
 					KAI_Actor(Master).KAI_ShareTarget (Self,Target);
