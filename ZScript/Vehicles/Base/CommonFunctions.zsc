@@ -184,6 +184,9 @@ Mixin Class MVP_GenericShit
 	//MVP projectile deflections add slight variation to the parameters. Alongside playing deflection sounds and sparks.
 	Override Vector4 OnProjectileDeflect (Actor Projectile, Int &FailChance, Double &DamFac, Double &VelFac, Vector4 Funnel)
 	{
+		If (!Self) //KLUDGE: Maybe fix whatever problem caused the Strider to VM abort once on the chance if statement below?????
+			Return (Double.NaN,Double.NaN,Double.NaN,Double.NaN);
+		
 		Vector4 Ret = Super.OnProjectileDeflect (Projectile, FailChance, DamFac, VelFac, Funnel);
 		If (FailChance >= DeflectionChance) //Not happening.
 			Return Ret;

@@ -3,6 +3,7 @@
 //IIRC one of the grenade frames is missing brightmaps.
 //The AltDeath frame of the Strider fully fallen is cropped wrong.
 //BUG:
+//It (Sometimes at least) VM aborts from OnProjectileDeflect() in MVP_GenericShit when it tries deflecting a projectile?
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 
@@ -224,7 +225,7 @@ Class MVP_Strider : MVP_Humanoid
 					FastProjSpeed = GetDefaultByType("MVP_70mmRocket").FastSpeed;
 					
 					//Explosive hazard.
-					//TODO:Add it.
+					//TODO: Add its rocket attack.
 					Break;
 				/*Case ATTACK_GRENADE:
 					ProjSpeed = GetDefaultByType("MVP_40mmGrenade").Speed;
@@ -249,8 +250,8 @@ Class MVP_Strider : MVP_Humanoid
 			Target = RealTarg;
 		}
 		
-		If (LastTickFallVel >= STRIDER_FALLTHRESHOLD*2 && !IsDead && !IsAttacking && !IsInState(Self,"Jump.Loop.Down")){console.printf ("jeronimo");
-			SetStateLabel ("Jump.Loop.Down");}
+		If (LastTickFallVel >= STRIDER_FALLTHRESHOLD*2 && !IsDead && !IsAttacking && !IsInState(Self,"Jump.Loop.Down"))
+			SetStateLabel ("Jump.Loop.Down");
 		
 		//Run fall impact code.
 		//HACK: Yes this is a copy from KAI_BaseVehicle because it's like, the only feature 
@@ -484,15 +485,15 @@ Class MVP_Strider : MVP_Humanoid
 		
 		Int Threat = AssessThreatLevel (Target);
 		Double Dist = Distance3D (Target);
-		Bool InSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY); //IDEA: Try to make the grenade launcher fire at out of sight target?
+		Bool InSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY); //IDEA: Try to make the grenade launcher fire at out of sight target? Otherwise just abort if out of sight.
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN); //The position we're firing from.
 		
 		//Fire miniguns if close enough. Especially for very dangerous enemies.
 		Int MinigunChance = (Threat >= ThreatLevelThreshold) ? 192 : 128;
 		If (InSight && Random (0,255) < MinigunChance && KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
-		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFAimPos(Target,FirePos),DHC_THRUHOSTILES) >= 30)
+		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES) >= 30)
 		{
-			Inaccuracy = (32,32,32);
+			Inaccuracy = (64,64,64); //Bad accuracy, but it does help with a wide AOE due to the fire volume.
 			AttackType = ATTACK_MINIGUN;
 			Shots = Random (192,255);
 			console.printf ("firing miniguns");
@@ -504,8 +505,25 @@ Class MVP_Strider : MVP_Humanoid
 		If (InSight && KAI_CheckLOF (Target,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(Target,FirePos)))
 		{
 			AttackType = ATTACK_MACHINEGUN;
-			Shots = Random (15,30);
-			console.printf ("firing machine gun");
+			
+			Int Boolets = Random (15,30);
+			Int Hits = DetermineHitChance (Target,True,Dist,shots:Boolets,FirePos,(1,-1,1,-1),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES);
+			If (Hits >= Boolets/3) //Over a third hit.
+			{
+				MGMode = MODE_AUTO;
+				Shots = Boolets;
+			}
+			Else If (Hits < 3) //Bad luck (or aim).
+			{
+				MGmode = MODE_SINGLE;
+				Shots = 1;
+			}
+			Else If (Hits <= Boolets/3) //Under a third hit but still decent.
+			{
+				MGMode = MODE_SEMI;
+				Shots = 3;
+			}
+			console.printf ("firing machine gun with %d successful imaginary shots",hits);
 			If (!NoStateJump) SetStateLabel ("Fire.Start");
 			Return True;
 		}
@@ -1287,6 +1305,7 @@ Class MVP_Strider : MVP_Humanoid
 	Actor LastProj; //Last projectile dodged.
 	
 	UInt8 AttackType; //What do we attack with currently?
+	UInt8 MGMode; //What mode to fire the nose gun at?
 	Int Shots; //How many times to use our attack before stopping?
 	UInt8 FireDelay; //Time before we can fire again. Used by SJUMP_STRAFE as a delay in the jump loop between shots instead.
 	
@@ -1300,6 +1319,13 @@ Class MVP_Strider : MVP_Humanoid
 		ATTACK_PUNT, //Old punt
 		ATTACK_STOMP,
 		ATTACK_RAMMING,
+	}
+	
+	Enum MGModes
+	{
+		MODE_AUTO,
+		MODE_SEMI,
+		MODE_SINGLE,
 	}
 	
 	//Cover variables
@@ -1325,7 +1351,7 @@ Class MVP_Strider : MVP_Humanoid
 		JDIR_NORMAL, //Standard nondescript jump
 		JDIR_LEFT,
 		JDIR_RIGHT,
-		JDIR_RUN, //Running jump //MAYDO: Since the jump direction is determined dynamically, make this a flag instead?
+		//JDIR_RUN, //Running jump //MAYDO: Since the jump direction is determined dynamically, make this a flag instead?
 		JDIR_BACK, //Jump backwards
 	}
 	
@@ -1387,8 +1413,8 @@ Class MVP_Strider : MVP_Humanoid
 				MVP_UseCrouchAnim();
 				
 				//Debug wandering and random jumping.
-				/*KAI_Wander (32,384,anglelimit:25);
-				if (random (0,255) < 8)
+				//KAI_Wander (32,384,anglelimit:25);
+				/*if (random (0,255) < 8)
 				{
 					vector3 where = FindRandomMovePos (self.pos,8,checkrad:384);
 					//where = vec3angle (randompick(256,-256),RandomPick(90,-90,0,0));
@@ -1526,6 +1552,25 @@ Class MVP_Strider : MVP_Humanoid
 					Return FindState ("Fire.Grenade",True);
 				If (AttackType == ATTACK_NONE) //Womp womp.
 					Return SeeState;
+				
+				//Set nose gun accuracy before firing.
+				If (AttackType == ATTACK_MACHINEGUN)
+				{
+					Switch (MGMode)
+					{
+						Case MODE_AUTO:
+							Inaccuracy = (32,32,32);
+							Break;
+						Case MODE_SEMI:
+							Inaccuracy = (16,16,16);
+							Break;
+						Case MODE_SINGLE:
+							Inaccuracy = (8,8,8);
+							Break;
+					}
+					
+					console.printf ("set nose gun accuracy to %d %d %d",inaccuracy);
+				}
 				
 				If (InCover) //Skip the preperation if we're already behind cover.
 					Return A_Jump (256,4);
@@ -1858,16 +1903,15 @@ Class MVP_Strider : MVP_Humanoid
 					}
 					
 					//Emit a hazard in front of where we're falling towards.
-					//TODO: Use the angle and pitch the Strider is moving towards.
 					FLineTraceData Data;
-					LineTrace (VectorAngle(Vel.X,Vel.Y),384,VectorAngle(Vel.XY.Length(),Vel.Z),TRF_BLOCKSELF,Height/2,data:Data);
+					LineTrace (VectorAngle(Vel.X,Vel.Y),384,-VectorAngle(Vel.XY.Length(),Vel.Z),TRF_BLOCKSELF,Height/2,data:Data);
 					
-					//Warn NPCs of hazard.
+					//Warn NPCs of Strider coming down.
 					Array <String> Fall;
 					Fall.Push("Vehicle");
 					Fall.Push("Crush");
 					Fall.Push("VehicleCrush");
-					HazardInfo.EmitHazard (Self,Radius*4,HazardInfo.HAZARD_ACTOR,HazardInfo.HAZARD_MEDIUM,tags:Fall);
+					HazardInfo.EmitHazard (Self,Radius*4,HazardInfo.HAZARD_ACTOR,HazardInfo.HAZARD_MEDIUM,tags:Fall,Data.HitLocation,usepos:True);
 					
 					Return State (Null);
 				}
