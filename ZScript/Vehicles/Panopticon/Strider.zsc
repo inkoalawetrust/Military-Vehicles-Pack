@@ -4,17 +4,15 @@
 //The AltDeath frame of the Strider fully fallen is cropped wrong.
 //BUG:
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
-//I noticed that when following me idly while crouching, it was running all the crouch logic except for using the right sprites.
+//Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 
 //TODO:
 //Add kicking (Generic) and stomping (Smol victims) attacks before adding the rest of the ranged attacks. Don't forget to make old punt victims +BLASTED.
 	//On this note, also add a random straight up kick variant, and make it a lot less random if the thing it's punting can actually take fall damage :>
 //Add hazard zone tagged as crushing when the strider is jumping, that is positioned to where it's going with a short trace.
 //Generally add hazard zones for attacks.
-//Make it do the "jump back from threats" thing while firing its' MG or minigun as well.
 
 //MAYDO:
-//Make it automatically go to Jump.Loop.Down: when falling fast enough.
 //Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed.
 
 //IDEA:
@@ -189,20 +187,44 @@ Class MVP_Strider : MVP_Humanoid
 		//Target prediction during attack states.
 		If (!IsDead && IsAttacking)
 		{
+			Vector3 AttackPos = MVP_StriderAttackPos (AttackType);
+			FLineTraceData Proj;
+			bMissile = True; //HACK: Become missile for TRF_BLOCKSELF.
+			LineTrace (Angle,MaxTargetRange,Pitch,TRF_SOLIDACTORS|TRF_BLOCKSELF,AttackPos.Z,AttackPos.X,AttackPos.Y,Proj);
+			bMissile = False;
+			
 			Double ProjSpeed, FastProjSpeed;
-			Switch (AttackType) //Change speed generically based on attack.
+			Switch (AttackType) //Change speed generically based on attack. And also emit hazards.
 			{
 				Case ATTACK_MACHINEGUN:
 					ProjSpeed = GetDefaultByType("MVP_RifleBullet").Speed;
 					FastProjSpeed = GetDefaultByType("MVP_RifleBullet").FastSpeed;
+					
+					//Warn actor in LOF.
+					HazardInfo MG = New ('HazardInfo');
+					MG.Origin = Self;
+					MG.Position = Proj.HitLocation;
+					MG.Type = HazardInfo.HAZARD_ATTACK;
+					MG.Level = HazardInfo.HAZARD_MEDIUM;
+					MG.Range = 128;
+					Array <String> MGTags; MGTags.Push ("Vehicle"); MGTags.Push ("Bullet");
+					MG.CustomTags = MGTags;
+					HazardInfo.GiveHazard (Proj.HitActor,MG);
 					Break;
 				Case ATTACK_MINIGUN:
 					ProjSpeed = GetDefaultByType("MVP_SmallRifleBullet").Speed;
 					FastProjSpeed = GetDefaultByType("MVP_SmallRifleBullet").FastSpeed;
+					
+					//Ditto but AOE.
+					Array <String> MTags; MTags.Push ("Vehicle"); MTags.Push ("Bullet"); MTags.Push ("Minigun");
+					HazardInfo.EmitHazard (Self,256,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:MTags,Proj.HitLocation);
 					Break;
 				Case ATTACK_ROCKETS:
 					ProjSpeed = GetDefaultByType("MVP_70mmRocket").Speed;
 					FastProjSpeed = GetDefaultByType("MVP_70mmRocket").FastSpeed;
+					
+					//Explosive hazard.
+					//TODO:Add it.
 					Break;
 				/*Case ATTACK_GRENADE:
 					ProjSpeed = GetDefaultByType("MVP_40mmGrenade").Speed;
@@ -217,7 +239,7 @@ Class MVP_Strider : MVP_Humanoid
 				//Turn = StriderMove.AngleLimit;
 			}
 			//HACK: Bizzare hack to account for the striders firing way off their origin, fun part is that this happens in ALL actors I'm pretty sure!
-			Int FAF = GetFAFAimPos(Target,MVP_StriderAttackPos (AttackType));
+			Int FAF = GetFAFAimPos(Target,AttackPos);
 			Double AimOfs = GetFAFPosOffset(Target,FAF);
 			SetZ (Pos.Z+AimOfs);
 			AimAtTarget (Turn,Turn,flags:FAF,attackspeed:ProjSpeed,fastattackspeed:FastProjSpeed);
@@ -553,10 +575,13 @@ Class MVP_Strider : MVP_Humanoid
 				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_LOW)
 					Hazards.Delete(I);
 				
-				ForEach (CurTag : Hazards[I].CustomTags)
+				If (Hazards[I].CustomTags.Size())
 				{
-					If (CurTag ~== "Bullet" || CurTag ~== "Projectile")
-						Hazards.Delete(I);
+					ForEach (CurTag : Hazards[I].CustomTags)
+					{
+						If (CurTag ~== "Bullet" || CurTag ~== "Projectile")
+							Hazards.Delete(I);
+					}
 				}
 			}
 		}
@@ -811,7 +836,7 @@ Class MVP_Strider : MVP_Humanoid
 		//Dodge projectiles by jumping out of the way.
 		Actor Proj;
 		Bool B;
-		If ((Proj = MVP_DroneDodge(User_DodgeRange,LastProj)))
+		If (!IsIndestructible (Self) && (Proj = MVP_DroneDodge(User_DodgeRange,LastProj)))
 		{
 			LastProj = Proj;
 			Double Delta = DeltaAngle (Proj.Angle,AngleTo(Proj));
@@ -1831,6 +1856,18 @@ Class MVP_Strider : MVP_Humanoid
 						Else
 							Return FindState ("Jump.End",True);
 					}
+					
+					//Emit a hazard in front of where we're falling towards.
+					//TODO: Use the angle and pitch the Strider is moving towards.
+					FLineTraceData Data;
+					LineTrace (VectorAngle(Vel.X,Vel.Y),384,VectorAngle(Vel.XY.Length(),Vel.Z),TRF_BLOCKSELF,Height/2,data:Data);
+					
+					//Warn NPCs of hazard.
+					Array <String> Fall;
+					Fall.Push("Vehicle");
+					Fall.Push("Crush");
+					Fall.Push("VehicleCrush");
+					HazardInfo.EmitHazard (Self,Radius*4,HazardInfo.HAZARD_ACTOR,HazardInfo.HAZARD_MEDIUM,tags:Fall);
 					
 					Return State (Null);
 				}

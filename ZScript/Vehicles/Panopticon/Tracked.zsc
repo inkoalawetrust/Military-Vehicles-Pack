@@ -1,5 +1,3 @@
-//FIXME: At least on the big hull, it seems to sometimes just wander off aimlessly. Even though both hull and turret have the same sight range.
-
 Class MVP_GunDrone : MVP_BaseVehicle
 {
 	Default
@@ -783,7 +781,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		KAI_Chase_PreChecks();
 		If (IsDead (Target)) Target = Null;
 		KAI_Chase_Retarget(0,True);
-		If (!Target && Turret) KAI_ShareTarget (Turret,Turret.Target);
+		If (!Target && Turret && Turret.Target) KAI_ShareTarget (Turret,Turret.Target);
 		
 		Bool MovedAlready; Bool B;
 		Int KMTFlags = KMT_ZIGZAG;
@@ -878,6 +876,11 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		
 		HazardInfo Haz;
 		If (!RunAway) Haz = GetStrongestHazard(Hazards); //Avoid strongest hazard around if not already busy with backing off from a nearby enemy.
+		If (Haz && Turret && Haz.Origin == Turret) //KLUDGE: Ignore hazards emited from the big turret firing rockets. So that we don't get stuck running from our own turret.
+		{
+			Hazards.Delete(Hazards.Find(Haz));
+			Haz = GetStrongestHazard(Hazards);
+		}
 		
 		//Keep different distances for targets.
 		If (!LockedIn && !RunAway && TargetInSight && Target && Target != Goal)
@@ -1006,6 +1009,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		//If our turret can't aim at its' target, and we haven't ran away from something already and aren't focused on patrolling, try to position ourselves better.
 		If (!MovedAlready && !LockedIn && Turret && Turret.Target && Turret.ElevationState == Turret.ELEVATION_TOOHIGH)
 		{
+			Console.Printf ("Turret %p can't aim at %p because it's too high, get away",Turret,Turret.Target);
 			KAI_MoveAway (Turret.Target,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
 			MovedAlready = True;
 		}
@@ -1013,9 +1017,12 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		//Move to target.
 		If (!MovedAlready && Target && Target != Goal && !LockedIn)
 		{
+			Console.Printf ("Big hull %p chasing %p",Self,Target);
 			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
 			MovedAlready = True;
 		}
+		else
+			console.printf ("we're NOT chasing %p but we ARE calling the main AI loop, goal %p, moved %d",target, goal, movedalready);
 		
 		//Patrol handling.
 		If (!MovedAlready)
@@ -1276,9 +1283,9 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			While (Finder.Next())
 			{
 				Other = Finder.Thing;
-				If (Level.Vec3Diff (FuckOff.Pos,Other.Pos).Length() > 256 || !(RocketHazard.Flags & RocketHazard.HAZ_NOSIGHT) && !Other.CheckSight (FuckOff,SF_IGNOREWATERBOUNDARY))
+				If ((Master && Other == Master) && Level.Vec3Diff (FuckOff.Pos,Other.Pos).Length() > 256 || !(RocketHazard.Flags & RocketHazard.HAZ_NOSIGHT) && !Other.CheckSight (FuckOff,SF_IGNOREWATERBOUNDARY))
 					Continue;
-				
+				console.printf ("passing rocket hazard to %p (%s)",other,other.getclassname());
 				HazardInfo.GiveHazard (Other,RocketHazard);
 			}
 		}
