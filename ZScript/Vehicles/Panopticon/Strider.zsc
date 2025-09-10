@@ -7,18 +7,15 @@
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 
+//PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignore bChaseGoal.
+
 //TODO:
-//Add kicking (Generic) and stomping (Smol victims) attacks before adding the rest of the ranged attacks. Don't forget to make old punt victims +BLASTED.
-	//On this note, also add a random straight up kick variant, and make it a lot less random if the thing it's punting can actually take fall damage :>
-//Add hazard zone tagged as crushing when the strider is jumping, that is positioned to where it's going with a short trace.
-//Generally add hazard zones for attacks.
 
 //MAYDO:
-//Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed.
+//Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed so that it can ram it again.
 
 //IDEA:
 //Make it optionally crouch walk when targeting a player for as long as the player can't see them and they're out of their FOV. Yes, literally sneaking up on them.
-//For the plain machine gun, add fire modes like on the marines and tracked drone, but maybe based on just distance instead.
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
 
@@ -91,7 +88,8 @@ Class MVP_Strider : MVP_Humanoid
 		
 		MVP_Humanoid.SmokeDelay 4;
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
-		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
+		//KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
+		KAI_Actor.ThreatLevelThreshold THREAT_UNSTOPPABLE; //URGENT: DEBUGGING THE FUCKING MELEE ATTACKS WITRH AN UBER PINKY
 		KAI_Actor.ActorFollowDist 192;
 		KAI_Actor.Inaccuracy (12,12,12);
 		KAI_Actor.InaccuracyFrequency 0.6;
@@ -181,6 +179,9 @@ Class MVP_Strider : MVP_Humanoid
 		
 		If (FireDelay >= 1)
 			FireDelay--;
+		
+		If (MeleeWindow >= 1)
+			MeleeWindow--;
 		
 		Bool IsDead = IsDead(Self);
 		Bool IsAttacking = IsInAttackState();
@@ -480,12 +481,46 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
-		If (!Target || Target == Goal || FireDelay != 0) Return False; //Don't attack if you have no target or just following a goal.
+		If (!Target || Target == Goal) Return False; //Don't attack if you have no target or just following a goal.
 		If (!CanAttack() || !CanBeTargeted(Self,Target) || IsInanimateObject (Target)) Return False;
 		
 		Int Threat = AssessThreatLevel (Target);
 		Double Dist = Distance3D (Target);
 		Bool InSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY); //IDEA: Try to make the grenade launcher fire at out of sight target? Otherwise just abort if out of sight.
+		
+		Bool WhackTarget = KAI_CheckMeleeRange (Target,flags:CMR_3DDISTANCE);
+		Actor NearestMeleeEnemy; //TL;DR Allow the strider to also kick other nearby enemies when surrounded.
+		//BUG: This causes it to often kick corpses too, despite FindNearestEnemy() filtering them out, of course. But hey, at least it's funny.
+		If (!WhackTarget) //NOTE: Don't always check, for perfomance.
+			NearestMeleeEnemy = FindNearestEnemy ( Radius+(MeleeRange*2) ); 
+		
+		//Mecha secretary bird.
+		//IDEA: Add extended kick where it punts enemies straight up, particularly if they are actually vulnerable to fall damage.
+		If (InSight && (WhackTarget || KAI_CheckMeleeRange (NearestMeleeEnemy,flags:CMR_3DDISTANCE)))
+		{
+			If (!WhackTarget)
+				{console.printf ("lets kick a nearby dipshit");MeleeTarget = NearestMeleeEnemy;}
+			Else
+				MeleeTarget = Target;
+			//Should we stomp instead?
+			//NOTE: For simplicity, just don't stomp at all if the actor is flying, no fancy "is beneath my feet anyways" checks or whatever.
+			Bool EwISteppedOnShit = (Random (0,255) < 16 && !IsFlying (MeleeTarget) && Target.Height <= Height*0.7 && MeleeTarget.ApplyDamageFactor ('Crush',100) >= 30);
+			If (EwISteppedOnShit) //https://www.youtube.com/watch?v=rkOib-MmTds
+			{
+				If (!NoStateJump) SetStateLabel ("Melee.Stomp");
+				Return True;
+			}
+			
+			//Mostly kick only if, you know, it works.
+			If (MeleeTarget.ApplyDamageFactor ('Melee',100) >= 30 || Random (0,255) < 8)
+			{
+				If (!NoStateJump) SetStateLabel ("Melee.Kick");
+				Return True;
+			}
+		}
+		return false;
+		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
+			Return False;
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN); //The position we're firing from.
 		
 		//Fire miniguns if close enough. Especially for very dangerous enemies.
@@ -671,7 +706,7 @@ Class MVP_Strider : MVP_Humanoid
 		If (!RunAway) Haz = GetStrongestHazard(Hazards); //Avoid strongest hazard around if not already busy with backing off from a nearby enemy.
 		
 		//Keep different distances for targets, by reversing
-		If (!LockedIn && !RunAway && TargetInSight && Target && Target != Goal)
+		If (!LockedIn && !RunAway && TargetInSight && Target && Target != Goal && TargetLevel > THREAT_VERYLOW)
 		{
 			Double Dist = 0;
 			Switch (TargetLevel)
@@ -699,7 +734,6 @@ Class MVP_Strider : MVP_Humanoid
 				Case THREAT_LOW:
 					Dist = 72;
 					Break;
-				Case THREAT_VERYLOW:
 				Default:
 					Break;
 			}
@@ -707,15 +741,24 @@ Class MVP_Strider : MVP_Humanoid
 			If (Health <= WoundHealth) //Keep double distance when hurt.
 				Dist *= 2;
 			
-			//MAYDO: Make it ignore this if it can melee the target.
-			If (ReverseSteps == 0 && DistToTarget <= Dist+Radius) //Too close to target, reverse.
+			//Decide to open up a melee window sometimes, even if the enemy has ranged attacks too.
+			If (!RunAway && MeleeWindow == 0 && Random (0,255) < 8 &&
+			(StriderWhackChecks (Target,TargetLevel,SMELEE_GOODENOUGH) || StriderWhackChecks (Target,TargetLevel,SMELEE_MELEEONLY)))
+				MeleeWindow = GameTicRate*Random (4,7);
+			
+			If (TargetLevel >= ThreatLevelThreshold)
+				MeleeWindow = 0;
+			
+			Bool ShouldRun = (MeleeWindow == 0 && !StriderWhackChecks (Target,TargetLevel,SMELEE_MELEEONLY));
+			
+			If (ShouldRun && ReverseSteps == 0 && DistToTarget <= Dist+Radius) //Too close to target and we can't kick it, reverse.
 			{
 				RunAway = True; //In case we otherwise wouldn't run away, like if retreatrange is turned off.
 				ReverseSteps = Random (8,16);
 			}
 			
 			//Run from target if hazard isn't closer.
-			If (Dist && DistToTarget <= Dist && !(Haz && Distance3D (Target) <= GetHazardDistance (Haz)))
+			If (ShouldRun && Dist && DistToTarget <= Dist && !(Haz && Distance3D (Target) <= GetHazardDistance (Haz)))
 			{
 				RunAway = True;
 				Haz = Null; //Signify that we shouldn't run from a hazard later in the function.
@@ -726,6 +769,13 @@ Class MVP_Strider : MVP_Humanoid
 		{
 			RunAway = True;
 			ReverseSteps = 0; //Just run away.
+			MeleeWindow = 0;
+		}
+		console.printf ("melee window %u",meleewindow);
+		If (MeleeWindow && Target && !RunSteps && !Crouching) //We decided to open up a window to punt a bitch.
+		{
+			MVP_StartRun (Random(16,32));
+			Return;
 		}
 		
 		//Run away from threat, be it the target itself, a hazard.
@@ -835,6 +885,26 @@ Class MVP_Strider : MVP_Humanoid
 		}
 		
 		Return MeleeShits >= TheThreshold;
+	}
+	
+	Enum SMELEE_CHECKS //Smelly
+	{
+		SMELEE_MELEEONLY,
+		SMELEE_GOODENOUGH,
+	}
+	
+	Bool StriderWhackChecks (Actor Who, Int Level, Int Type)
+	{
+		If (!Who)
+			Return False;
+		
+		If (Type == SMELEE_MELEEONLY && Who.MeleeState && !Who.MissileState) //Melee only enemy.
+			Return True;
+		
+		If (Type == SMELEE_GOODENOUGH && Target.MissileState && Level <= THREAT_ABOVENORMAL && Health > WoundHealth)
+			Return True;
+		
+		Return False;
 	}
 	
 	Bool MVP_StartRun (Int Steps)
@@ -1308,11 +1378,13 @@ Class MVP_Strider : MVP_Humanoid
 	UInt8 MGMode; //What mode to fire the nose gun at?
 	Int Shots; //How many times to use our attack before stopping?
 	UInt8 FireDelay; //Time before we can fire again. Used by SJUMP_STRAFE as a delay in the jump loop between shots instead.
+	UInt8 MeleeWindow; //If this is not 0 during the chase loop, the Strider will not steer clear of its' target so it can kick it instead.
+	Actor MeleeTarget; //Who we are meleeing, normally it's our target but sometimes it can also be some other nearby SOB.
 	
 	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
 	{
 		ATTACK_NONE,
-		ATTACK_MACHINEGUN, //TODO: Add separate fire modes for single shots, bursts, and full auto, like the marines and large gun drone do.
+		ATTACK_MACHINEGUN,
 		ATTACK_MINIGUN,
 		ATTACK_ROCKETS,
 		ATTACK_GRENADE,
@@ -1798,7 +1870,73 @@ Class MVP_Strider : MVP_Humanoid
 					Return FindState ("Melee.Stomp");
 				Return State (Null); //Fall into kick state.
 			}
+		//TODO: Add melee and miss sounds.
 		Melee.Kick:
+			PNS2 I 4 Fast Slow
+			{
+				A_StartSound ("Vehicle/Strider/Motor",flags:CHANF_OVERLAP); 
+				A_Face(MeleeTarget);
+				AttackType = ATTACK_PUNT;
+			}
+			PNS2 J 2 Fast A_Face(MeleeTarget);
+			PNS2 K 2 Fast
+			{
+				If (Target && KAI_CheckMeleeRange (MeleeTarget,flags:CMR_3DDISTANCE))
+				{
+					A_Face (MeleeTarget);
+					
+					Int Dmg = MeleeTarget.DamageMobj (Self,Self,10*Random (4,8),'Melee');
+					If (Random (False, True))
+						TraceBleed (Dmg,MeleeTarget);
+					
+					//If () //Old punt
+					{
+						MeleeTarget.Thrust (FRandom (16.0f,24.0f),AngleTo (MeleeTarget));
+						MeleeTarget.Vel.Z += FRandom (4.0f,8.0f);
+						MeleeTarget.bBlasted = True;
+					}
+					/*Else //NEW punt!
+										{
+						MeleeTarget.Thrust (FRandom (4.0f,8.0f),AngleTo (MeleeTarget));
+						MeleeTarget.Vel.Z += FRandom (16.0f,24.0f);
+					}*/
+
+					//A_StartSound ();
+				}
+				//Else
+					//A_StartSound ();
+			}
+			PNS2 K 6 Fast Slow;
+			Goto Melee.End;
+		Melee.Stomp:
+			PNS1 S 5 Fast Slow
+			{
+				A_StartSound ("Vehicle/Strider/Motor",flags:CHANF_OVERLAP); 
+				A_Face(MeleeTarget);
+				AttackType = ATTACK_STOMP;
+			}
+			PNS2 LM 4 Fast A_Face(MeleeTarget);
+			PNS2 N 2 Fast
+			{
+				If (MeleeTarget && KAI_CheckMeleeRange (MeleeTarget,flags:CMR_3DDISTANCE))
+				{
+					A_Face (MeleeTarget);
+					
+					Int Dmg = MeleeTarget.DamageMobj (Self,Self,10*Random (15,25),'Melee');
+					TraceBleed (Dmg,MeleeTarget);
+					A_StartSound ("Vehicle/Strider/Stomp",CHAN_AUTO,CHANF_OVERLAP,0.7);
+				}
+			}
+			PNS2 N 4 Fast Slow;
+			Goto Melee.End;
+		Melee.Ram:
+			
+		Melee.End:
+			TNT1 A 0
+			{
+				AttackType = ATTACK_NONE;
+				MeleeTarget = Null;
+			}
 			Goto See;
 		Climb:
 			PNS1 R 6 Fast Slow
@@ -1860,6 +1998,8 @@ Class MVP_Strider : MVP_Humanoid
 						Angle = GetAngleToPos (JumpPos,StriderMove.AngleLimit/5);
 					
 					MVP_StriderStrafeAttack ();
+					
+					bNoGravity = Default.bNoGravity; //Always come back down.
 					
 					//Going down, or maybe we already landed.
 					If (Vel.Z <= -2 || bOnMobj || Pos.Z <= FloorZ || Pos.Z <= GetZAt ())
