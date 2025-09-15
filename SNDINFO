@@ -351,6 +351,7 @@ $Random MVPMarine/Death
 	Vehicle/Strider/Stomp2 "Sounds/Vehicles/Drones/Strider/StrWalk2.ogg"
 	Vehicle/Strider/Stomp3 "Sounds/Vehicles/Drones/Strider/StrWalk3.ogg"
 	Vehicle/Strider/Alert "Sounds/Vehicles/Drones/Strider/StrAlert.ogg"
+	Vehicle/Strider/KickFail "Sounds/Vehicles/Drones/Strider/StrKickMiss.ogg"
 	
 	$Random Vehicle/Strider/Motor
 	{

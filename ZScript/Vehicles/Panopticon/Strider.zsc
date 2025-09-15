@@ -7,9 +7,7 @@
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 
-//PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignore bChaseGoal.
-
-//TODO:
+//PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignoring bChaseGoal.
 
 //MAYDO:
 //Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed so that it can ram it again.
@@ -164,6 +162,24 @@ Class MVP_Strider : MVP_Humanoid
 			User_RetreatDistance = 512;
 		If (User_ChaseTime == 0)
 			User_ChaseTime = User_ChaseTime = (35/4)*30;
+		
+		//Copied from how the  ̶S̶m̶a̶r̶t̶ ̶M̶a̶r̶i̶n̶e̶s̶'̶ tanks' color variable is handled.
+		If (!User_Color || User_Color ~== ""){} //Don't run the code if User_Color is empty.
+		Else
+		{
+			//Handles the random color choice that is performed if the color name given is "Random".
+			If (User_Color ~== "Random")
+			{
+				Static Const String ColorArray[] = {"White","Black","Yellow","Orange","Red","Blue","Default"}; //Contains all the valid color names.
+				
+				User_Color = ColorArray[Random(0,ColorArray.Size()-1)]; //Randomly picks a color string.
+			}
+			
+			If (!(User_Color ~== "Default"))
+				A_SetTranslation (String.Format("Strider_%s", User_Color));
+			Else
+				A_SetTranslation ('');
+		}
 	}
 	
 	Protected Double LastTickFallVel;
@@ -492,16 +508,20 @@ Class MVP_Strider : MVP_Humanoid
 		Actor NearestMeleeEnemy; //TL;DR Allow the strider to also kick other nearby enemies when surrounded.
 		//BUG: This causes it to often kick corpses too, despite FindNearestEnemy() filtering them out, of course. But hey, at least it's funny.
 		If (!WhackTarget) //NOTE: Don't always check, for perfomance.
-			NearestMeleeEnemy = FindNearestEnemy ( Radius+(MeleeRange*2) ); 
+		{
+			NearestMeleeEnemy = FindNearestEnemy ( Radius+(MeleeRange*2) );
+			If (IsDead (NearestMeleeEnemy))
+				NearestMeleeEnemy = Null;
+		}
 		
 		//Mecha secretary bird.
-		//IDEA: Add extended kick where it punts enemies straight up, particularly if they are actually vulnerable to fall damage.
-		If (InSight && (WhackTarget || KAI_CheckMeleeRange (NearestMeleeEnemy,flags:CMR_3DDISTANCE)))
+		If (Random (0,255) < 220 && InSight && (WhackTarget || KAI_CheckMeleeRange (NearestMeleeEnemy,flags:CMR_3DDISTANCE)))
 		{
 			If (!WhackTarget)
-				{console.printf ("lets kick a nearby dipshit");MeleeTarget = NearestMeleeEnemy;}
+				MeleeTarget = NearestMeleeEnemy;
 			Else
 				MeleeTarget = Target;
+			
 			//Should we stomp instead?
 			//NOTE: For simplicity, just don't stomp at all if the actor is flying, no fancy "is beneath my feet anyways" checks or whatever.
 			Bool EwISteppedOnShit = (Random (0,255) < 16 && !IsFlying (MeleeTarget) && Target.Height <= Height*0.7 && MeleeTarget.ApplyDamageFactor ('Crush',100) >= 30);
@@ -511,9 +531,18 @@ Class MVP_Strider : MVP_Humanoid
 				Return True;
 			}
 			
+			//Sometimes kick up delibaretely if the enemy can take fall damage and there's airspace.
+			If (CanTakeFallDamage (MeleeTarget) && MeleeTarget.ApplyDamageFactor ("Falling",100) > 0 && CeilingZ - FloorZ >= 256)
+			{
+				AttackType = ATTACK_ALTPUNT;
+				If (!NoStateJump) SetStateLabel ("Melee.Kick");
+				Return True;
+			}
+			
 			//Mostly kick only if, you know, it works.
 			If (MeleeTarget.ApplyDamageFactor ('Melee',100) >= 30 || Random (0,255) < 8)
 			{
+				If (Random (0,255) < 8) AttackType = ATTACK_ALTPUNT; //Variety kicking.
 				If (!NoStateJump) SetStateLabel ("Melee.Kick");
 				Return True;
 			}
@@ -536,7 +565,7 @@ Class MVP_Strider : MVP_Humanoid
 			Return True;
 		}
 		FirePos = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
-		//Fire more accurate machine gun otherwise.
+		//Fire more accurate machine gun otherwise. With different firing modes like the AAF soldiers and the large ground drone.
 		If (InSight && KAI_CheckLOF (Target,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(Target,FirePos)))
 		{
 			AttackType = ATTACK_MACHINEGUN;
@@ -1255,7 +1284,6 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		If (User_JumpMode == -1) //Nope
 			Return -1;
-		//MAYDO: Change the jump range to 640MU (20 meters), and accordingly change the height too of course.
 		If (User_JumpMode == 1) //Normal params
 		{
 			Switch (What)
@@ -1389,6 +1417,7 @@ Class MVP_Strider : MVP_Humanoid
 		ATTACK_ROCKETS,
 		ATTACK_GRENADE,
 		ATTACK_PUNT, //Old punt
+		ATTACK_ALTPUNT, //NEW punt!!!!!!!!!1
 		ATTACK_STOMP,
 		ATTACK_RAMMING,
 	}
@@ -1423,7 +1452,6 @@ Class MVP_Strider : MVP_Humanoid
 		JDIR_NORMAL, //Standard nondescript jump
 		JDIR_LEFT,
 		JDIR_RIGHT,
-		//JDIR_RUN, //Running jump //MAYDO: Since the jump direction is determined dynamically, make this a flag instead?
 		JDIR_BACK, //Jump backwards
 	}
 	
@@ -1450,6 +1478,7 @@ Class MVP_Strider : MVP_Humanoid
 	Double User_RetreatDistance;
 	Int User_ChaseTime;
 	Bool User_NoCover;
+	String User_Color;
 	
 	Const STRIDER_CROUCHHEIGHT = 64;
 	Const STRIDER_RUNFACTOR = 2.25;
@@ -1870,18 +1899,17 @@ Class MVP_Strider : MVP_Humanoid
 					Return FindState ("Melee.Stomp");
 				Return State (Null); //Fall into kick state.
 			}
-		//TODO: Add melee and miss sounds.
 		Melee.Kick:
 			PNS2 I 4 Fast Slow
 			{
 				A_StartSound ("Vehicle/Strider/Motor",flags:CHANF_OVERLAP); 
 				A_Face(MeleeTarget);
-				AttackType = ATTACK_PUNT;
+				If (AttackType != ATTACK_ALTPUNT) AttackType = ATTACK_PUNT;
 			}
 			PNS2 J 2 Fast A_Face(MeleeTarget);
 			PNS2 K 2 Fast
 			{
-				If (Target && KAI_CheckMeleeRange (MeleeTarget,flags:CMR_3DDISTANCE))
+				If (KAI_CheckMeleeRange (MeleeTarget,flags:CMR_3DDISTANCE))
 				{
 					A_Face (MeleeTarget);
 					
@@ -1889,23 +1917,31 @@ Class MVP_Strider : MVP_Humanoid
 					If (Random (False, True))
 						TraceBleed (Dmg,MeleeTarget);
 					
-					//If () //Old punt
+					If (AttackType != ATTACK_ALTPUNT) //Old punt
 					{
 						MeleeTarget.Thrust (FRandom (16.0f,24.0f),AngleTo (MeleeTarget));
 						MeleeTarget.Vel.Z += FRandom (4.0f,8.0f);
 						MeleeTarget.bBlasted = True;
 					}
-					/*Else //NEW punt!
+					Else //NEW punt!
 										{
 						MeleeTarget.Thrust (FRandom (4.0f,8.0f),AngleTo (MeleeTarget));
 						MeleeTarget.Vel.Z += FRandom (16.0f,24.0f);
-					}*/
-
-					//A_StartSound ();
+					}
+					
+					If (MeleeTarget.bNoBlood) //Clank
+						A_StartSound ("SFX/MetalHit",flags:CHANF_OVERLAP);
+					Else //Plap
+						A_StartSound ("SFX/FleshHit",flags:CHANF_OVERLAP);
 				}
-				//Else
-					//A_StartSound ();
+				Else
+					A_StartSound ("Vehicle/Strider/KickFail",flags:CHANF_OVERLAP);
 			}
+			TNT1 A 0 A_JumpIf (AttackType == ATTACK_ALTPUNT,2);
+			PNS2 K 6 Fast Slow;
+			Goto Melee.End;
+			//Extra frame of kicking straight up.
+			PNS2 L 8 Fast Slow;
 			PNS2 K 6 Fast Slow;
 			Goto Melee.End;
 		Melee.Stomp:
@@ -1924,7 +1960,9 @@ Class MVP_Strider : MVP_Humanoid
 					
 					Int Dmg = MeleeTarget.DamageMobj (Self,Self,10*Random (15,25),'Melee');
 					TraceBleed (Dmg,MeleeTarget);
-					A_StartSound ("Vehicle/Strider/Stomp",CHAN_AUTO,CHANF_OVERLAP,0.7);
+					If (!MeleeTarget.bNoBlood) //Plap
+						A_StartSound ("SFX/FleshHit",flags:CHANF_OVERLAP);
+					A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,0.7);
 				}
 			}
 			PNS2 N 4 Fast Slow;
