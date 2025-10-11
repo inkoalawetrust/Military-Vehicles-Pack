@@ -1,6 +1,5 @@
 //Generic projectiles used by multiple vehicles.
 
-Class MVP_50CalBullet : MVP_RifleBullet{} //Old name.
 Class MVP_LargeRifleBullet : MVP_BaseProjectile
 {
 	Default

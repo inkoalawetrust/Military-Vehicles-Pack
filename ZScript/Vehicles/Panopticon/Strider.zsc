@@ -13,7 +13,6 @@
 //Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed so that it can ram it again.
 
 //IDEA:
-//Make it optionally crouch walk when targeting a player for as long as the player can't see them and they're out of their FOV. Yes, literally sneaking up on them.
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
 
@@ -542,12 +541,12 @@ Class MVP_Strider : MVP_Humanoid
 			//Mostly kick only if, you know, it works.
 			If (MeleeTarget.ApplyDamageFactor ('Melee',100) >= 30 || Random (0,255) < 8)
 			{
-				If (Random (0,255) < 8) AttackType = ATTACK_ALTPUNT; //Variety kicking.
+				/*If (Random (0,255) < 8)*/ AttackType = ATTACK_ALTPUNT; //Variety kicking.
 				If (!NoStateJump) SetStateLabel ("Melee.Kick");
 				Return True;
 			}
 		}
-		return false;
+		return false; //DEBUG
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN); //The position we're firing from.
@@ -865,7 +864,7 @@ Class MVP_Strider : MVP_Humanoid
 			If (DistToTarget >= 768 && !Crouching && !RunSteps && CheckSight(Target,SF_IGNOREWATERBOUNDARY)) //Target too far, run to them.
 			{
 				MVP_StartRun (Random(32,64));
-				Int Chance = DistToTarget >= 3072 ? 8 : 2;
+				Int Chance = DistToTarget >= 3072 ? 10 : 2;
 				If (Random (0,512) < Chance) //May leapfrog towards enemy. Especially when really far but still in sight.
 				{
 					console.printf ("jumping to my enemy, angle to target is %.2f",angle);
@@ -996,8 +995,11 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Bool MVP_StriderParkour()
 	{
-		//Crouching comes first.
+		//Crouching comes first. Also sneak behind players. MAYDO: Have the sneaking up not be affected by parkour being disabled?
 		Crouching = KAI_HandleCrouching(Default.Height,STRIDER_CROUCHHEIGHT);
+		If (!Crouching && Target && Target.Player && !Target.CheckFOV (Self,90) && Distance3DSquared (Target) <= 384*384)
+			Crouching = True;
+			
 		If (ReverseSteps == 0 && Crouching && Sprite == GetSpriteIndex ('PNS0')) //Offset into the crouching animation.
 			Frame += STRIDER_CROUCHFRAMEOFFSET;
 		

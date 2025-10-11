@@ -74,7 +74,7 @@ Class MVP_Handler : EventHandler
 		Name MarineBullet = "SmartMarineMGBullet";
 		
 		If (!NoCustomMarines && E.Replacee Is MarineBullet)
-			E.Replacement = "MVP_50CalBullet";
+			E.Replacement = "MVP_LargeRifleBullet";
 	}
 	
 	//Just a test, returns the current date in 24 hour format.

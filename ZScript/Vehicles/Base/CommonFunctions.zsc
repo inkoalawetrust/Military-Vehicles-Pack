@@ -416,6 +416,8 @@ Mixin Class MVP_SharedFunctions
 			VelReduction = Clamp (VelReduction,0.25,INT.MAX);
 			ForEach (Bug : InTheWay)
 			{
+				If (!Bug)
+					Continue;
 				Double Force = TotalMass * PostCrushVel;
 				Int ImpactDamage = Force/300;
 				Bug.DamageMobj (Self,Self,ImpactDamage,'Crush');

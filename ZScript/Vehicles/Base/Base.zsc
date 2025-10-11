@@ -396,7 +396,7 @@ Class MVP_LOFDebugGun : Pistol
 		Check.Shooter = Self;
 		
 		Check.ProjInfo = New ('LOFProjInfo'); //Assign struct.
-		Check.ProjInfo.Projectile = "MVP_50CalBullet"; //Pass projectile class to struct.
+		Check.ProjInfo.Projectile = "MVP_LargeRifleBullet"; //Pass projectile class to struct.
 		Check.ProjInfo.InitializeProjectileInfo(); //Let it infer the rest.
 		
 		Check.Trace (ShotPos,CurSector,Direction,Distance,0);

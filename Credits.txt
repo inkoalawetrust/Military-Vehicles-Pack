@@ -109,7 +109,7 @@ Drone electric motor sound (DroneSmallMotor.ogg) is from ZapSplat (https://www.z
 Drone track sound (DroneTrack.ogg) is from ZapSplat (https://www.zapsplat.com/music/loop-steady-rattling-tracks-of-a-small-driving-tank-fast/)
 Drone turret turn sound (DroneTurret.ogg) is from ZapSplat (https://www.zapsplat.com/music/sound-of-a-small-tank-turning-around-its-turret-different-lengths-within-variations/)
 
-Strider alert sound is a parasaurolophus sound reconstruction edited by me 
+Strider alert sound is a parasaurolophus sound reconstruction edited by me https://www.youtube.com/watch?v=rlKa7i_59As
 Strider kick miss sound (StrKickMiss.ogg) by qubodup https://freesound.org/people/qubodup/sounds/60013/
 
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.

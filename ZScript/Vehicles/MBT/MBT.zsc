@@ -2000,7 +2000,7 @@ Class MVP_MBTRWS : MVP_BaseTurret
 		If (Target && !CheckFOV (Target,90/2)) Return False; //KLUDGE: We need to do the null check here, because as of GZDoom 4.10, it's not done internally. Crashing the game.
 		If (IsOverPitchLimits (Target,RWSAttackHeight,Target.Height/2) != ELEVATION_INBOUNDS) Return False;
 		
-		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,0,0,(0,-8,12),0,"MVP_50CalBullet"))
+		If (Target != Self && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,0,0,(0,-8,12),0,"MVP_LargeRifleBullet"))
 		{
 			If (!NoStateJump) SetStateLabel ("Fire");
 			Return True;
@@ -2113,7 +2113,7 @@ Class MVP_MBTRWS : MVP_BaseTurret
 			MMBT # 3 Light ("50CalFiringLight") Bright
 			{
 				A_StartSound (AttackSound,CHAN_WEAPON,CHANF_OVERLAP,1.0,0.3);
-				Actor Proj = A_SpawnProjectile ("MVP_50CalBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
+				Actor Proj = A_SpawnProjectile ("MVP_LargeRifleBullet",12,-8,flags:CMF_AIMDIRECTION,Pitch); //pew pew
 				AddProjectileSpread (Proj,(0.8,-0.8),(1.0,-1.0));
 				A_SpawnItemEx ("MVP_BulletCasing",-32,32,8,FRandom(2,-2),FRandom(8,14),FRandom(6,12));
 				Frame = UpdateRWSElevation (25,19,21,23); //Z, T, V, X
@@ -2139,7 +2139,7 @@ Class MVP_MBTRWS : MVP_BaseTurret
 				If (Random2[pr_monsterrefire]() < 48 &&
 				//If the target is too high or low to shoot.
 				((Target && IsOverPitchLimits (Target,12,Target.Height/2) != ELEVATION_INBOUNDS) ||
-				!KAI_TurretCheckLOF (Target,0,0,(0,-8,12),0,"MVP_50CalBullet")))
+				!KAI_TurretCheckLOF (Target,0,0,(0,-8,12),0,"MVP_LargeRifleBullet")))
 				{
 					A_ClearTarget();
 					Return ResolveState ("See");
