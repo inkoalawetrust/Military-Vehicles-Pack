@@ -388,6 +388,7 @@ Class MVP_Strider : MVP_Humanoid
 		bNoFriction = Default.bNoFriction; //Do friction again.
 		bNoGravity = Default.bNoGravity; //Do gravity again.
 		InCover = False;
+		SmokeCounter = 0;
 	}
 	
 	Override Bool OnWander()
@@ -494,6 +495,15 @@ Class MVP_Strider : MVP_Humanoid
 		Return True;
 	}
 	
+	//HACK: BlockingMobj doesn't work of course!
+	Override Void CollidedWith (Actor Other, Bool Passive)
+	{
+		Super.CollidedWith (Other, Passive);
+		
+		If (AttackType == ATTACK_RAMMING && !Passive)
+			Rammed = Other;
+	}
+	
 	Override Bool ShouldAttack (Bool NoStateJump)
 	{
 		If (!Target || Target == Goal) Return False; //Don't attack if you have no target or just following a goal.
@@ -506,7 +516,7 @@ Class MVP_Strider : MVP_Humanoid
 		Bool WhackTarget = KAI_CheckMeleeRange (Target,flags:CMR_3DDISTANCE);
 		Actor NearestMeleeEnemy; //TL;DR Allow the strider to also kick other nearby enemies when surrounded.
 		//BUG: This causes it to often kick corpses too, despite FindNearestEnemy() filtering them out, of course. But hey, at least it's funny.
-		If (!WhackTarget) //NOTE: Don't always check, for perfomance.
+		If (!WhackTarget) //MAYDO: Don't always check, for perfomance?
 		{
 			NearestMeleeEnemy = FindNearestEnemy ( Radius+(MeleeRange*2) );
 			If (IsDead (NearestMeleeEnemy))
@@ -514,7 +524,15 @@ Class MVP_Strider : MVP_Humanoid
 		}
 		
 		//Mecha secretary bird.
-		If (Random (0,255) < 220 && InSight && (WhackTarget || KAI_CheckMeleeRange (NearestMeleeEnemy,flags:CMR_3DDISTANCE)))
+		If (InSight && Random (0,255) < 2 && KAI_CheckMeleeRange (Target,640,CMR_3DDISTANCE) && IsPosReachable(Target.Pos,Target.Radius*2.2)) //Ram ranch
+		{
+			MeleeWindow = ReverseSteps = 0;
+			AttackType = ATTACK_RAMMING;
+			If (!NoStateJump) SetStateLabel ("Melee.Ram");
+			Return True;
+		}
+		
+		If (InSight && Random (0,255) < 220 && (WhackTarget || KAI_CheckMeleeRange (NearestMeleeEnemy,flags:CMR_3DDISTANCE)))
 		{
 			If (!WhackTarget)
 				MeleeTarget = NearestMeleeEnemy;
@@ -547,6 +565,7 @@ Class MVP_Strider : MVP_Humanoid
 			}
 		}
 		return false; //DEBUG
+		//RANGED ATTACKS.
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN); //The position we're firing from.
@@ -799,7 +818,7 @@ Class MVP_Strider : MVP_Humanoid
 			ReverseSteps = 0; //Just run away.
 			MeleeWindow = 0;
 		}
-		console.printf ("melee window %u",meleewindow);
+		
 		If (MeleeWindow && Target && !RunSteps && !Crouching) //We decided to open up a window to punt a bitch.
 		{
 			MVP_StartRun (Random(16,32));
@@ -1263,6 +1282,13 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Protected Void MVP_StriderFootsteps (Bool Running)
 	{
+		If (AttackType == ATTACK_RAMMING)
+		{
+			If (Frame == FRAME_T || Frame == FRAME_W) //Play stomp sound on frames where it steps on the ground.
+				A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.1,0.3));
+			Return;
+		}
+		
 		If (Running)
 		{
 			If (Frame == FRAME_H || Frame == FRAME_K) //Play stomp sound on frames where it steps on the ground.
@@ -1410,6 +1436,7 @@ Class MVP_Strider : MVP_Humanoid
 	UInt8 FireDelay; //Time before we can fire again. Used by SJUMP_STRAFE as a delay in the jump loop between shots instead.
 	UInt8 MeleeWindow; //If this is not 0 during the chase loop, the Strider will not steer clear of its' target so it can kick it instead.
 	Actor MeleeTarget; //Who we are meleeing, normally it's our target but sometimes it can also be some other nearby SOB.
+	Actor Rammed;
 	
 	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
 	{
@@ -1969,11 +1996,70 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			PNS2 N 4 Fast Slow;
 			Goto Melee.End;
+		/*FIXME: I swear the strider sometimes decides to come here from ShouldAttack(), then SOMEHOW aborts without using ANY of the defined exit conditions.
+		Which produces the effect of it randomly teleporting forward a bit when in ramming range of the target.*/
 		Melee.Ram:
-			
+			PNS0 STUVWX 2
+			{
+				If (SmokeCounter++ >= 250) //Stop running after some time.
+					Return FindState ("Melee.End",True);
+				
+				If (IsDead (Target)) //Look for new thing to ram on the fly.
+				{
+					LookForPlayers (False);
+					If (!Target)
+						Return FindState ("Melee.End",True);
+				}
+				
+				If ((Health <= WoundHealth || Distance3DSquared (Target) >= 512*512) && MVP_StriderDodge(True)) //Dodge when injured or too far anyway.
+				{
+					SmokeCounter = 0;
+					AttackType = ATTACK_NONE;
+					MeleeTarget = Null;
+					Return State (Null);
+				}
+				
+				If (Rammed) //Smash up actor.
+				{
+					Int Dmg = Rammed.DamageMobj (Self,Self,10*Random (25,50),'Melee');
+					//If (Random (False, True))
+						TraceBleed (Dmg,Rammed);
+					
+					Rammed.Thrust (FRandom (16.0f,24.0f),AngleTo (Rammed));
+					Rammed.Vel.Z += FRandom (4.0f,8.0f);
+					Rammed.bBlasted = True;
+					
+					If (Rammed.bNoBlood) //Clank
+						A_StartSound ("SFX/MetalHit",flags:CHANF_OVERLAP);
+					Else //Plap
+						A_StartSound ("SFX/FleshHit",flags:CHANF_OVERLAP);
+					
+					Rammed = Null;
+					Return FindState ("Melee.End",True);
+				}
+				
+				If (MovementBlockingLine) //Smash up line.
+				{
+					Destructible.DamageLinedef (MovementBlockingLine,Self,10*Random (25,50),'Melee',Level.ActorOnLineSide(Self,MovementBlockingLine),Self.Pos,False);
+					A_QuakeEx (.5,.5,.5,35,0,256,flags:QF_GROUNDONLY|QF_3D,rollintensity:0.5);
+					Return FindState ("Melee.End",True);
+				}
+				
+				//NOTE: The walk needs to run afterwards so the blocking line and mobj variables aren't cleared by the next step.
+				//RunSteps = 1;
+				Speed *= STRIDER_RUNFACTOR;
+				KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),StriderMove.DetourFactor,StriderMove.AngleLimit);
+				Speed /= STRIDER_RUNFACTOR;
+				MVP_StriderFootsteps(False);
+				
+				Return State(Null);
+			}
+			Loop;
+			tnt1 a 0 a_log ("is there some kinda fall through what the fuck is happening here");
 		Melee.End:
 			TNT1 A 0
-			{
+			{console.printf ("ceasing melee");
+				SmokeCounter = 0;
 				AttackType = ATTACK_NONE;
 				MeleeTarget = Null;
 			}
