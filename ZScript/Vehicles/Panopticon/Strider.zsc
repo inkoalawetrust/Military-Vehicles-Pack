@@ -9,9 +9,6 @@
 
 //PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignoring bChaseGoal.
 
-//MAYDO:
-//Make it so after each ram, the strider always or is very likely to (Try to) jump away from the thing it just rammed so that it can ram it again.
-
 //IDEA:
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
@@ -389,6 +386,7 @@ Class MVP_Strider : MVP_Humanoid
 		bNoGravity = Default.bNoGravity; //Do gravity again.
 		InCover = False;
 		SmokeCounter = 0;
+		RamPower = 0;
 	}
 	
 	Override Bool OnWander()
@@ -524,7 +522,7 @@ Class MVP_Strider : MVP_Humanoid
 		}
 		
 		//Mecha secretary bird.
-		If (InSight && Random (0,255) < 2 && KAI_CheckMeleeRange (Target,640,CMR_3DDISTANCE) && IsPosReachable(Target.Pos,Target.Radius*2.2)) //Ram ranch
+		If (InSight && Random (0,255) < 3 && KAI_CheckMeleeRange (Target,640,CMR_3DDISTANCE) && IsPosReachable(Target.Pos,Target.Radius*2.2)) //Ram ranch
 		{
 			MeleeWindow = ReverseSteps = 0;
 			AttackType = ATTACK_RAMMING;
@@ -559,12 +557,12 @@ Class MVP_Strider : MVP_Humanoid
 			//Mostly kick only if, you know, it works.
 			If (MeleeTarget.ApplyDamageFactor ('Melee',100) >= 30 || Random (0,255) < 8)
 			{
-				/*If (Random (0,255) < 8)*/ AttackType = ATTACK_ALTPUNT; //Variety kicking.
+				If (Random (0,255) < 8) AttackType = ATTACK_ALTPUNT; //Variety kicking.
 				If (!NoStateJump) SetStateLabel ("Melee.Kick");
 				Return True;
 			}
 		}
-		return false; //DEBUG
+		
 		//RANGED ATTACKS.
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
@@ -642,8 +640,13 @@ Class MVP_Strider : MVP_Humanoid
 		Bool BigThreat = (ThreatLevelThreshold != THREAT_ASSESS && TargetLevel >= ThreatLevelThreshold); //Target's threat level is over the threshold.
 		If (RunRange > 0 && !bNoFear && Target && Target != Goal && !LockedIn && BigThreat && DistToTarget <= RunRange && TargetInSight)
 		{
-			If (MVP_StriderJump (MVP_StriderJumpFromPos (Target.Pos,32,384),flags:SJUMP_STEER))
-					Return;
+			//Try jumping away from the target, with a chance of trying to shot at it too.
+			Int MayStrafe = Random (0,2) == 0 ? SJUMP_STRAFE : 0;
+			If (MVP_StriderJump (MVP_StriderJumpFromPos (Target.Pos,32,384),flags:SJUMP_STEER | MayStrafe, enemy:Target))
+			{
+				If (JumpFlags & SJUMP_STRAFE) FireDelay = 0; //So we can fire immediately.
+				Return;
+			}
 			Else If (!RunSteps && !Crouching) //Jumping away from the threat failed, just try running off.
 			{
 				MVP_StartRun (Random(16,32));
@@ -902,7 +905,7 @@ Class MVP_Strider : MVP_Humanoid
 		//Patrol handling.
 		If (!MovedAlready)
 		{
-			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Spawn",StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
+			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Idle.Stand",StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
 			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
 				KAI_MoveTowards (Goal.Pos,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
 			If (b && goal) spawn ("kai_debugpoint",goal.pos);
@@ -1437,6 +1440,7 @@ Class MVP_Strider : MVP_Humanoid
 	UInt8 MeleeWindow; //If this is not 0 during the chase loop, the Strider will not steer clear of its' target so it can kick it instead.
 	Actor MeleeTarget; //Who we are meleeing, normally it's our target but sometimes it can also be some other nearby SOB.
 	Actor Rammed;
+	Double RamPower;
 	
 	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
 	{
@@ -1597,7 +1601,27 @@ Class MVP_Strider : MVP_Humanoid
 				Return State (Null);
 			}
 			Loop;
-		//Idle.Stand: //Spinny 360 head state.
+		Idle.Stand: //Spinny 360 head state.
+			PNS3 ABCDEF 8
+			{
+				If (Crouching) //No 360 turning for crouching, just sit around.
+					Frame = FRAME_O;
+				Else
+					A_StartSound ("Vehicle/Drone/Turret",CHAN_AUTO,volume:0.5,ATTN_STATIC);
+				KAI_Look (LOF_NOJUMP);
+				If (Target)
+				{
+					Int Chance = (Distance3D(Target) <= 1024) ? 64 : 8;
+					If (Target.CurSector.LightLevel <= 104)
+						Chance += 32;
+					If (Random (0,255) < Chance)
+						A_StartSound (SeeSound,CHAN_VOICE,attenuation: 0.6);
+					Return SeeState;
+				}
+				
+				Return State (Null);
+			}
+			Loop;
 		Idle.Cover:
 			PNS1 UVW 4 A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
 			PNS1 W 0 A_StopSound (CHAN_WEAPON);
@@ -1765,7 +1789,7 @@ Class MVP_Strider : MVP_Humanoid
 				
 				//Jump away from nearby enemies when we can.
 				Actor Near;
-				If (!bNoFear && Random (0,255) < 32 && (Near = FindNearestEnemy (Radius+128)))
+				If (!bNoFear && !(bChaseGoal && Goal) && Random (0,255) < 32 && (Near = FindNearestEnemy (Radius+128)))
 				{
 					If (MVP_StriderJump (MVP_StriderJumpFromPos (Near.Pos,32,384),flags:SJUMP_STRAFE,enemy:Near))
 					{
@@ -1857,7 +1881,7 @@ Class MVP_Strider : MVP_Humanoid
 				
 				//Rarely jump away from the target when we can.
 				Actor Near;
-				If (!bNoFear && Random (0,255) < 2 && Target && Distance3D(Target) <= 128+Radius)
+				If (!bNoFear && !(bChaseGoal && Goal) && Random (0,255) < 2 && Target && Distance3D(Target) <= 128+Radius)
 				{
 					If (MVP_StriderJump (MVP_StriderJumpFromPos (Target.Pos,32,384),flags:SJUMP_STRAFE,enemy:Target))
 					{
@@ -2001,6 +2025,8 @@ Class MVP_Strider : MVP_Humanoid
 		Melee.Ram:
 			PNS0 STUVWX 2
 			{
+				RamPower += 0.01f; //More damage as you run more.
+				RamPower = Clamp (RamPower,0.0,1.0);
 				If (SmokeCounter++ >= 250) //Stop running after some time.
 					Return FindState ("Melee.End",True);
 				
@@ -2021,7 +2047,7 @@ Class MVP_Strider : MVP_Humanoid
 				
 				If (Rammed) //Smash up actor.
 				{
-					Int Dmg = Rammed.DamageMobj (Self,Self,10*Random (25,50),'Melee');
+					Int Dmg = Rammed.DamageMobj (Self,Self,10*Random (25,50)*RamPower,'Melee');
 					//If (Random (False, True))
 						TraceBleed (Dmg,Rammed);
 					
@@ -2034,13 +2060,25 @@ Class MVP_Strider : MVP_Humanoid
 					Else //Plap
 						A_StartSound ("SFX/FleshHit",flags:CHANF_OVERLAP);
 					
+					//Very special exit condition, we rammed an enemy at insufficient power to launch them away, so jump away!
+					//MAYDO: Make it able to sometimes jump back just to immediately ram again? Particularly against melee only enemies.
+					If (RamPower <= 0.5)
+					{
+						RamPower = 0;
+						SmokeCounter = 0;
+						AttackType = ATTACK_NONE;
+						MeleeTarget = Null;
+						MVP_StriderJump (MVP_StriderJumpFromPos (Rammed.Pos,32,256),flags:SJUMP_STRAFE,enemy:Target);
+						Rammed = Null;
+						Return State(Null);
+					}
 					Rammed = Null;
 					Return FindState ("Melee.End",True);
 				}
 				
 				If (MovementBlockingLine) //Smash up line.
 				{
-					Destructible.DamageLinedef (MovementBlockingLine,Self,10*Random (25,50),'Melee',Level.ActorOnLineSide(Self,MovementBlockingLine),Self.Pos,False);
+					Destructible.DamageLinedef (MovementBlockingLine,Self,10*Random (25,50)*RamPower,'Melee',Level.ActorOnLineSide(Self,MovementBlockingLine),Self.Pos,False);
 					A_QuakeEx (.5,.5,.5,35,0,256,flags:QF_GROUNDONLY|QF_3D,rollintensity:0.5);
 					Return FindState ("Melee.End",True);
 				}
@@ -2059,6 +2097,7 @@ Class MVP_Strider : MVP_Humanoid
 		Melee.End:
 			TNT1 A 0
 			{console.printf ("ceasing melee");
+				RamPower = 0;
 				SmokeCounter = 0;
 				AttackType = ATTACK_NONE;
 				MeleeTarget = Null;
