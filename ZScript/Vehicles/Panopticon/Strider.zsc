@@ -2,6 +2,7 @@
 //The climb preperation frame (PNS1R1-8) has the foot spikes appearing over the top of the Striders' feet.
 //IIRC one of the grenade frames is missing brightmaps.
 //The AltDeath frame of the Strider fully fallen is cropped wrong.
+
 //BUG:
 //It (Sometimes at least) VM aborts from OnProjectileDeflect() in MVP_GenericShit when it tries deflecting a projectile?
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
@@ -12,6 +13,15 @@
 //IDEA:
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
+
+//MAYDO:
+//Keep trying to make it have a less horrendous 1vwhatever match against like 60 pinkies because holy shit it's more pathetic than my life to witness.
+//Look into improving the existing bullet and melee attacks.
+//Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
+
+//TODO:
+//Add the remaining rocket and grenade attacks.
+//Add more sound handling than just the sight sound, like being able to 'speak', and perhaps also just more advanced handling of the sight sound in general.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -82,8 +92,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		MVP_Humanoid.SmokeDelay 4;
 		KAI_Actor.ThreatLevel THREAT_DANGEROUS;
-		//KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
-		KAI_Actor.ThreatLevelThreshold THREAT_UNSTOPPABLE; //URGENT: DEBUGGING THE FUCKING MELEE ATTACKS WITRH AN UBER PINKY
+		KAI_Actor.ThreatLevelThreshold THREAT_VERYDANGEROUS;
 		KAI_Actor.ActorFollowDist 192;
 		KAI_Actor.Inaccuracy (12,12,12);
 		KAI_Actor.InaccuracyFrequency 0.6;
@@ -409,10 +418,11 @@ Class MVP_Strider : MVP_Humanoid
 		{
 			For (Int I = Hazards.Size()-1; I >= 0; I--)
 			{
-				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_LOW)
+				Let Haz = Hazards[I];
+				If (Haz && Haz.Level <= HazardInfo.HAZARD_LOW)
 					Hazards.Delete(I);
 				
-				ForEach (CurTag : Hazards[I].CustomTags)
+				ForEach (CurTag : Haz.CustomTags)
 				{
 					If (CurTag ~== "Bullet" || CurTag ~== "Projectile")
 						Hazards.Delete(I);
@@ -514,14 +524,16 @@ Class MVP_Strider : MVP_Humanoid
 		Bool WhackTarget = KAI_CheckMeleeRange (Target,flags:CMR_3DDISTANCE);
 		Actor NearestMeleeEnemy; //TL;DR Allow the strider to also kick other nearby enemies when surrounded.
 		//BUG: This causes it to often kick corpses too, despite FindNearestEnemy() filtering them out, of course. But hey, at least it's funny.
-		If (!WhackTarget) //MAYDO: Don't always check, for perfomance?
+		If (!WhackTarget)
 		{
 			NearestMeleeEnemy = FindNearestEnemy ( Radius+(MeleeRange*2) );
 			If (IsDead (NearestMeleeEnemy))
 				NearestMeleeEnemy = Null;
 		}
 		
+		//==================
 		//Mecha secretary bird.
+		
 		If (InSight && Random (0,255) < 3 && KAI_CheckMeleeRange (Target,640,CMR_3DDISTANCE) && IsPosReachable(Target.Pos,Target.Radius*2.2)) //Ram ranch
 		{
 			MeleeWindow = ReverseSteps = 0;
@@ -530,9 +542,24 @@ Class MVP_Strider : MVP_Humanoid
 			Return True;
 		}
 		
-		If (InSight && Random (0,255) < 220 && (WhackTarget || KAI_CheckMeleeRange (NearestMeleeEnemy,flags:CMR_3DDISTANCE)))
+		Bool Surrounded = MVP_IsSurrounded (256,8,True);
+		//Separate chance to do a stomp if standing on an enemy and surrounded, AKA fighting swarms of enemies like pinkies without trying to shoot under your damn feet.
+		If (Random (0,255) < 200 && Surrounded)
 		{
-			If (!WhackTarget)
+			Actor Standing = MVP_StriderStandingOnEnemy();
+			If (Standing)
+			{console.printf ("EW IM STANDING ON SHIT");
+				MeleeTarget = Standing;
+				If (!NoStateJump) SetStateLabel ("Melee.Stomp");
+				Return True;
+			}
+		}
+		
+		//Normal melee attack decisions.
+		If (InSight && Random (0,255) < 220 && (WhackTarget || KAI_CheckMeleeRange (NearestMeleeEnemy,flags:CMR_3DDISTANCE)) ||
+		Random (0,255) < 128 && Surrounded && NearestMeleeEnemy)
+		{
+			If (!WhackTarget || Surrounded && NearestMeleeEnemy)
 				MeleeTarget = NearestMeleeEnemy;
 			Else
 				MeleeTarget = Target;
@@ -543,6 +570,7 @@ Class MVP_Strider : MVP_Humanoid
 			If (EwISteppedOnShit) //https://www.youtube.com/watch?v=rkOib-MmTds
 			{
 				If (!NoStateJump) SetStateLabel ("Melee.Stomp");
+				If (Surrounded && NearestMeleeEnemy) FireDelay = GameTicRate*8; //Wait a sec when surrounded by melee shits.
 				Return True;
 			}
 			
@@ -551,6 +579,7 @@ Class MVP_Strider : MVP_Humanoid
 			{
 				AttackType = ATTACK_ALTPUNT;
 				If (!NoStateJump) SetStateLabel ("Melee.Kick");
+				If (Surrounded && NearestMeleeEnemy) FireDelay = GameTicRate*8; //Wait a sec when surrounded by melee shits.
 				Return True;
 			}
 			
@@ -559,10 +588,13 @@ Class MVP_Strider : MVP_Humanoid
 			{
 				If (Random (0,255) < 8) AttackType = ATTACK_ALTPUNT; //Variety kicking.
 				If (!NoStateJump) SetStateLabel ("Melee.Kick");
+				If (Surrounded && NearestMeleeEnemy) FireDelay = GameTicRate*8; //Wait a sec when surrounded by melee shits.
 				Return True;
 			}
 		}
+		//==================
 		
+		//==================
 		//RANGED ATTACKS.
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
@@ -570,7 +602,8 @@ Class MVP_Strider : MVP_Humanoid
 		
 		//Fire miniguns if close enough. Especially for very dangerous enemies.
 		Int MinigunChance = (Threat >= ThreatLevelThreshold) ? 192 : 128;
-		If (InSight && Random (0,255) < MinigunChance && KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
+		If (InSight && Random (0,255) < MinigunChance &&
+		KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
 		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES) >= 30)
 		{
 			Inaccuracy = (64,64,64); //Bad accuracy, but it does help with a wide AOE due to the fire volume.
@@ -607,6 +640,7 @@ Class MVP_Strider : MVP_Humanoid
 			If (!NoStateJump) SetStateLabel ("Fire.Start");
 			Return True;
 		}
+		//==================
 		
 		Return False;
 	}
@@ -673,14 +707,15 @@ Class MVP_Strider : MVP_Humanoid
 		
 		If (Health > WoundHealth) //Ignore weak hazards if not weak yourself, and also projectile attack hazards. We try to dodge those instead.
 		{
+			Bool Delet; //So we don't permaturely delete and cause VM aborts.
 			For (Int I = Hazards.Size()-1; I >= 0; I--)
 			{
-				If (Hazards[I] && Hazards[I].Level <= HazardInfo.HAZARD_LOW)
+				Let Haz = Hazards[I];
+				If (Haz && Haz.Level <= HazardInfo.HAZARD_LOW)
 					Hazards.Delete(I);
-				
-				If (Hazards[I].CustomTags.Size())
+				Else If (!Delet && Haz.CustomTags.Size())
 				{
-					ForEach (CurTag : Hazards[I].CustomTags)
+					ForEach (CurTag : Haz.CustomTags)
 					{
 						If (CurTag ~== "Bullet" || CurTag ~== "Projectile")
 							Hazards.Delete(I);
@@ -695,9 +730,8 @@ Class MVP_Strider : MVP_Humanoid
 		If (MVP_StriderParkour ()) //General handling of climbing, crouching, jumping down, yadda yadda.
 			MovedAlready = True;
 		
-		//If surrounded by melee-only enemies and you have enough space, jump up sometimes to crush them.
-		//TODO: Make it also keep jumping up and down if it's standing on top of an enemy.
-		If (Random (0,255) < 4 && (GetZAt (flags:GZF_CEILING) - Pos.Z+Height) >= 128 && MVP_IsSurrounded())
+		/*//If surrounded by melee-only enemies and you have enough space, or you are standing on an enemy, jump up sometimes to crush them.
+		If (Random (0,255) < 64 && MVP_StriderStandingOnEnemy() || Random (0,255) < 4 && (GetZAt (flags:GZF_CEILING) - Pos.Z+Height) >= 128 && MVP_IsSurrounded())
 		{
 			//CREDIT: RaveYard for the formula.
 			Double JumpHeight = Abs(Pos.Z - Pos.Z+Height)+128;
@@ -705,7 +739,7 @@ Class MVP_Strider : MVP_Humanoid
 			console.printf ("jumping up with a velocity of %.2f",jumpvel);
 			MVP_StriderJump (Pos.PlusZ(128),JumpVel,SJUMP_CLIMB);
 			Return;
-		}
+		}*/
 		
 		//Cover located, go there, unless an enemy that can see us (Covered by FindNearestEnemy()) is there.
 		If (!KAI_Math.IsEmptyVector3(CoverPos) && !User_NoCover && !MovedAlready)
@@ -787,6 +821,7 @@ Class MVP_Strider : MVP_Humanoid
 				Default:
 					Break;
 			}
+			
 			If (Dist > 0) Dist += Target.Radius;
 			If (Health <= WoundHealth) //Keep double distance when hurt.
 				Dist *= 2;
@@ -821,6 +856,14 @@ Class MVP_Strider : MVP_Humanoid
 			ReverseSteps = 0; //Just run away.
 			MeleeWindow = 0;
 		}
+		
+		//Jump away from big crowds of melee enemies. Especially when low on health.
+		/*If (!RunAway && Random (0,255) < 16 && MVP_IsSurrounded(384,(Health > WoundHealth) ? 24 : 12,True))
+		{console.printf ("too many pinkies");
+			Actor NearShit = FindNearestEnemy (384);
+			MVP_StriderJump (MVP_StriderJumpFromPos (NearShit.Pos,32,256),flags:SJUMP_STRAFE,enemy:NearShit);
+			Return;
+		}*/
 		
 		If (MeleeWindow && Target && !RunSteps && !Crouching) //We decided to open up a window to punt a bitch.
 		{
@@ -918,23 +961,37 @@ Class MVP_Strider : MVP_Humanoid
 	}
 	
 	//Strider is currently surrounded by melee-only enemies, and is also trying to traverse away. AKA, almost certainly overwhelmed by melee enemies.
-	Bool MVP_IsSurrounded (Double Range = 128, Int TheThreshold = 6)
+	Bool MVP_IsSurrounded (Double Range = 128, Int TheThreshold = 6, Bool Stationary = False)
 	{
-		If (MoveCount <= 0)
+		If (MoveCount <= 0 && !Stationary)
 			Return False;
-		
+		console.printf ("why oh god why am i fucking having to break down a function i already wrote months ago this much, i've not even been back for an hour");
 		Array <Actor> Enemies;
 		Int MeleeShits;
 		LookForEnemiesEx (Enemies,Range,False,True);
 		
 		ForEach (Mobj : Enemies)
 		{
-			If (IsDead (Mobj) || Distance2DSquared(Mobj) > Range*Range || Mobj.Pos.Z > Pos.Z+Height|| !(Mobj.MeleeState && !Mobj.MissileState)) Continue;
-			
+			If (IsDead (Mobj) || Distance2DSquared(Mobj) > Range*Range || Mobj.Pos.Z > Pos.Z+Height || !(Mobj.MeleeState && !Mobj.MissileState)) Continue;
 			MeleeShits++;
 		}
-		
+		console.printf ("i have %d melee shits in range",meleeshits);
 		Return MeleeShits >= TheThreshold;
+	}
+	
+	//Strider is standing on an enemy.
+	Actor MVP_StriderStandingOnEnemy()
+	{
+		Bool FuckYou; Actor TheActualFuckingData;
+		SetZ (Pos.Z-1);
+		[FuckYou, TheActualFuckingData] = TestMobjZ(True);
+		SetZ (Pos.Z+1);
+		If (!IsInanimateObject(TheActualFuckingData) && !IsDead (TheActualFuckingData) && IsActorHostile(TheActualFuckingData))
+		{
+			console.printf ("JUMP ON ENEMY RAAAAAHHHH");
+			Return TheActualFuckingData;
+		}
+		Return Null;
 	}
 	
 	Enum SMELEE_CHECKS //Smelly
@@ -1514,7 +1571,7 @@ Class MVP_Strider : MVP_Humanoid
 	String User_Color;
 	
 	Const STRIDER_CROUCHHEIGHT = 64;
-	Const STRIDER_RUNFACTOR = 2.25;
+	Const STRIDER_RUNFACTOR = 2.5;
 	Const STRIDER_CROUCHFRAMEOFFSET = 12; //Offset the PNS0 sprite name by 12 frames (From PNS0A) to map to the crouch animation instead.
 	
 	States
@@ -1879,8 +1936,15 @@ Class MVP_Strider : MVP_Humanoid
 					Return State (Null);
 				}
 				
+				//Stop trying to fire when totally surrounded by melee fuckers.
+				If (Random (0,255) < 32 && MVP_IsSurrounded (256,15,True) && FindNearestEnemy (88))
+				{
+					MVP_StriderEndFire();
+					FireDelay = 35;
+					Return FindState ("Fire.End",True);
+				}
+				
 				//Rarely jump away from the target when we can.
-				Actor Near;
 				If (!bNoFear && !(bChaseGoal && Goal) && Random (0,255) < 2 && Target && Distance3D(Target) <= 128+Radius)
 				{
 					If (MVP_StriderJump (MVP_StriderJumpFromPos (Target.Pos,32,384),flags:SJUMP_STRAFE,enemy:Target))

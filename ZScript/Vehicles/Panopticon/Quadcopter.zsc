@@ -1076,6 +1076,7 @@ Mixin Class MVP_DroneFunctions
 }
 
 //Drone swarm group structure. The group leader is kinda irrelevant for this group type.
+//TODO: Move out of here.
 //$GZDB_SKIP
 Class MVP_DroneSwarm : KAI_NPCGroup
 {

@@ -1,3 +1,4 @@
+//BUG: They sometimes seem to just be blind to enemies? At least the friendly ones. And it's not the low FriendlySeeBlock either.
 //MAYDO: Replace the current master following code in Idle: with a proper set of HandleFollowingActor() and OnWander() overrides, or maybe not, cheaper that way?
 Class MVP_KamikazeDrone : MVP_BaseFlyer
 {
