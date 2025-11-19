@@ -643,7 +643,6 @@ Mixin Class MVP_SharedFunctions
 	}
 	
 	//Spawn a smart marine (Cool and smart), or fall back to spawning ZDoom marines (Cringe and dumb) if unavailable.
-	//MAYDO: Since the MVP now needs the KAI library anyway. Maybe make a custom fallback marine ?
 	Actor SpawnMarine (Vector3 Position = (0,0,0), Bool FollowVehicle = False, Bool SpawnRunning = False)
 	{
 		Name CustomMarine = 'SM_Marine';

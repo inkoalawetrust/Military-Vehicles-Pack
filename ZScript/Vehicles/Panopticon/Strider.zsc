@@ -7,8 +7,9 @@
 //It (Sometimes at least) VM aborts from OnProjectileDeflect() in MVP_GenericShit when it tries deflecting a projectile?
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
+//Sometimes the constant engine hum doesn't play.
 
-//PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignoring bChaseGoal.
+//PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignoring bChaseGoal. Edit: I did check this already but forgot if it worked, second test anymore?
 
 //IDEA:
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
@@ -21,7 +22,6 @@
 
 //TODO:
 //Add the remaining rocket and grenade attacks.
-//Add more sound handling than just the sight sound, like being able to 'speak', and perhaps also just more advanced handling of the sight sound in general.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -71,6 +71,7 @@ Class MVP_Strider : MVP_Humanoid
 		//$Sprite PNS3A1
 		Mass 1000;
 		Health 600;
+		GibHealth 300;
 		WoundHealth 200;
 		XScale 0.8;
 		YScale 0.666666; //0.8 / 1.2
@@ -462,8 +463,9 @@ Class MVP_Strider : MVP_Humanoid
 		If (CurrentOrder == ORDER_FOLLOW)
 			[FolPos, Followee] = HandleFollowingActor (FolPos,True); //NOTE: We turn bDontFollowPlayers on between KAI_Wander calls so lonely drones in a swarm don't do that.
 		
-		//If (Random(0,2048) == Random (0,2048) && Yapper)
+		If (Random(0,3072) == Random (0,3072) && Yapper)
 		//	MVP_QuadcopterSpeak();
+			SayVoiceLine (VOICE_SEE,Yapper);
 		
 		//Follow something instead.
 		If (CurrentOrder == ORDER_FOLLOW)
@@ -606,7 +608,7 @@ Class MVP_Strider : MVP_Humanoid
 		KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
 		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES) >= 30)
 		{
-			Inaccuracy = (64,64,64); //Bad accuracy, but it does help with a wide AOE due to the fire volume.
+			Inaccuracy = (48,48,48); //Bad accuracy, but it does help with a wide AOE due to the fire volume.
 			AttackType = ATTACK_MINIGUN;
 			Shots = Random (192,255);
 			console.printf ("firing miniguns");
@@ -972,7 +974,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		ForEach (Mobj : Enemies)
 		{
-			If (IsDead (Mobj) || Distance2DSquared(Mobj) > Range*Range || Mobj.Pos.Z > Pos.Z+Height || !(Mobj.MeleeState && !Mobj.MissileState)) Continue;
+			If (Distance2DSquared(Mobj) > Range*Range || Mobj.Pos.Z > Pos.Z+Height || !(Mobj.MeleeState && !Mobj.MissileState)) Continue;
 			MeleeShits++;
 		}
 		console.printf ("i have %d melee shits in range",meleeshits);
@@ -1431,6 +1433,7 @@ Class MVP_Strider : MVP_Humanoid
 		If (JumpFlags & SJUMP_STRAFE && FireDelay <= 0 && (JumpDir == JDIR_BACK || JumpDir == JDIR_LEFT || JumpDir == JDIR_RIGHT))
 		{
 			//No jump target, look for another one.
+			//BUG: When dodge firing, it will sometimes decide to target dead enemies for some reason.
 			If (IsDead(JumpTarget))
 			{console.printf ("current jumptarget %p died",jumptarget);
 				Vector3 Real = Pos;
@@ -1861,8 +1864,8 @@ Class MVP_Strider : MVP_Humanoid
 				{
 					Shots = 0;
 					FireDelay = Clamp (GameTicRate*Random(1,6),0,UInt8.MAX);
-					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 16 && MVP_GunDrone(Master) && MVP_GunDrone(Master).Yapper)
-						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_GunDrone(Master).Yapper);
+					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 16 && MVP_Strider(Master) && MVP_Strider(Master).Yapper)
+						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_Strider(Master).Yapper);
 					Return FindState ("Fire.End",True);
 				}
 				
@@ -1961,8 +1964,8 @@ Class MVP_Strider : MVP_Humanoid
 				{
 					Shots = 0;
 					FireDelay = Clamp (GameTicRate*Random(1,6),0,UInt8.MAX);
-					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 16 && MVP_GunDrone(Master) && MVP_GunDrone(Master).Yapper)
-						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_GunDrone(Master).Yapper);
+					If (MVP_DroneSwitchTargets(KAI_Actor(Master),2048) && Random (0,255) < 16 && MVP_Strider(Master) && MVP_Strider(Master).Yapper)
+						KAI_Actor(Master).SayVoiceLine (VOICE_SEE,MVP_Strider(Master).Yapper);
 					Return FindState ("Fire.End",True);
 				}
 				

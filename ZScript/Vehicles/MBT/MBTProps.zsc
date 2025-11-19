@@ -737,7 +737,7 @@ Class MVP_MBTTurretProp : MVP_BaseTurretProp
 	Bool InFlight;
 }
 
-//TODO: Once I begin coding the actual NPC versions of this turrets, put its settings like damage factors and obituaries here, these are basically placeholders.
+//TODO: Once I begin coding the actual NPC versions of this turret, put its settings like damage factors and obituaries here, these are basically placeholders.
 Class MVP_MBTMissileTurretProp : MVP_MBTTurretProp
 {
 	Default

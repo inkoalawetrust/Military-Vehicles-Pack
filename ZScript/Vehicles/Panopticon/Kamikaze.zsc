@@ -1,4 +1,3 @@
-//BUG: They sometimes seem to just be blind to enemies? At least the friendly ones. And it's not the low FriendlySeeBlock either.
 //MAYDO: Replace the current master following code in Idle: with a proper set of HandleFollowingActor() and OnWander() overrides, or maybe not, cheaper that way?
 Class MVP_KamikazeDrone : MVP_BaseFlyer
 {
@@ -310,23 +309,14 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 				target = goal; //Just go to the goal. Very simple.
 			}
 		
-			If (!Target) //Pick random target in sight.
+			If (!Target) //Pick random/first target in sight.
 			{
 				Array <Actor> Targs;
 				LookForEnemiesEx (Targs, -1, False, True);
-				For (Int I = Targs.Size()-1; I > 0; I--)
-				{
-					//HACK: Yes, the internal monster sight logic apparently doesn't exclude dead monsters despite the health check in ValidEnemyInBlock().
-					//So we have to double check here to prevent fun problems like infinite recursions!
-					If (IsDead(Targs[I]))
-						Targs.Delete(I);
-				}
-				If (Targs.Size() == 1 && !IsDead(Targs[0]))
+				If (Targs.Size() == 1)
 					Target = Targs[0];
 				Else If (Targs.Size())
-				{
 					Target = User_RandomTarget ? Targs[Random(0,Targs.Size()-1)] : Targs[0]; //Pick random target in sight. Or the first one we found.
-				}
 			}
 			If (IsDead (Target)) //Prevents infinite recursions.
 				Target = Null;

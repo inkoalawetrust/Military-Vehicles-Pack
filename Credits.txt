@@ -26,6 +26,7 @@ Shockwave ring (SHOKA0) made by inkoalawetrust.
 Tank cannon firing and explosion sprites made by inkoalawetrust
 Di-Cokka firing, projectile, and debris sprites are from Metal Slug.
 Smoke sprites (Sprites/SFX/Smoke) are from unknown source, ripped from Project Brutality.
+Bullet tracers made by DennisBelmondo
 
 =====<Other>=====
 Radio/Walkie-talkie sprites (RADI*) made by Doom Nukem. World sprite (RADIZ0) by mark#8218.

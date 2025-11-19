@@ -1011,9 +1011,6 @@ Mixin Class MVP_DroneFunctions
 		
 		ForEach (Targ : Others)
 		{
-			If (IsDead (Targ))
-				Continue;
-			
 			If (Taken.Find (Targ) == Taken.Size()) //This target isn't taken.
 			{
 				Target = Targ;
@@ -1076,7 +1073,7 @@ Mixin Class MVP_DroneFunctions
 }
 
 //Drone swarm group structure. The group leader is kinda irrelevant for this group type.
-//TODO: Move out of here.
+//TODO: Move this and MVP_DroneVirtuals out of here, eventually.
 //$GZDB_SKIP
 Class MVP_DroneSwarm : KAI_NPCGroup
 {

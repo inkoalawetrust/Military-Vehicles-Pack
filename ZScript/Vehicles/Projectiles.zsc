@@ -110,7 +110,6 @@ Class MVP_BulletCasing : Actor
 }
 
 //A smaller bullet projectile sort of based on the 7.62mm NATO round.
-//TODO: Use the fucking belmondo bullet trace for these like I did the marines jesus.
 Class MVP_RifleBullet : MVP_BaseProjectile
 {
 	Default

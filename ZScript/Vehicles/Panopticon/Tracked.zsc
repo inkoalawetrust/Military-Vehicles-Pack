@@ -1037,6 +1037,16 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		HandleChaseTimer();
 	}
 	
+	Override Bool OnWander()
+	{
+		//Yes even these speak lol, nowhere near as frequently though.
+		If (Random(0,8192) == Random (0,8192) && Yapper)
+		//	MVP_QuadcopterSpeak();
+			SayVoiceLine (VOICE_SEE,Yapper);
+		
+		Return Super.OnWander();
+	}
+	
 	UInt8 ReverseSteps;
 	Bool InCover;
 	Vector3 CoverPos;
@@ -1316,9 +1326,6 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			LookForEnemiesEx (Others,512,False,True);
 			ForEach (Targ : Others)
 			{
-				If (IsDead (Targ))
-					Continue;
-				
 				If (Targ != Target && Targ.Target == Self && AssessThreatLevel (Targ) > TargetLevel)
 				{
 					Target = Targ;
