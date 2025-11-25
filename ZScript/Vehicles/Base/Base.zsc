@@ -6,9 +6,10 @@ first tick. Which is literally worse than the turrets spawning on the ground.*/
 //IDEA:
 //Maybe give the APCs' 2 big turrets 16 rotations instead of 8. Due to the combat traverse code ? The main concern here is file size.
 //Remaster the Army Truck and APC sprites one day, adding more detail here and there, and most importantly redoing those shitty fucking death animations.
-//Make marines able to get back into the APC and Army Truck from their backs. Not sure how this would even work. Definitely needs a rewrite of the marines.
+//Make marines able to get back into the APC and Army Truck from their backs. Will need to add a passenger system to KAI for this.
 //Make bullet splashes work on swimmable 3D floors.
 //Make a custom MVP_VehicleGroup structure for marines that are supposed to be following their specified vehicle.
+//Replace all the damage factor crap with actual armor items?
 
 Class MVP_BaseVehicle : KAI_BaseVehicle
 {

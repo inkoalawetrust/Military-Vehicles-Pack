@@ -8,7 +8,6 @@
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 //Sometimes the constant engine hum doesn't play.
-//Briefly changes to having no sprites at all if its' running towards the player its' following and the player is running towards them too.
 
 //PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignoring bChaseGoal. Edit: I did check this already but forgot if it worked, second test anymore?
 
@@ -524,6 +523,8 @@ Class MVP_Strider : MVP_Humanoid
 					}
 					Tics = 8;
 					Sprite = GetSpriteIndex ('PNS3');
+					If (Frame > FRAME_F)
+						Frame = FRAME_F; //Clamp frame.
 					A_StartSound ("Vehicle/Drone/Turret",CHAN_AUTO,volume:0.5,ATTN_STATIC);
 					KAI_Look(0,FOV: 360,extraflags:KAIL_CHASETARGET); //NOTE: Look all around, yes, twice, whatever.
 					Return False;
