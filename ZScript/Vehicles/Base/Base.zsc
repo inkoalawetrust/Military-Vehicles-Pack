@@ -461,6 +461,8 @@ Class MVP_HazardZone : KAI_MixinActor
 		WRN_EXPLOSIVE		= 1 << 5, //This is a hazard zone for an explosive attack.
 		WRN_CRUSHING		= 1 << 6, //This is a hazard zone for the ability of a vehicle to crush and push objects as it moves.
 		WRN_ANTIAIR			= 1 << 7, //This hazard is particularly dangerous to flying NPCs.
+		WRN_AUTOCANNON		= 1 << 8, //This hazard is an autocannon.
+		WRN_ARTILLERY		= 1 << 9, //This hazard is artillery, which is to say, REALLY big weapons.
 	}
 	
 	HazardInfo Hazard;
@@ -502,6 +504,8 @@ Class MVP_HazardZone : KAI_MixinActor
 				Hazard.Origin = Self;
 			}
 			If (FLags & WRN_ANTIAIR) Hazard.CustomTags.Push ("AntiAir");
+			If (FLags & WRN_AUTOCANNON) Hazard.CustomTags.Push ("Autocannon");
+			If (FLags & WRN_ARTILLERY) Hazard.CustomTags.Push ("Artillery");
 		}
 	}
 	

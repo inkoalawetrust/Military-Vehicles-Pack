@@ -8,6 +8,7 @@
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 //Sometimes the constant engine hum doesn't play.
+//Briefly changes to having no sprites at all if its' running towards the player its' following and the player is running towards them too.
 
 //PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignoring bChaseGoal. Edit: I did check this already but forgot if it worked, second test anymore?
 
@@ -16,18 +17,19 @@
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
 
 //MAYDO:
-//Keep trying to make it have a less horrendous 1vwhatever match against like 60 pinkies because holy shit it's more pathetic than my life to witness.
 //Look into improving the existing bullet and melee attacks.
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
+//Make strider able to strafe fire rockets :>
 
 //TODO:
-//Add the remaining rocket and grenade attacks.
+//Add the remaining grenade attack.
+//Make it react to (Run away from) really big hazard zones when shooting its guns, such as being aimed at by an enemy tank.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
 {
 	Mixin MVP_DamageSmokeHandling;
-	//Mixin MVP_SharedFunctions;
+	Mixin MVP_SharedNonVehicleFunctions;
 	//Mixin MVP_MarineFunctions;
 	Mixin MVP_GenericShit;
 	Int SearchTime;
@@ -202,6 +204,9 @@ Class MVP_Strider : MVP_Humanoid
 		If (FireDelay >= 1)
 			FireDelay--;
 		
+		If (ExplosiveDelay >= 1)
+			ExplosiveDelay--;
+		
 		If (MeleeWindow >= 1)
 			MeleeWindow--;
 		
@@ -212,12 +217,15 @@ Class MVP_Strider : MVP_Humanoid
 		If (!IsDead && IsAttacking)
 		{
 			Vector3 AttackPos = MVP_StriderAttackPos (AttackType);
+			
+			//NOTE: Separate check from GetAttackLocation() because some types need more data.
 			FLineTraceData Proj;
 			bMissile = True; //HACK: Become missile for TRF_BLOCKSELF.
 			LineTrace (Angle,MaxTargetRange,Pitch,TRF_SOLIDACTORS|TRF_BLOCKSELF,AttackPos.Z,AttackPos.X,AttackPos.Y,Proj);
 			bMissile = False;
 			
 			Double ProjSpeed, FastProjSpeed;
+			Array <String> AttackTags; AttackTags.Push ("Vehicle"); AttackTags.Push ("Drone"); AttackTags.Push ("Robot"); //Generic tags.
 			Switch (AttackType) //Change speed generically based on attack. And also emit hazards.
 			{
 				Case ATTACK_MACHINEGUN:
@@ -231,8 +239,8 @@ Class MVP_Strider : MVP_Humanoid
 					MG.Type = HazardInfo.HAZARD_ATTACK;
 					MG.Level = HazardInfo.HAZARD_MEDIUM;
 					MG.Range = 128;
-					Array <String> MGTags; MGTags.Push ("Vehicle"); MGTags.Push ("Bullet");
-					MG.CustomTags = MGTags;
+					AttackTags.Push ("Bullet");
+					MG.CustomTags = AttackTags;
 					HazardInfo.GiveHazard (Proj.HitActor,MG);
 					Break;
 				Case ATTACK_MINIGUN:
@@ -240,19 +248,24 @@ Class MVP_Strider : MVP_Humanoid
 					FastProjSpeed = GetDefaultByType("MVP_SmallRifleBullet").FastSpeed;
 					
 					//Ditto but AOE.
-					Array <String> MTags; MTags.Push ("Vehicle"); MTags.Push ("Bullet"); MTags.Push ("Minigun");
-					HazardInfo.EmitHazard (Self,256,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:MTags,Proj.HitLocation);
+					AttackTags.Push ("Bullet"); AttackTags.Push ("Minigun");
+					HazardInfo.EmitHazard (Self,256,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation,usepos:True);
 					Break;
 				Case ATTACK_ROCKETS:
 					ProjSpeed = GetDefaultByType("MVP_70mmRocket").Speed;
 					FastProjSpeed = GetDefaultByType("MVP_70mmRocket").FastSpeed;
 					
 					//Explosive hazard.
-					//TODO: Add its rocket attack.
+					console.printf ("AAAA TROLLDIER");
+					AttackTags.Push ("Explosive"); AttackTags.Push ("Rocket");
+					HazardInfo.EmitHazard (Self,512,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation,UsePos:True);
 					Break;
 				/*Case ATTACK_GRENADE:
 					ProjSpeed = GetDefaultByType("MVP_40mmGrenade").Speed;
 					FastProjSpeed = GetDefaultByType("MVP_40mmGrenade").FastSpeed;
+					
+					AttackTags.Push ("Explosive"); AttackTags.Push ("Grenade");
+					HazardInfo.EmitHazard (Self,256,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation);
 					Break;*/
 			}
 			Actor RealTarg = Target;
@@ -337,6 +350,24 @@ Class MVP_Strider : MVP_Humanoid
 			
 			LastTickFallVel = 0;
 		}
+	}
+	
+	Override Vector3 GetAttackLocation()
+	{
+		//If doing a ranged attack, we are attacking wherever we're aiming currently.
+		If (AttackType == ATTACK_MACHINEGUN || AttackType == ATTACK_MINIGUN || AttackType == ATTACK_ROCKETS || AttackType == ATTACK_GRENADE)
+		{
+			Vector3 AttackPos = MVP_StriderAttackPos (AttackType);
+			FLineTraceData Proj;
+			bMissile = True; //HACK: Become missile for TRF_BLOCKSELF.
+			LineTrace (Angle,MaxTargetRange,Pitch,TRF_SOLIDACTORS|TRF_BLOCKSELF,AttackPos.Z,AttackPos.X,AttackPos.Y,Proj);
+			bMissile = Default.bMissile;
+			Return Proj.HitLocation;
+		}
+		
+		If (Target) //Doing melee attack, our attack location is the target. MAYDO: Make it be whatever is MeleeRange units in front of the strider?
+			Return Target.Pos;
+		Return (Double.NaN,Double.NaN,Double.NaN);
 	}
 	
 	Override Bool SpawnDamageSmoke()
@@ -600,7 +631,35 @@ Class MVP_Strider : MVP_Humanoid
 		//RANGED ATTACKS.
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
-		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN); //The position we're firing from.
+		
+		//Fire rocket pods towards crowds and strong mofos.
+		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_ROCKETS); //The position we're firing from.
+		Double RocketDist = InCover ? 8192 : 6144;
+		//Check if we should fire rockets. As long as it's not too far for the rockets or the LOF for them is bad.
+		If (Target && Dist <= RocketDist && ExplosiveDelay <= 0 && KAI_CheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,FirePos,TLOF_OnlyAhead,"MVP_70mmRocket",GetFAFAimPos(Target,FirePos)))
+		{
+			Int Chance = AttackByQuantity (Target,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,countorigin:True);
+			Chance += Random (0,32);
+			If (InCover) Chance += 25;
+			If (Random (0,512) < 4) Chance += 60; //Fuck it, we ball.
+			If (Health <= WoundHealth) Chance += 25; //Dying
+			If (Threat >= ThreatLevelThreshold) Chance += 40;
+			
+			Bool ImmuneToBlasts = (Target.bNoRadiusDmg || Target.GetRadiusDamage (Target,1024,384,128,False,True) <= 512/8); //The enemy is immune or HIGHLY resistant to blasts.
+			
+			//Even more likely to fire rockets if the target is not necessarily immune to explosions, however it will still sometimes blast them sometimes even if they are.
+			If (!ImmuneToBlasts && Random (0,255) < 128)
+				Chance += 80;
+			console.printf ("rocket chance %d",chance);
+			If (Chance >= Random (80,180))
+			{
+				AttackType = ATTACK_ROCKETS;
+				If (!NoStateJump) SetStateLabel ("Fire.Start");
+				Return True;
+			}
+		}
+		
+		FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN);
 		
 		//Fire miniguns if close enough. Especially for very dangerous enemies.
 		Int MinigunChance = (Threat >= ThreatLevelThreshold) ? 192 : 128;
@@ -608,15 +667,15 @@ Class MVP_Strider : MVP_Humanoid
 		KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
 		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES) >= 30)
 		{
-			Inaccuracy = (48,48,48); //Bad accuracy, but it does help with a wide AOE due to the fire volume.
 			AttackType = ATTACK_MINIGUN;
 			Shots = Random (192,255);
 			console.printf ("firing miniguns");
 			If (!NoStateJump) SetStateLabel ("Fire.Start");
 			Return True;
 		}
-		FirePos = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
+		
 		//Fire more accurate machine gun otherwise. With different firing modes like the AAF soldiers and the large ground drone.
+		FirePos = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
 		If (InSight && KAI_CheckLOF (Target,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(Target,FirePos)))
 		{
 			AttackType = ATTACK_MACHINEGUN;
@@ -967,7 +1026,7 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		If (MoveCount <= 0 && !Stationary)
 			Return False;
-		console.printf ("why oh god why am i fucking having to break down a function i already wrote months ago this much, i've not even been back for an hour");
+		
 		Array <Actor> Enemies;
 		Int MeleeShits;
 		LookForEnemiesEx (Enemies,Range,False,True);
@@ -977,7 +1036,7 @@ Class MVP_Strider : MVP_Humanoid
 			If (Distance2DSquared(Mobj) > Range*Range || Mobj.Pos.Z > Pos.Z+Height || !(Mobj.MeleeState && !Mobj.MissileState)) Continue;
 			MeleeShits++;
 		}
-		console.printf ("i have %d melee shits in range",meleeshits);
+		
 		Return MeleeShits >= TheThreshold;
 	}
 	
@@ -1416,10 +1475,10 @@ Class MVP_Strider : MVP_Humanoid
 				Return (Double.NaN,Double.NaN,Double.NaN);
 			Case ATTACK_MACHINEGUN:
 				Return !Crouching ? (0,0,64) : (0,0,48);
-			Case ATTACK_MINIGUN: //Just flip this after each shot by doing Abs(X), same with the rockets.
+			Case ATTACK_MINIGUN: //NOTE: Just flip this after each shot by doing Abs(Y), same with the rockets.
 				Return !Crouching ? (0,-12,80) : (0,-12,64);
 			Case ATTACK_ROCKETS:
-				Return !Crouching ? (0,-12,72) : (0,-12,56);
+				Return !Crouching ? (0,-12,68) : (0,-12,52);
 			Case ATTACK_GRENADE:
 				Return !Crouching ? (0,0,88) : (0,0,72);
 			Default:
@@ -1474,6 +1533,36 @@ Class MVP_Strider : MVP_Humanoid
 			A_RemoveLight ('StrafeLight');
 	}
 	
+	Void MVP_StriderRocketBarrage()
+	{
+		Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_MINIGUN);
+		Bool B; Actor Proj;
+		
+		A_StartSound ("Vehicle/Tank/Artillery3",CHAN_WEAPON,CHANF_OVERLAP,0.6);
+		Proj = A_SpawnProjectile ("MVP_70mmRocket",FireOfs.Z,FireOfs.Y,flags:CMF_AIMDIRECTION,Pitch);
+		AddProjectileSpread (Proj,(0.65,-0.65),(0.65,-0.65));
+		MVP_SpawnBackblastParticles (Self,Random (64,72),(FireOfs.X-16,FireOfs.Y,FireOfs.Z));
+		
+		A_StartSound ("Vehicle/Tank/Artillery3",CHAN_WEAPON,CHANF_OVERLAP,0.6);
+		Proj = A_SpawnProjectile ("MVP_70mmRocket",FireOfs.Z,Abs(FireOfs.Y),flags:CMF_AIMDIRECTION,Pitch);
+		AddProjectileSpread (Proj,(0.65,-0.65),(0.65,-0.65));
+		MVP_SpawnBackblastParticles (Self,Random (64,72),(FireOfs.X-16,Abs(FireOfs.Y),FireOfs.Z));
+		
+		MakeAlliesImmuneToExplosion (Self,128);
+		A_Explode (128,128,XF_CIRCULAR|XF_CIRCULARTHRUST,False); //Backblast
+		RemoveAllyExplosionImmunity();
+		
+		//Sprite elevations
+		If (!Crouching)
+			Frame = UpdateStriderElevation (FRAME_O,FRAME_B,FRAME_R);
+		Else
+		{
+			Frame = UpdateStriderElevation(FRAME_BRACKETOPEN,FRAME_BRACKETOPEN,FRAME_U);
+			If (Frame == FRAME_BRACKETOPEN)
+				Sprite = GetSpriteIndex ('PNS1');
+		}
+	}
+	
 	Void MVP_StriderEndFire()
 	{
 		A_StopSound (CHAN_WEAPON);
@@ -1501,6 +1590,7 @@ Class MVP_Strider : MVP_Humanoid
 	Actor MeleeTarget; //Who we are meleeing, normally it's our target but sometimes it can also be some other nearby SOB.
 	Actor Rammed;
 	Double RamPower;
+	UInt16 ExplosiveDelay; //Time before we can fire an explosive weapon again.
 	
 	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
 	{
@@ -1785,6 +1875,13 @@ Class MVP_Strider : MVP_Humanoid
 					
 					console.printf ("set nose gun accuracy to %d %d %d",inaccuracy);
 				}
+				Else If (AttackType == ATTACK_MINIGUN)
+					Inaccuracy = (48,48,48); //Bad accuracy, but it does help with a wide AOE due to the fire volume.
+				Else If (AttackType == ATTACK_ROCKETS)
+				{
+					RetargetVehicleHull(); //Target the hull of a vehicle if it makes sense.
+					Inaccuracy = (16,16,16);
+				}
 				
 				If (InCover) //Skip the preperation if we're already behind cover.
 					Return A_Jump (256,4);
@@ -1796,6 +1893,7 @@ Class MVP_Strider : MVP_Humanoid
 					Frame = FRAME_BRACKETOPEN;
 				Else
 					A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+				
 				If (AttackType == ATTACK_MACHINEGUN) //Open faster for the machine gun.
 					Tics = 2;
 			}
@@ -1903,7 +2001,7 @@ Class MVP_Strider : MVP_Humanoid
 				Return State (Null);
 			}
 			Loop;
-		Fire.Minigun:
+		Fire.Minigun: //Fire the left and right miniguns.
 			PNS2 A 1 Light ("StriderFiringLight")
 			{
 				A_StartSound ("Vehicle/APC/SmallMGFire",CHAN_WEAPON,CHANF_OVERLAP,1.0,0.5);
@@ -2000,6 +2098,19 @@ Class MVP_Strider : MVP_Humanoid
 				Return State (Null);
 			}
 			Loop;
+		Fire.Rocket: //6 rocket barrage
+			PNS2 B 3;
+			PNS2 B 6 MVP_StriderRocketBarrage();
+			PNS2 B 6 MVP_StriderRocketBarrage();
+			PNS2 B 6 MVP_StriderRocketBarrage();
+			PNS2 B 8
+			{
+				If (Health > WoundHealth)
+					ExplosiveDelay = Clamp (GameTicRate*Random(5,10),0,UInt8.MAX);
+				Else
+					ExplosiveDelay = Clamp (GameTicRate*Random(3,8),0,UInt8.MAX);
+			}
+			Goto Fire.End;
 		Fire.End:
 			PNS1 VU 4 Fast
 			{
@@ -2118,7 +2229,8 @@ Class MVP_Strider : MVP_Humanoid
 					//If (Random (False, True))
 						TraceBleed (Dmg,Rammed);
 					
-					Rammed.Thrust (FRandom (16.0f,24.0f),AngleTo (Rammed));
+					Double Powah = KAI_Math.LinearMap (Rammed.Mass,0,6000,FRandom (16.0f,24.0f),0); //Scale thrust with mass.
+					Rammed.Thrust (Powah,AngleTo (Rammed));
 					Rammed.Vel.Z += FRandom (4.0f,8.0f);
 					Rammed.bBlasted = True;
 					

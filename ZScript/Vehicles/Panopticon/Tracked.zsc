@@ -1246,6 +1246,7 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 		{
 			Array <String> Tags;
 			Tags.Push ("Explosive");
+			Tags.Push ("Rocket");
 			//Hazard.Position = Data.HitPos;
 			RocketHazard.Origin = Self;
 			RocketHazard.Range = 256;
@@ -1283,10 +1284,11 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			console.printf ("rocketdelay is %d",RocketDelay);
 		}
 		
+		//Emit rocket hazard at where we're aiming at.
 		If (RocketDelay <= 0 && GetAge() % 4 == 0 && IsInState (Self,"Fire.Rocket"))
 		{
 			Actor FuckOff = Spawn ("KAI_TempPoint",GetAttackLocation());
-			RocketHazard.Position = FuckOff.Pos;
+			RocketHazard.Position = FuckOff.Pos; //Hazard is at where we're aiming at, and we're its' Origin.
 			Let Finder = BlockThingsIterator.Create (FuckOff,256);
 			
 			Actor Other;
@@ -1295,7 +1297,7 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 				Other = Finder.Thing;
 				If ((Master && Other == Master) && Level.Vec3Diff (FuckOff.Pos,Other.Pos).Length() > 256 || !(RocketHazard.Flags & RocketHazard.HAZ_NOSIGHT) && !Other.CheckSight (FuckOff,SF_IGNOREWATERBOUNDARY))
 					Continue;
-				console.printf ("passing rocket hazard to %p (%s)",other,other.getclassname());
+				//console.printf ("passing rocket hazard to %p (%s)",other,other.getclassname());
 				HazardInfo.GiveHazard (Other,RocketHazard);
 			}
 		}
@@ -1348,7 +1350,7 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			
 			Bool ImmuneToBlasts = (Target.bNoRadiusDmg || Target.GetRadiusDamage (Target,256,256,48,False,True) <= 256/8); //The enemy is immune or HIGHLY resistant to blasts.
 			
-			//Even more likely to fire rockets if the target is not necessarily immune to explosions, however it will still sometimes blast them sometimes even if they are.
+			//Even more likely to fire rockets if the target is not necessarily immune to explosions, however it will still blast them sometimes even if they are.
 			If (!ImmuneToBlasts && Random (0,255) < 128)
 				Chance += 80;
 			
@@ -1408,25 +1410,7 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			Actor Proj = A_SpawnProjectile ("MVP_70mmRocket",FireOfs.Z,16,flags:CMF_AIMDIRECTION,Pitch);
 			AddProjectileSpread (Proj,(0.45,-0.45),(0.45,-0.45));
 			
-			Int RNG = Random (64,72);
-			For (Int I = 0; I < RNG; I++)
-			{
-				Let Fire = Level.SpawnVisualThinker ("MVP_RocketBackblastParticle");
-				
-				If (Fire)
-				{
-					Fire.PostBeginPlay();
-					KAI_Tracer(Fire).RanPostBeginPlayEarly = True;
-					Fire.Pos = KAI_Math.Vec3OffsetRelative (Self,(0,-18,16));
-					Fire.Flags |= SPF_ROLL;
-					Fire.Roll = FRandom(-180,180);
-					Fire.Scale *= FRandom(0.4f,0.75f);
-					Fire.PostBeginPlay();
-					KAI_Tracer(Fire).RanPostBeginPlayEarly = True;
-					Fire.Vel = KAI_Math.AngleToVector3D (Angle+FRandom (12,-12),-Pitch+FRandom (12,-12),FRandom (-2,-8));
-				}
-			}
-			
+			MVP_SpawnBackblastParticles (Self,Random (64,72),(0,-18,16));
 			MakeAlliesImmuneToExplosion (Self,64);
 			A_Explode (64,64,XF_CIRCULAR|XF_CIRCULARTHRUST,False); //Backblast
 			RemoveAllyExplosionImmunity();
@@ -1544,7 +1528,7 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			PND0 ################## 1
 			{
 				Frame = UpdateTurretElevation (8,4,6,6); /*I, E, G, G*/ //Adjust for a bit.
-				HazardInfo.EmitHazard (Self,128,HazardInfo.HAZARD_ACTOR,HazardInfo.HAZARD_MEDIUM,0,RocketHazard.CustomTags);
+				HazardInfo.EmitHazard (Self,128,HazardInfo.HAZARD_ACTOR,HazardInfo.HAZARD_MEDIUM,0,RocketHazard.CustomTags); //Backblast hazard zone.
 			}
 			PND0 # 0 A_StopSound (CHAN_VOICE);
 			PND0 # 8 MVP_BigGunDroneShoot();

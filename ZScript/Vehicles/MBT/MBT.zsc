@@ -1711,6 +1711,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 						Hazard.Range = WarningZone.MaxTargetRange;
 						Hazard.Level = HazardInfo.HAZARD_HUGE;
 						Hazard.CustomTags.Push ("Explosive");
+						Hazard.CustomTags.Push ("Artillery");
 					}
 				}
 				ShellType = DecideAmmoType();
@@ -1719,7 +1720,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 					Actor New = A_FindEnemyVehicle();
 					If (New) Target = New;
 				}
-				PreFireZone = WarnNPCs (WRN_EXPLOSIVE,256,Self,(224,0,0),HazardInfo.HAZARD_HUGE);
+				PreFireZone = WarnNPCs (WRN_EXPLOSIVE|WRN_ARTILLERY,384,Self,(224,0,0),HazardInfo.HAZARD_HUGE);
 			}
 			MMBT ###################################################################### 1
 			{
@@ -1736,6 +1737,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 							Hazard.Range = WarningZone.MaxTargetRange;
 							Hazard.Level = HazardInfo.HAZARD_MEDIUM;
 							Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Explosive"));
+							Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Artillery"));
 						}
 					}
 					TurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").FastSpeed;

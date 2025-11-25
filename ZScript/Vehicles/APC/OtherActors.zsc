@@ -311,7 +311,7 @@ Class MVP_APCAutocannon : MVP_APCMachineGun
 			If (!NoStateJump)
 			{
 				SetStateLabel ("Fire");
-				WarningZone = WarnNPCs (WRN_EXPLOSIVE,128,threatlevel:HazardInfo.HAZARD_LARGE); //Create a warning zone to warn NPCs wherever the autocannon is aiming.
+				WarningZone = WarnNPCs (WRN_EXPLOSIVE|WRN_AUTOCANNON,128,threatlevel:HazardInfo.HAZARD_LARGE); //Create a warning zone to warn NPCs wherever the autocannon is aiming.
 				If (WarningZone) WarningZone.SetOrigin (GetAttackLocation(),True);
 			}
 			Return True;

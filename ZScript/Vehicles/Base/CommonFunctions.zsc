@@ -1,12 +1,14 @@
 Extend Class MVP_BaseVehicle
 {
 	Mixin MVP_SharedFunctions;
+	Mixin MVP_SharedNonVehicleFunctions;
 	Mixin MVP_MarineFunctions;
 }
 
 Extend Class MVP_BaseTurret
 {
 	Mixin MVP_SharedFunctions;
+	Mixin MVP_SharedNonVehicleFunctions;
 	Mixin MVP_MarineFunctions;
 }
 
@@ -218,6 +220,104 @@ Mixin Class MVP_GenericShit
 		A_StartSound (Projectile.BounceSound,flags:CHANF_OVERLAP,1,0.9); //Ricochet sound, uses the BounceSound property, naturally.
 		
 		Return Ret;
+	}
+}
+
+//Functions shared between both vehicle and non-vehicle NPCs.
+Mixin Class MVP_SharedNonVehicleFunctions
+{
+	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
+	//TODO: Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
+	//Range: The range around which to check for enemies.
+	//AvoidAllies: Deduct points from the score for any allies in the AOE.
+	//CountOrigin: Count the actor the check is ran around of as well.
+	Int AttackByQuantity (Actor Origin, Double Range = 256, Bool AvoidAllies = False, Bool CountOrigin = False)
+	{
+		If (!Origin) Return 0;
+		Actor Mobj;
+		Int Chance;
+		Bool IsHostile, IsVisible; //Caching
+		
+		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Origin,Range);
+		
+		While (FindEnemies.Next())
+		{
+			Mobj = FindEnemies.Thing;
+			
+			If (!Mobj || IsDead (Mobj) || IsInanimateObject (Mobj) || Mobj == Self || !CountOrigin && Mobj == Origin) Continue;
+			
+			IsHostile = IsActorHostile (Mobj); IsVisible = IsVisible (Mobj,False);
+			If (AvoidAllies && !IsHostile && IsVisible)
+			{
+				If (Mobj.bIsMonster) Chance -= 10;
+				If (Mobj.Player) Chance -= 40;
+				Continue;
+			}
+			
+			If (IsHostile && IsVisible && Mobj.Distance3DSquared (Origin) <= Range*Range)
+			{
+				Switch (AssessThreatLevel (Mobj))
+				{
+					Case THREAT_UNSTOPPABLE:
+						Chance += 500;
+						Break;
+					Case THREAT_SUPERDANGER:
+						Chance += 200;
+						Break;
+					Case THREAT_VERYDANGEROUS:
+						Chance += 80;
+						Break;
+					Case THREAT_DANGEROUS:
+						Chance += 40;
+						Break;
+					Case THREAT_ABOVENORMAL:
+						Chance += 20;
+						Break;
+					Case THREAT_NORMAL:
+						Chance += 10;
+						Break;
+					Case THREAT_MILD:
+						Chance += 8;
+						Break;
+					Case THREAT_LOW:
+						Chance += 5;
+						Break;
+					Case THREAT_VERYLOW:
+						Chance += 1;
+						Break;
+					Case THREAT_NONE:
+						Break;
+					Default:
+						Chance += 1;
+						Break;
+				}
+			}
+		}
+		
+		Return Chance;
+	}
+	
+	Void MVP_SpawnBackblastParticles (Actor Spawner, Int Amount, Vector3 Offsets)
+	{
+		If (!Spawner)
+			Return;
+		For (Int I = 0; I < Amount; I++)
+		{
+			Let Fire = Level.SpawnVisualThinker ("MVP_RocketBackblastParticle");
+			
+			If (Fire)
+			{
+				Fire.PostBeginPlay();
+				KAI_Tracer(Fire).RanPostBeginPlayEarly = True;
+				Fire.Pos = KAI_Math.Vec3OffsetRelative (Spawner,Offsets);
+				Fire.Flags |= SPF_ROLL;
+				Fire.Roll = FRandom(-180,180);
+				Fire.Scale *= FRandom(0.4f,0.75f);
+				Fire.PostBeginPlay();
+				KAI_Tracer(Fire).RanPostBeginPlayEarly = True;
+				Fire.Vel = KAI_Math.AngleToVector3D (Spawner.Angle+FRandom (12,-12),-Spawner.Pitch+FRandom (12,-12),FRandom (-2,-8));
+			}
+		}
 	}
 }
 
@@ -484,76 +584,6 @@ Mixin Class MVP_SharedFunctions
 		Return GetClosestActor (NearbyCorpses,Self.Pos,1024);
 	}
 	
-	//Increase an integer value based on the amount of enemies and how powerful they are, to use for AOE attacks.
-	//TODO: Probably needs a rewrite in the future, besides being a bit basic. The specific checks for the callers' target are also a little sussy.
-	//Range: The range around which to check for enemies.
-	//AvoidAllies: Deduct points from the score for any allies in the AOE.
-	//CountOrigin: Count the actor the check is ran around of as well.
-	Int AttackByQuantity (Actor Origin, Double Range = 256, Bool AvoidAllies = False, Bool CountOrigin = False)
-	{
-		If (!Origin) Return 0;
-		Actor Mobj;
-		Int Chance;
-		Bool IsHostile, IsVisible; //Caching
-		
-		BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Origin,Range);
-		
-		While (FindEnemies.Next())
-		{
-			Mobj = FindEnemies.Thing;
-			
-			If (!Mobj || IsDead (Mobj) || IsInanimateObject (Mobj) || Mobj == Self || !CountOrigin && Mobj == Origin) Continue;
-			
-			IsHostile = IsActorHostile (Mobj); IsVisible = IsVisible (Mobj,False);
-			If (AvoidAllies && !IsHostile && IsVisible)
-			{
-				If (Mobj.bIsMonster) Chance -= 10;
-				If (Mobj.Player) Chance -= 40;
-				Continue;
-			}
-			
-			If (IsHostile && IsVisible && Mobj.Distance3DSquared (Origin) <= Range*Range)
-			{
-				Switch (AssessThreatLevel (Mobj))
-				{
-					Case THREAT_UNSTOPPABLE:
-						Chance += 500;
-						Break;
-					Case THREAT_SUPERDANGER:
-						Chance += 200;
-						Break;
-					Case THREAT_VERYDANGEROUS:
-						Chance += 80;
-						Break;
-					Case THREAT_DANGEROUS:
-						Chance += 40;
-						Break;
-					Case THREAT_ABOVENORMAL:
-						Chance += 20;
-						Break;
-					Case THREAT_NORMAL:
-						Chance += 10;
-						Break;
-					Case THREAT_MILD:
-						Chance += 8;
-						Break;
-					Case THREAT_LOW:
-						Chance += 5;
-						Break;
-					Case THREAT_VERYLOW:
-						Chance += 1;
-						Break;
-					Case THREAT_NONE:
-						Break;
-					Default:
-						Chance += 1;
-						Break;
-				}
-			}
-		}
-		
-		Return Chance;
-	}
 	
 	//Death flame handling.
 	Array <Actor> DeathFlames; //Pointers to the flames created by the vehicle being gibbed.
@@ -712,6 +742,8 @@ Mixin Class MVP_MarineFunctions
 		WRN_EXPLOSIVE		= 1 << 5, //This is a hazard zone for an explosive attack.
 		WRN_CRUSHING		= 1 << 6, //This is a hazard zone for the ability of a vehicle to crush and push objects as it moves.
 		WRN_ANTIAIR			= 1 << 7, //This hazard is particularly dangerous to flying NPCs.
+		WRN_AUTOCANNON		= 1 << 8, //This hazard is an autocannon.
+		WRN_ARTILLERY		= 1 << 9, //This hazard is artillery, which is to say, REALLY big weapons.
 	}
 	
 	//Spawns a custom warning zone for KAI NPCs, that alerts them to evade vehicle attacks.
@@ -735,6 +767,8 @@ Mixin Class MVP_MarineFunctions
 		If (Flags & WRN_EXPLOSIVE) MVP_HazardZone(WarnZone).Flags |= WRN_EXPLOSIVE;
 		If (Flags & WRN_CRUSHING) MVP_HazardZone(WarnZone).Flags |= WRN_CRUSHING;
 		If (Flags & WRN_ANTIAIR) MVP_HazardZone(WarnZone).Flags |= WRN_ANTIAIR;
+		If (Flags & WRN_AUTOCANNON) MVP_HazardZone(WarnZone).Flags |= WRN_AUTOCANNON;
+		If (Flags & WRN_ARTILLERY) MVP_HazardZone(WarnZone).Flags |= WRN_ARTILLERY;
 		WarnZone.MaxTargetRange = Range;
 		MVP_HazardZone(WarnZone).Offset = Offsets;
 		MVP_HazardZone(WarnZone).HazardLevel = ThreatLevel;

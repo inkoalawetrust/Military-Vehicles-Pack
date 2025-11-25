@@ -1,4 +1,6 @@
-//MAYDO: Replace the current master following code in Idle: with a proper set of HandleFollowingActor() and OnWander() overrides, or maybe not, cheaper that way?
+//MAYDO:
+//Replace the current master following code in Idle: with a proper set of HandleFollowingActor() and OnWander() overrides, or maybe not, cheaper that way?
+//Count the drone as a projectile? By adding it to KAI's projectilelist.
 Class MVP_KamikazeDrone : MVP_BaseFlyer
 {
 	Default
