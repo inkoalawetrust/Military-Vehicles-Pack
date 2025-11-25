@@ -1250,7 +1250,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Array <Actor> Incoming; //Detectable incoming projectiles found.
 		ForEach (Proj : KAIHandler.ProjectileList)
 		{
-			If (!Proj || Proj.Target == Self || !Proj.bMissile) //Null, one of our own, or not a missile anymore. (AKA it was blown up, but not out of the list yet)
+			If (!Proj || Proj.Default.bMissile && Proj.Target == Self || Proj.Default.bMissile && !Proj.bMissile) //Null, one of our own projectiles, or a missile that blew up but is still on the list.
 				Continue;
 			
 			//If the projectile is faster than the threshold. Then begin raising the chance of a failed shootdown for each bit of excess velocity.
@@ -1262,7 +1262,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 					Continue;
 			}
 			
-			If (!IsActorHostile(Proj.Target)) //Ignore friendly projectiles.
+			If (!IsActorHostile( Proj.Default.bMissile ? Proj.Target : Proj )) //Ignore friendly projectiles. Or if a non-projectile actor is on the list for some reason, if it's friendly.
 				Continue;
 			
 			//If (Proj.bSeekerMissile && Proj.Tracer && Proj.Tracer Is "MVP_SeekerDecoy") //Homing projectile that was tricked by the IR dazzler.
@@ -1280,7 +1280,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			
 			If (!CheckSight (Proj,SF_IGNOREWATERBOUNDARY)) //Out of sight, out of mind.
 				Continue;
-			
+			console.printf ("%s is incoming",proj.getclassname());
 			Incoming.Push(Proj);
 		}
 		

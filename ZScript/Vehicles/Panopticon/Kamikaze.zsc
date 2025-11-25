@@ -36,6 +36,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		WoundHealth 8;
 		ExplosionRadius 192;
 		ExplosionDamage 128;
+		Damage 128;
 		FloatSpeed 3;
 		FloatBobStrength 0.5;
 		Mass 16; //Going by the convention that each integer is a kilo, this thing shouldn't be 16 kilos, but you know how Jazzy Doom is.
@@ -84,6 +85,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		MissileState = MeleeState = SeeState; //We do have attacks, yes.
 		HazardTags.Push ("Drone");
 		HazardTags.Push ("Explosive");
+		If (KAIHandler) KAIHandler.RemoveFromVehicleList (Self); //Don't count the flying bombs as vehicles.
 	}
 	
 	Override Void Tick()
@@ -333,12 +335,14 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		A_StopSound (CHAN_BODY);
 		bInFloat = False; //Not currently flying, but we ARE a flyer, so KAI mods and mods in general should know. Even if it means that it can't cross float blocking lines when landed.
 		bNoGravity = bFloatBob = False;
+		If (KAIHandler) KAIHandler.RemoveFromProjectileList (Self, True);
 	}
 	
 	Void StartFlight()
 	{
 		A_StartSound (ActiveSound,flags:CHANF_LOOPING,attenuation:1.5);
 		bInFloat = bNoGravity = bFloatBob = True;
+		If (KAIHandler) KAIHandler.AddToProjectileList (Self, True);
 	}
 	
 	Void SpawnHitscanShrapnel (Int Amount, Int Damage = 2, Double Range = 512, Class <Actor> Puff = "MVP_ShrapnelPuff")
