@@ -57,6 +57,7 @@ SFX/CaseFall5 "Sounds/SFX/CaseFall5.ogg"
 SFX/FleshHit "Sounds/SFX/FleshHit.ogg"
 Weapon/RadioCall "Sounds/SFX/RadioCall.ogg"
 Weapon/DebugFire "Sounds/SFX/DebugGunFire.ogg"
+Weapon/GrenadeBounce "Sounds/SFX/GrenadeBounce.ogg"
 
 $Random SFX/MSExplosion
 {

@@ -467,7 +467,7 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 				A_SetScale (FRandom(1.1,1.3));
 				A_SetRenderStyle (1.0,STYLE_ADD);
 				MakeAlliesImmuneToExplosion (Target,ExplosionRadius);
-				A_Explode (ExplosionDamage,ExplosionRadius,XF_CIRCULAR|XF_CIRCULARTHRUST,False,32);
+				A_Explode (ExplosionDamage,ExplosionRadius,XF_CIRCULAR|XF_CIRCULARTHRUST,False,64);
 				RemoveAllyExplosionImmunity();
 				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.5);
 				
@@ -502,7 +502,180 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 				A_SetScale (FRandom(1.8,2.2));
 				A_SetRenderStyle (1.0,STYLE_ADD);
 				MakeAlliesImmuneToExplosion (Target,ExplosionRadius*1.25);
-				A_Explode (ExplosionDamage,ExplosionRadius*1.25,XF_CIRCULAR|XF_CIRCULARTHRUST,False,48);
+				A_Explode (ExplosionDamage,ExplosionRadius*1.25,XF_CIRCULAR|XF_CIRCULARTHRUST,False,96);
+				RemoveAllyExplosionImmunity();
+				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.35);
+				
+				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				If (Ring)
+				{
+					Ring.Speed = FRandom(0.4,0.5);
+					Ring.FloatSpeed = FRandom(0.15,0.12);
+					Ring.ReactionTime = (GameTicRate/2);
+				}
+				
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+				Duster.ReactionTime = Random (48,72);
+				Duster.RadiusDamageFactor = 0.5;
+				Duster.Threshold = 192;
+				Duster.Scale.X *= 0.5;
+				
+				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
+				If (Light)
+				{
+					Light.Args[3] = 128; //Intensity
+					Light.Args[0] = 255; Light.Args[1] = 225; Light.Args[2] = 179; //RGB
+				}
+			}
+			GAXP ABCDEFGHIJ 2 Bright {If (Light) Light.Args[3] -= 12.8;}
+			TNT1 A 0 {If (Light) Light.Destroy();}
+			Stop;
+	}
+}
+
+//Yes, this is basically just the 70mm rocket code.
+Class MVP_40mmGrenade : MVP_BaseProjectile
+{
+	Default
+	{
+		Radius 8;
+		Height 16;
+		Speed 30;
+		FastSpeed 45;
+		DamageFunction (Random (5,15));
+		XScale 0.6;
+		YScale 0.5; //0.6 / 1.2
+		ExplosionRadius 128;
+		ExplosionDamage 160;
+		Decal "BigScorch";
+		DamageType "Explosive";
+		Obituary "%o tried throwing back a grenade";
+		
+		//Boinky
+		BounceFactor 0.7;
+		WallBounceFactor 0.85;
+		BounceCount 10;
+		BounceType "Hexen";
+		BounceSound "Weapon/GrenadeBounce";
+		+KAI_BaseProjectile.NoFriendlyFire; //Go through allies, but that DOESN'T mean the explosion's harmless to them.
+		-NoGravity;
+		+FloorClip;
+		+CanBounceWater;
+		+DontBounceOnSky;
+		+BounceOnActors;
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		If (Tracer) bSeekerMissile = True;
+	}
+	
+	Void DoGrenadeSplash (Int LiquidType, Bool UpsideDown = False)
+	{
+		If (LiquidType == LIQUID_NONE) Return;
+		HitLiquid = True;
+		Actor Splash = SpawnLiquidSplash (LiquidType,"SFX/LiquidExplosion",1,1.0,ExplosionDamage*0.5,ExplosionRadius*0.5,ExplosionRadius*0.75,"Explosive",True);
+		
+		Double Size = FRandom (1.5,2.25);
+		Splash.Scale.X = Splash.Scale.Y = (UpsideDown ? -Size : Size);
+		Splash.bXFlip = Random (False,True);
+	}
+	
+	//Detonate on impact with anything hostile to the shooter. And also try steering the tracer if the actor has any.
+	Override Int SpecialBounceHit (Actor BounceMobj, Line BounceLine, ReadOnly<SecPlane> BouncePlane)
+	{
+		If (Target && BounceMobj && !IsInanimateObject (BounceMobj))
+		{
+			If (KAI_Actor(Target) && KAI_Actor(Target).IsActorHostile (BounceMobj) || Target.IsHostile (BounceMobj))
+				Return MHIT_DESTROY;
+		}
+		
+		If (Tracer && bSeekerMissile) //PLAYTEST: Test the homing function.
+		{
+			A_FaceTracer (10,10);
+			KAI_Math.AngleToVector3D (Angle,-Pitch,5);
+		}
+		
+		Return Super.SpecialBounceHit (BounceMobj, BounceLine, BouncePlane);
+	}
+	
+	Override Void OnDestroy()
+	{
+		Super.OnDestroy();
+		
+		If (Light) Light.Destroy(); //KLUDGE: Just in case for when it gets stuck bouncing on a slope because UZDoom physics.
+	}
+	
+	Bool HitLiquid;
+	DynamicLight Light;
+	
+	States
+	{
+		Spawn:
+			SGRN A 1;
+			Loop;
+		Death:
+			TNT1 A 0
+			{
+				//The floor was hit.
+				If (Pos.Z <= FloorZ)
+					DoGrenadeSplash(CheckLiquid(FloorPic));
+				//The ceiling was hit.
+				Else If (Pos.Z + Height >= CeilingZ)
+					DoGrenadeSplash(CheckLiquid(CeilingPic),True);
+				
+				If (HitLiquid) Destroy(); //Splash was spawned, so just delete yourself.
+				
+				If (Pos.Z + Height >= CeilingZ) Scale.Y *= -1; //If a ceiling was hit, invert the explosion.
+				Else If (Pos.Z >= FloorZ+32) Return FindState ("Death.Air",True); //If the explosion happened above 32 map units from the ground, trigger the air explosion.
+				Return State (Null);
+			}
+			TNT1 A 0
+			{
+				SetZ (FloorZ);
+				Roll = Random (0,360);
+				bXFlip = Random (False,True);
+				A_SetScale (FRandom(1.1,1.3));
+				A_SetRenderStyle (1.0,STYLE_ADD);
+				MakeAlliesImmuneToExplosion (Target,ExplosionRadius);
+				A_Explode (ExplosionDamage,ExplosionRadius,XF_CIRCULAR|XF_CIRCULARTHRUST,False,64);
+				RemoveAllyExplosionImmunity();
+				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.5);
+				
+				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				If (Ring)
+				{
+					Ring.Speed = FRandom(0.4,0.5);
+					Ring.FloatSpeed = FRandom(0.15,0.12);
+					Ring.ReactionTime = (GameTicRate/2);
+				}
+				
+				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
+				Duster.ReactionTime = Random (48,72);
+				Duster.RadiusDamageFactor = 0.5;
+				Duster.Threshold = 192;
+				Duster.Scale.X *= 0.5;
+				
+				Light = DynamicLight(Spawn ("PointLight",Vec3Offset (0,0,8)));
+				If (Light)
+				{
+					Light.Args[3] = 128; //Intensity
+					Light.Args[0] = 255; Light.Args[1] = 225; Light.Args[2] = 179; //RGB
+				}
+			}
+			GXPL ABCDEFGHIJLMNO 2 Bright {If (Light) Light.Args[3] -= 9.14;}
+			TNT1 A 0 {If (Light) Light.Destroy();}
+			Stop;
+		Death.Air:
+			TNT1 A 0
+			{
+				Roll = Random (0,360);
+				A_SetScale (FRandom(1.8,2.2));
+				A_SetRenderStyle (1.0,STYLE_ADD);
+				MakeAlliesImmuneToExplosion (Target,ExplosionRadius*1.25);
+				A_Explode (ExplosionDamage,ExplosionRadius*1.25,XF_CIRCULAR|XF_CIRCULARTHRUST,False,96);
 				RemoveAllyExplosionImmunity();
 				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.35);
 				
