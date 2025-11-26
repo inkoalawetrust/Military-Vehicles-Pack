@@ -1752,7 +1752,18 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				If (PreFireZone) PreFireZone.Destroy();
 				If (ShellType == TYPE_NONE)
 				{
-					If (WarningZone) WarningZone.MaxTargetRange = 48;
+					If (WarningZone)
+					{
+						WarningZone.MaxTargetRange = 48;
+						Let Hazard = MVP_HazardZone(WarningZone).Hazard;
+						If (Hazard)
+						{
+							Hazard.Range = WarningZone.MaxTargetRange;
+							Hazard.Level = HazardInfo.HAZARD_MEDIUM;
+							Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Explosive"));
+							Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Artillery"));
+						}
+					}
 					TurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").FastSpeed;
 					Return FindState ("Fire.Coaxial");
 				}
@@ -1766,7 +1777,18 @@ Class MVP_MBTTurret : MVP_BaseTurret
 				A_TankFire (ShellType); //This is where the magic happens.
 				
 				//Revert to the coaxial until next load.
-				If (WarningZone) WarningZone.MaxTargetRange = 48;
+				If (WarningZone)
+				{
+					WarningZone.MaxTargetRange = 48;
+					Let Hazard = MVP_HazardZone(WarningZone).Hazard;
+					If (Hazard)
+					{
+						Hazard.Range = WarningZone.MaxTargetRange;
+						Hazard.Level = HazardInfo.HAZARD_MEDIUM;
+						Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Explosive"));
+						Hazard.CustomTags.Delete (Hazard.CustomTags.Find("Artillery"));
+					}
+				}
 				ShellType = TYPE_NONE;
 				TurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").Speed; FastTurretAttackSpeed = GetDefaultByType("MVP_RifleBullet").FastSpeed;
 			}

@@ -9,8 +9,6 @@
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 //Sometimes the constant engine hum doesn't play.
 
-//PLAYTEST: Make sure it doesn't do anything fucky when patrolling, like refusing to attack or ignoring bChaseGoal. Edit: I did check this already but forgot if it worked, second test anymore?
-
 //IDEA:
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
@@ -1149,7 +1147,7 @@ Class MVP_Strider : MVP_Humanoid
 		If (!Crouching &&
 		//DO NOT CLIMB OVER YOUR COVER
 		//BUG: Probably prevents  ̶m̶a̶r̶i̶n̶e̶s̶ striders from climbing at all when running to cover.
-		//BUG: Fix Strider getting stuck spazzing up on solid actors.
+		//BUG: Fix Strider getting stuck spazzing up on solid actors. Maybe by checking bOnMobj or something.
 		(!KAI_Math.IsEmptyVector3 (CoverPos) || Level.Vec3Diff (Pos,CoverPos).Length() > Radius*1.2))
 		{
 			If (KAI_HandleClimbing(ClimbPos,JumpPos,"Climb","Jump.Up",0.8,JumpFac))
@@ -1946,6 +1944,18 @@ Class MVP_Strider : MVP_Humanoid
 				
 				//MAYDO: Make this check into a function so the minigun loop can use it too.
 				
+				//Dodge very dangerous hazard in range.
+				HazardInfo Haz;
+				If (bAvoidHazards && Random (0,255) < 128 && (Haz = GetStrongestHazard(Hazards)) && Haz.Level >= HazardInfo.HAZARD_LARGE)
+				{
+					If (MVP_StriderJump (MVP_StriderJumpFromPos (GetHazardOriginPos(Haz),32,384),flags:SJUMP_STRAFE,enemy:Target))
+					{
+						MVP_StriderEndFire();
+						FireDelay = 0;
+						Return State(Null);
+					}
+				}
+				
 				//Jump away from nearby enemies when we can.
 				Actor Near;
 				If (!bNoFear && !(bChaseGoal && Goal) && Random (0,255) < 32 && (Near = FindNearestEnemy (Radius+128)))
@@ -2044,6 +2054,18 @@ Class MVP_Strider : MVP_Humanoid
 					MVP_StriderEndFire();
 					FireDelay = 35;
 					Return FindState ("Fire.End",True);
+				}
+				
+				//Dodge very dangerous hazard in range.
+				HazardInfo Haz;
+				If (bAvoidHazards && Random (0,255) < 128 && (Haz = GetStrongestHazard(Hazards)) && Haz.Level >= HazardInfo.HAZARD_HUGE)
+				{
+					If (MVP_StriderJump (MVP_StriderJumpFromPos (GetHazardOriginPos(Haz),32,384),flags:SJUMP_STRAFE,enemy:Target))
+					{
+						MVP_StriderEndFire();
+						FireDelay = 0;
+						Return State(Null);
+					}
 				}
 				
 				//Rarely jump away from the target when we can.
