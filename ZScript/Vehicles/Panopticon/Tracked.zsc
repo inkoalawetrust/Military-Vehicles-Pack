@@ -881,6 +881,9 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			Hazards.Delete(Hazards.Find(Haz));
 			Haz = GetStrongestHazard(Hazards);
 		}
+		//We're healthy and the hazard isn't that scary, ignore.
+		If (Haz && Health > WoundHealth && Haz.Level <= Haz.HAZARD_MEDIUM)
+			{console.printf ("ignoring haz:"); haz.printhazardinfo();Haz = Null;}
 		
 		//Keep different distances for targets.
 		If (!LockedIn && !RunAway && TargetInSight && Target && Target != Goal)
@@ -894,13 +897,13 @@ Class MVP_BigGunDrone : MVP_GunDrone
 				Case THREAT_SUPERDANGER:
 					Dist = 768;
 					Break;
+				//Just in case the threshold is changed ^^^^^
 				Case THREAT_VERYDANGEROUS:
 					Dist = 640;
 					Break;
 				Case THREAT_DANGEROUS:
 					Dist = 448;
 					Break;
-				//Just in case the threshold is changed ^^^^^
 				Case THREAT_ABOVENORMAL:
 					Dist = 256;
 					Break;
@@ -920,7 +923,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 				Dist *= 2;
 			
 			Double TargDist = Distance3D (Target);
-			If (!ReverseSteps && TargDist <= ReverseRange+Radius) //Too close to target, reverse.
+			If (!ReverseSteps && TargDist <= ReverseRange) //Too close to target, reverse.
 			{
 				RunAway = True; //In case we otherwise wouldn't run away, like if retreatrange is turned off.
 				ReverseSteps = Random (2,8);

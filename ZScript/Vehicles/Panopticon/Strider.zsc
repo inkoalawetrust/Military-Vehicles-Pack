@@ -8,6 +8,7 @@
 //Seems like the strider sometimes stops attacking and just walks around despite having a target.
 //Dodges around too much. UPDATE: Looking at this a month later, gee, real fucking descriptive past me.
 //Sometimes the constant engine hum doesn't play.
+//The Strider seems to retreating by jumping away waaayyyy too much when fighting other KAI actors, might be considering all hazards as super dangerouns at all times.
 
 //IDEA:
 //Add jumping SpecialSpots. This requires a proper ballistic function so not happening until then.
@@ -86,6 +87,8 @@ Class MVP_Strider : MVP_Humanoid
 		MaxDropoffHeight 32; //This is different from the striders' ability to climb down to areas it has the range to jump back up from.
 		Tag "R-11-B Paŝegulo";
 		SeeSound "Vehicle/Strider/Alert";
+		Obituary "%o was killed by a Strider";
+		HitObituary "%o got too close to a Strider";
 		
 		+NoBlood;
 		+DontCorpse;
@@ -235,7 +238,7 @@ Class MVP_Strider : MVP_Humanoid
 					MG.Position = Proj.HitLocation;
 					MG.Type = HazardInfo.HAZARD_ATTACK;
 					MG.Level = HazardInfo.HAZARD_MEDIUM;
-					MG.Range = 128;
+					MG.Range = 64;
 					AttackTags.Push ("Bullet");
 					MG.CustomTags = AttackTags;
 					HazardInfo.GiveHazard (Proj.HitActor,MG);
@@ -253,7 +256,6 @@ Class MVP_Strider : MVP_Humanoid
 					FastProjSpeed = GetDefaultByType("MVP_70mmRocket").FastSpeed;
 					
 					//Explosive hazard.
-					console.printf ("AAAA TROLLDIER");
 					AttackTags.Push ("Explosive"); AttackTags.Push ("Rocket");
 					HazardInfo.EmitHazard (Self,512,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation,UsePos:True);
 					Break;
@@ -262,7 +264,7 @@ Class MVP_Strider : MVP_Humanoid
 					FastProjSpeed = GetDefaultByType("MVP_40mmGrenade").FastSpeed;
 					
 					AttackTags.Push ("Explosive"); AttackTags.Push ("Grenade");
-					HazardInfo.EmitHazard (Self,256,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation);
+					HazardInfo.EmitHazard (Self,512,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation);
 					Break;*/
 			}
 			Actor RealTarg = Target;
@@ -408,6 +410,65 @@ Class MVP_Strider : MVP_Humanoid
 		}
 		
 		Return True;
+	}
+	
+	Override String GetObituary (Actor Victim, Actor Inflictor, Name MOD, Bool PlayerAttack)
+	{
+		If (AttackType == ATTACK_NONE && MOD == 'Crush') //Strider fell on victim lmao.
+			Return "A Strider fell on %os' head";
+		
+		If (MOD == 'Melee' || MOD == 'Crush' && AttackType == ATTACK_STOMP) //Melee attack obituaries.
+		{
+			If (Random (1,6) == 6) //Use the generic melee obituary sometimes.
+				Return HitObituary;
+			
+			If (AttackType == ATTACK_PUNT)
+			{
+				If (Random (False, True) == True)
+					Return "%o was punted by a Strider";
+				Else
+					Return "%o violated a Striders' personal space";
+			}
+			Else If (AttackType == ATTACK_ALTPUNT)
+				Return "%o became a football";
+			Else If (AttackType == ATTACK_STOMP)
+			{
+				String StompObituaries[] = {
+				"%o was stepped on by a Strider",
+				"%o got squashed by a Strider",
+				"%k wasn't paying attention and stepped on %o"}; //Lol, all the other obituaries just call it a Strider while this one uses its' full untranslated name.
+				
+				Return StompObituaries[Random(0,StompObituaries.Size()-1)];
+			}
+			Else If (AttackType == ATTACK_RAMMING)
+			{
+				If (Random (False, True) == True)
+					Return "%o didn't get out of a Striders' way";
+				Else
+					Return "%o showed red to a Strider";
+			}
+		}
+		
+		If (Inflictor Is "MVP_SmallRifleBullet") //Minigun spam.
+			Return "%o got showered by a Strider";
+		
+		If (Inflictor Is "MVP_RifleBullet")
+		{
+			If (Distance3D (Victim) >= 6144)
+			{
+				If (Random (0, 255) < 192)
+					Return "%o was sniped by a Strider";
+				Else
+					Return "%o will make a cameo in a Striders' montage video";
+			}
+			
+			Return "%o was shot by a Strider";
+		}
+		
+		If (Inflictor Is "MVP_70mmRocket") //MAYDO: Direct hit obituary?
+			Return "%o was blown up by a Striders' rocket";
+		
+		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
 	}
 	
 	Override Void Die (Actor Source, Actor Inflictor, Int DMGFlags, Name MeansOfDeath)
@@ -2212,7 +2273,7 @@ Class MVP_Strider : MVP_Humanoid
 				{
 					A_Face (MeleeTarget);
 					
-					Int Dmg = MeleeTarget.DamageMobj (Self,Self,10*Random (15,25),'Melee');
+					Int Dmg = MeleeTarget.DamageMobj (Self,Self,10*Random (15,25),'Crush');
 					TraceBleed (Dmg,MeleeTarget);
 					If (!MeleeTarget.bNoBlood) //Plap
 						A_StartSound ("SFX/FleshHit",flags:CHANF_OVERLAP);
@@ -2298,7 +2359,7 @@ Class MVP_Strider : MVP_Humanoid
 			tnt1 a 0 a_log ("is there some kinda fall through what the fuck is happening here");
 		Melee.End:
 			TNT1 A 0
-			{console.printf ("ceasing melee");
+			{
 				RamPower = 0;
 				SmokeCounter = 0;
 				AttackType = ATTACK_NONE;
