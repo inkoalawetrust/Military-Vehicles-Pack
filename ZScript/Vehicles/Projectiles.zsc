@@ -592,10 +592,11 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 				Return MHIT_DESTROY;
 		}
 		
-		If (Tracer && bSeekerMissile) //PLAYTEST: Test the homing function.
+		//Homing mode, kinda works but not to well because the velocity and angle changed is added on top of where it bounced.
+		If (Tracer && bSeekerMissile && BounceLine)
 		{
-			A_FaceTracer (10,10);
-			KAI_Math.AngleToVector3D (Angle,-Pitch,5);
+			A_FaceTracer ();
+			Vel += KAI_Math.AngleToVector3D (Angle,-Pitch,16);
 		}
 		
 		Return Super.SpecialBounceHit (BounceMobj, BounceLine, BouncePlane);

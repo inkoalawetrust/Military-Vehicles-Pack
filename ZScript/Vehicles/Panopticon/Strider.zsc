@@ -19,7 +19,7 @@
 //Make strider able to strafe fire rockets :>
 
 //TODO:
-//Add the remaining grenade attack. Don't forget to make the strider not use it for flyers, but especially use it whenever the target is out of sight.
+//Add the remaining grenade attack. Make the strider not use it for flyers, but especially use it whenever the target is out of sight. Also add a grenade launch sound.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -147,8 +147,8 @@ Class MVP_Strider : MVP_Humanoid
 		AttackStates.Push (FindState("Fire.Start",True));
 		AttackStates.Push (FindState("Fire.MG",True));
 		AttackStates.Push (FindState("Fire.Minigun",True));
-		AttackStates.Push (FindState("Fire.Rocket",True));
-		AttackStates.Push (FindState("Fire.Grenade",True));
+		AttackStates.Push (FindState("Fire.Rockets",True));
+		AttackStates.Push (FindState("Fire.Grenades",True));
 		
 		//Melee state is just called "Melee", no need to custom set it, and it functions like Fire:.
 		AttackStates.Push (FindState("Melee.Kick",True));
@@ -221,6 +221,7 @@ Class MVP_Strider : MVP_Humanoid
 			bMissile = True; //HACK: Become missile for TRF_BLOCKSELF.
 			LineTrace (Angle,MaxTargetRange,Pitch,TRF_SOLIDACTORS|TRF_BLOCKSELF,AttackPos.Z,AttackPos.X,AttackPos.Y,Proj);
 			bMissile = False;
+			KAI_DebugPointDelay.KAI_TempPointSpawn (proj.hitlocation, 8);
 			
 			Double ProjSpeed, FastProjSpeed;
 			Array <String> AttackTags; AttackTags.Push ("Vehicle"); AttackTags.Push ("Drone"); AttackTags.Push ("Robot"); //Generic tags.
@@ -257,30 +258,42 @@ Class MVP_Strider : MVP_Humanoid
 					AttackTags.Push ("Explosive"); AttackTags.Push ("Rocket");
 					HazardInfo.EmitHazard (Self,512,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation,UsePos:True);
 					Break;
-				/*Case ATTACK_GRENADE:
+				Case ATTACK_GRENADE:
 					ProjSpeed = GetDefaultByType("MVP_40mmGrenade").Speed;
 					FastProjSpeed = GetDefaultByType("MVP_40mmGrenade").FastSpeed;
+					If (!bNoTargetPrediction) LastSawPos = LastEnemyPosition;
+					console.printf ("lastsawpos %.2f %.2f %.2f",lastsawpos);
 					
 					AttackTags.Push ("Explosive"); AttackTags.Push ("Grenade");
 					HazardInfo.EmitHazard (Self,512,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation);
-					Break;*/
+					Break;
 			}
-			Actor RealTarg = Target;
-			Int Turn = 6;
-			If (JumpFlags & SJUMP_STRAFE) //Currently strafing.
+			
+			If (AttackType == ATTACK_GRENADE) //Turn off target prediction when set to fire a grenade and the target is out of sight.
+				bNoTargetPrediction = !CheckSight (Target,SF_IGNOREWATERBOUNDARY);
+			
+			If (!bNoTargetPrediction)
 			{
-				Target = JumpTarget;
-				//Turn = StriderMove.AngleLimit;
+				Actor RealTarg = Target;
+				Int Turn = 6;
+				If (JumpFlags & SJUMP_STRAFE) //Currently strafing.
+					Target = JumpTarget;
+				//HACK: Bizzare hack to account for the striders firing way off their origin, fun part is that this happens in ALL actors I'm pretty sure!
+				Int FAF = GetFAFAimPos(Target,AttackPos);
+				Double AimOfs = GetFAFPosOffset(Target,FAF);
+				SetZ (Pos.Z+AimOfs);
+				AimAtTarget (Turn,Turn,flags:FAF,attackspeed:ProjSpeed,fastattackspeed:FastProjSpeed);
+				SetZ (Pos.Z-AimOfs);
+				if (target)
+					kai_lofraycast.visualizetracepath (Pos,level.vec3offset(pos,kai_math.angletovector3d(angle,-pitch,distance3d(target))),distance3d(target));
+				Target = RealTarg;
 			}
-			//HACK: Bizzare hack to account for the striders firing way off their origin, fun part is that this happens in ALL actors I'm pretty sure!
-			Int FAF = GetFAFAimPos(Target,AttackPos);
-			Double AimOfs = GetFAFPosOffset(Target,FAF);
-			SetZ (Pos.Z+AimOfs);
-			AimAtTarget (Turn,Turn,flags:FAF,attackspeed:ProjSpeed,fastattackspeed:FastProjSpeed);
-			SetZ (Pos.Z-AimOfs);
-			if (target)
-				kai_lofraycast.visualizetracepath (Pos,level.vec3offset(pos,kai_math.angletovector3d(angle,-pitch,distance3d(target))),distance3d(target));
-			Target = RealTarg;
+			
+			If (bNoTargetPrediction && AttackType == ATTACK_GRENADE)
+			{
+				Angle = GetAngleToPos (LastSawPos,6);
+				Pitch = GetPitchToPos (LastSawPos,6);
+			}
 		}
 		
 		If (LastTickFallVel >= STRIDER_FALLTHRESHOLD*2 && !IsDead && !IsAttacking && !IsInState(Self,"Jump.Loop.Down"))
@@ -691,6 +704,10 @@ Class MVP_Strider : MVP_Humanoid
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
 		
+		/*attacktype = attack_Grenade;
+		setstatelabel ("fire.start");
+		return true;*/
+		
 		//Fire rocket pods towards crowds and strong mofos.
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_ROCKETS); //The position we're firing from.
 		Double RocketDist = InCover ? 8192 : 6144;
@@ -1029,7 +1046,7 @@ Class MVP_Strider : MVP_Humanoid
 					Else
 						RevFrame--;
 				}
-				console.printf ("showing sprite %s",texman.getname(curstate.getspritetexture (0,spritenum:sprite,frame)));
+				//console.printf ("showing sprite %s",texman.getname(curstate.getspritetexture (0,spritenum:sprite,frame)));
 				//Tics--; //Reduce tics twice as fast to make it reverse faster.
 				Angle -= 180;
 				Speed *= 1.2;
@@ -1634,6 +1651,80 @@ Class MVP_Strider : MVP_Humanoid
 		}
 	}
 	
+	Void MVP_StriderGrenade (Bool NoFire = False)
+	{
+		If (!NoFire) //Fire grenade.
+		{
+			If (!bNoTargetPrediction) //Lob grenade normally when target in sight.
+				StriderGrenadeThrow (Target,"MVP_40mmGrenade",aimdist:384);
+			Else //Fire at LastSawPos when target prediction is off, which happens when the target is out of sight.
+			{console.printf ("firing at last seen pos");
+				Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_GRENADE);
+				Actor Proj = A_SpawnProjectile ("MVP_40mmGrenade",FireOfs.Z,flags:CMF_AIMDIRECTION,Pitch);
+				If (Proj) Proj.Tracer = Target; //Try to bounce towards the target, hopefully in a situation like them having hid behind cover.
+			}
+		}
+		
+		//Sprite crouching
+		If (NoFire)
+			Frame = Crouching ? FRAME_G : FRAME_D;
+		Else
+			Frame = Crouching ? FRAME_H : FRAME_E;
+	}
+	
+	//Credit: Lewisk3
+	//TODO: Add handling for firing over raised sector floor walls, maybe by adding the walls' height as part of the toAct's height?
+	Bool StriderGrenadeThrow (Actor toAct, class<Actor> nade, double maxPitch = 90, double aimSens = 1.1, double aimDist = 128)
+	{
+		if(!toAct) return null;
+		
+		Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_GRENADE);
+		
+		// Source and Destination
+		vector3 fromPos = (
+			pos.xy,
+			pos.z + (FireOfs.Z)
+		);
+		vector3 toPos = (
+			toAct.pos.xy, 
+			toAct.pos.z + (toAct.height * 0.5) 
+		);
+		
+		vector3 diff = level.vec3diff(fromPos, toPos);
+		
+		// Spawn grenade, calculate values from instance.
+		let nade = Spawn(nade, fromPos);
+		if(!nade) return null;    
+		nade.target = self;
+		//nade.tracer = target; //Pass target as tracer.
+		
+		// Modify toPos Z component based on how many units the thrown grenade
+		// falls by the time it reaches the destination.
+		double dist = diff.xy.Length();
+		if(dist >= aimDist || !CheckSight (toAct,SF_IGNOREWATERBOUNDARY))
+		{
+			double grav = 1.0 + ceil(nade.GetGravity() * (level.gravity * 0.010769));
+			double ticsDist = diff.Length() / double(max(nade.Speed,1.0));        
+			double fallDist = ticsDist * grav;
+			toPos.z += fallDist * aimSens;
+		}
+		
+		// Recalculate differences.
+		diff = level.vec3diff(fromPos, toPos);
+		double aimPitch = VectorAngle( sqrt(diff.y*diff.y + diff.x*diff.x), diff.z );
+		aimPitch = min(aimPitch, maxPitch);
+		
+		// Modify grenade velocity
+		double a = AngleTo(toAct);
+		double p = -aimPitch;
+		nade.vel = (
+			cos(a) * cos(p),
+			sin(a) * cos(p),
+			-sin(p)
+		) * nade.Speed;
+		return nade;
+	}
+	
 	Void MVP_StriderEndFire()
 	{
 		A_StopSound (CHAN_WEAPON);
@@ -1652,6 +1743,7 @@ Class MVP_Strider : MVP_Humanoid
 	UInt8 RunSteps; //How many steps to stay in one of the Run substates for.
 	Bool Crouching;
 	Actor LastProj; //Last projectile dodged.
+	Vector3 LastSawPos; //Where the target was last seen, used by the grenade attack when they are out of sight.
 	
 	UInt8 AttackType; //What do we attack with currently?
 	UInt8 MGMode; //What mode to fire the nose gun at?
@@ -1923,8 +2015,6 @@ Class MVP_Strider : MVP_Humanoid
 		Fire.Start:
 			PNS1 U 0
 			{
-				If (AttackType == ATTACK_GRENADE) //Skip straight to firing grenades.
-					Return FindState ("Fire.Grenade",True);
 				If (AttackType == ATTACK_NONE) //Womp womp.
 					Return SeeState;
 				
@@ -1960,11 +2050,37 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			PNS1 UVW 4 Fast
 			{
-				If (Crouching) //No prepare animation for the crouch firing.
-					Frame = FRAME_BRACKETOPEN;
-				Else
-					A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
-				
+				If (AttackType != ATTACK_GRENADE) //All ranged attacks besides the grenade have the same animation.
+				{
+					If (Crouching) //No prepare animation for the crouch firing.
+						Frame = FRAME_BRACKETOPEN;
+					Else
+						A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
+				}
+				Else //Alternate grenade prepare animation.
+				{
+					Sprite = GetSpriteIndex ('PNS2');
+					If (Crouching)
+					{
+						If (Frame == FRAME_U || Frame == FRAME_V)
+							Frame = FRAME_F;
+						Else If (Frame == FRAME_W)
+							Frame = FRAME_G;
+					}
+					Else
+					{
+						If (Frame == FRAME_U)
+							Frame = FRAME_C;
+						Else If (Frame == FRAME_V)
+						{
+							A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.075,0.2));
+							Frame = FRAME_D;
+						}
+						Else If (Frame == FRAME_W)
+							Frame = FRAME_d;
+					}
+				}
+				console.printf ("showing sprite %s",texman.getname(curstate.getspritetexture (0,spritenum:sprite,frame)));
 				If (AttackType == ATTACK_MACHINEGUN) //Open faster for the machine gun.
 					Tics = 2;
 			}
@@ -1978,11 +2094,14 @@ Class MVP_Strider : MVP_Humanoid
 					Case ATTACK_MINIGUN:
 						Return FindState ("Fire.Minigun",True);
 					Case ATTACK_ROCKETS:
-						Return FindState ("Fire.Rocket",True);
+						Return FindState ("Fire.Rockets",True);
+					Case ATTACK_GRENADE:
+						Return FindState ("Fire.Grenades",True);
 				}
 
 				Return State (Null);
 			}
+			Goto Fire.End; //Just in case.
 		Fire.MG:
 			PNS1 X 2 Light ("StriderFiringLight")
 			{
@@ -2193,12 +2312,48 @@ Class MVP_Strider : MVP_Humanoid
 				Return State (Null);
 			}
 			Loop;
-		Fire.Rocket: //6 rocket barrage
-			PNS2 B 3;
+		Fire.Rockets: //6 rocket barrage
+			PNS2 B 3
+			{
+				//Sprite elevations
+				If (!Crouching)
+					Frame = UpdateStriderElevation (FRAME_O,FRAME_B,FRAME_R);
+				Else
+				{
+					Frame = UpdateStriderElevation(FRAME_BRACKETOPEN,FRAME_BRACKETOPEN,FRAME_U);
+					If (Frame == FRAME_BRACKETOPEN)
+						Sprite = GetSpriteIndex ('PNS1');
+				}
+			}
 			PNS2 B 6 MVP_StriderRocketBarrage();
 			PNS2 B 6 MVP_StriderRocketBarrage();
 			PNS2 B 6 MVP_StriderRocketBarrage();
 			PNS2 B 8
+			{
+				//Sprite elevations
+				If (!Crouching)
+					Frame = UpdateStriderElevation (FRAME_O,FRAME_B,FRAME_R);
+				Else
+				{
+					Frame = UpdateStriderElevation(FRAME_BRACKETOPEN,FRAME_BRACKETOPEN,FRAME_U);
+					If (Frame == FRAME_BRACKETOPEN)
+						Sprite = GetSpriteIndex ('PNS1');
+				}
+				
+				If (Health > WoundHealth)
+					ExplosiveDelay = Clamp (GameTicRate*Random(5,10),0,UInt8.MAX);
+				Else
+					ExplosiveDelay = Clamp (GameTicRate*Random(3,8),0,UInt8.MAX);
+			}
+			Goto Fire.End;
+		Fire.Grenades:
+			PNS2 D 4 MVP_StriderGrenade (True);
+			PNS2 D 4 MVP_StriderGrenade (False);
+			PNS2 D 4 MVP_StriderGrenade (True);
+			PNS2 D 4 MVP_StriderGrenade (False);
+			PNS2 D 4 MVP_StriderGrenade (True);
+			PNS2 D 4 MVP_StriderGrenade (False);
+			TNT1 A 0
 			{
 				If (Health > WoundHealth)
 					ExplosiveDelay = Clamp (GameTicRate*Random(5,10),0,UInt8.MAX);
