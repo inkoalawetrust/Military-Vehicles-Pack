@@ -15,12 +15,11 @@
 //Add an action restrictor for the strider. Such as for stopping it from running in certain parkour-heavy areas.
 
 //MAYDO:
-//Look into improving the existing bullet and melee attacks.
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
 //Make strider able to strafe fire rockets :>
 
 //TODO:
-//Add the remaining grenade attack.
+//Add the remaining grenade attack. Don't forget to make the strider not use it for flyers, but especially use it whenever the target is out of sight.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -692,15 +691,13 @@ Class MVP_Strider : MVP_Humanoid
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
 		
-		//TODO: Better aerial target handling.
-		/*When fighting fast flying monsters like the quadcopters (Which'll probably need hardcoded handling), be more likely to use the miniguns instead of the
-		nose gun, unless the fast flyer is far away. And avoid firing slow rockets much (Or at all) unless the flyer is big, and/or really strong.*/
-		
 		//Fire rocket pods towards crowds and strong mofos.
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_ROCKETS); //The position we're firing from.
 		Double RocketDist = InCover ? 8192 : 6144;
+		//Don't fire rockets at small, weak, nimble flyers. NOTE: Speed of 9 makes enemy quadcopters be included for example, but not the much slower vanilla flyers like Cacodemons.
+		Bool LittleShit = IsFlying (Target) && (Target.Height <= 20 && Target.Radius <= 20) && MVP_GetSpeed (Target) >= 9 && Threat <= THREAT_ABOVENORMAL;
 		//Check if we should fire rockets. As long as it's not too far for the rockets or the LOF for them is bad.
-		If (Target && Dist <= RocketDist && ExplosiveDelay <= 0 && KAI_CheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,FirePos,TLOF_OnlyAhead,"MVP_70mmRocket",GetFAFAimPos(Target,FirePos)))
+		If (Target && (!LittleShit || Random (0,255) < 4) && Dist <= RocketDist && ExplosiveDelay <= 0 && KAI_CheckLOF (Target,100,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,FirePos,TLOF_OnlyAhead,"MVP_70mmRocket",GetFAFAimPos(Target,FirePos)))
 		{
 			Int Chance = AttackByQuantity (Target,GetDefaultByType("MVP_70mmRocket").ExplosionRadius,countorigin:True);
 			Chance += Random (0,32);
@@ -725,11 +722,13 @@ Class MVP_Strider : MVP_Humanoid
 		
 		FirePos = MVP_StriderAttackPos (ATTACK_MINIGUN);
 		
-		//Fire miniguns if close enough. Especially for very dangerous enemies.
+		//Fire miniguns if close enough. Especially for very dangerous enemies. And based on if the enemy is flying and how fast.
 		Int MinigunChance = (Threat >= ThreatLevelThreshold) ? 192 : 128;
+		Int MinShots = !IsFlying (Target) ? 100 : KAI_Math.LinearMap (MVP_GetSpeed(Target),0,16,100,10); //Scale shot threshold with flyer speed if applicable.
+		console.printf ("minigun minshots for target %d",minshots);
 		If (InSight && Random (0,255) < MinigunChance &&
 		KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
-		DetermineHitChance (Target,True,Dist,shots:100,FirePos,(10,-10,10,-10),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES) >= 30)
+		DetermineHitChance (Target,True,Dist,shots:MinShots,FirePos,(8,-8,8,-8),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES) >= 30)
 		{
 			AttackType = ATTACK_MINIGUN;
 			Shots = Random (192,255);
@@ -1117,6 +1116,14 @@ Class MVP_Strider : MVP_Humanoid
 			Return TheActualFuckingData;
 		}
 		Return Null;
+	}
+	
+	Double MVP_GetSpeed (Actor Other)
+	{
+		If (!Other)
+			Return 0;
+		
+		Return IsTeleportingMonster (Other) ? Other.Speed : Other.Vel.Length();
 	}
 	
 	Enum SMELEE_CHECKS //Smelly
