@@ -586,7 +586,7 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 	//Detonate on impact with anything hostile to the shooter. And also try steering the tracer if the actor has any.
 	Override Int SpecialBounceHit (Actor BounceMobj, Line BounceLine, ReadOnly<SecPlane> BouncePlane)
 	{
-		If (Target && BounceMobj && !IsInanimateObject (BounceMobj))
+		If (Target && BounceMobj && !IsInanimateObject (BounceMobj) && !IsDead (BounceMobj))
 		{
 			If (KAI_Actor(Target) && KAI_Actor(Target).IsActorHostile (BounceMobj) || Target.IsHostile (BounceMobj))
 				Return MHIT_DESTROY;

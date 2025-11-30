@@ -693,7 +693,7 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 				Following = True;
 				//Don't dogpile.
 				If (Followee && Distance3DSquared(Followee) >= (FollowDist+Followee.Radius)*(FollowDist+Followee.Radius))
-				{console.printf ("going to %s",followee.getclassname());
+				{
 					If (Followee) FolPos.Z = Followee.Pos.Z+(Followee.Height/2);
 					KAI_MoveTowards (FolPos,DetourFactor,TurnHorz,flags:!Landed ? KMT_3D : 0,TurnVert);
 					Return False;
@@ -1170,10 +1170,12 @@ Mixin Class MVP_DroneVirtuals
 		[Ret, Ret2] = Super.HandleFollowingActor (BasePos,IgnoreDontFollowPlayers);
 		
 		//Do NOT follow the player if in a swarm but this virtual returned the friendplayer. Which means the group has nobody else but you.
-		If (CurrentOrder == ORDER_FOLLOW && Groups.Size() && Ret2 == Players[KAI_GetFriendPlayer()].Mo)
-			Return BasePos, Null;
+		//NOTE: Commented out because I forgot why I even added it here, cuz' it was caused issues with the striders' following.
+		//If (CurrentOrder == ORDER_FOLLOW && Groups.Size() && Ret2 == Players[KAI_GetFriendPlayer()].Mo)
+		//	Return BasePos, Null;
 		
 		//Do not follow other fragile drones in a swarm.
+		//URGENT: NOTE: This doesn't work with MVP_Humanoids because they inherit from KAI_Humanoid, that'll probably need its' own bDrone.
 		If (MVP_BaseVehicle(Ret2) && MVP_BaseVehicle(Ret2).bDrone && AssessThreatLevel(Ret2) < THREAT_ABOVENORMAL)
 			Return BasePos, Null;
 		

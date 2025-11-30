@@ -21,7 +21,6 @@
 
 //TODO:
 //Add the remaining grenade attack.
-//Make it react to (Run away from) really big hazard zones when shooting its guns, such as being aimed at by an enemy tank.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -550,7 +549,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		Vector3 FolPos = (Double.NaN, Double.NaN, Double.NaN); Actor Followee;
 		If (CurrentOrder == ORDER_FOLLOW)
-			[FolPos, Followee] = HandleFollowingActor (FolPos,True); //NOTE: We turn bDontFollowPlayers on between KAI_Wander calls so lonely drones in a swarm don't do that.
+			[FolPos, Followee] = HandleFollowingActor (FolPos,True);
 		
 		If (Random(0,3072) == Random (0,3072) && Yapper)
 		//	MVP_QuadcopterSpeak();
@@ -558,11 +557,11 @@ Class MVP_Strider : MVP_Humanoid
 		
 		//Follow something instead.
 		If (CurrentOrder == ORDER_FOLLOW)
-		{
+		{console.printf ("moving to %.2f %.2f %.2f, followee %p",folpos,followee);
 			If (!KAI_Math.IsEmptyVector3(FolPos))
 			{
 				Double Dist = Distance3D(Followee);
-				//Don't dogpile.
+				
 				If (Followee && Dist >= (FollowDist+Followee.Radius))
 				{
 					If (Dist >= (FollowDist*2) && !Crouching)
@@ -573,6 +572,7 @@ Class MVP_Strider : MVP_Humanoid
 					MVP_StriderFootsteps(RunSteps);
 					Return False;
 				}
+				//Don't dogpile.
 				Else If (Followee)
 				{
 					If (Crouching) //No 360 turning for crouching, just sit around.
@@ -691,6 +691,10 @@ Class MVP_Strider : MVP_Humanoid
 		//RANGED ATTACKS.
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
+		
+		//TODO: Better aerial target handling.
+		/*When fighting fast flying monsters like the quadcopters (Which'll probably need hardcoded handling), be more likely to use the miniguns instead of the
+		nose gun, unless the fast flyer is far away. And avoid firing slow rockets much (Or at all) unless the flyer is big, and/or really strong.*/
 		
 		//Fire rocket pods towards crowds and strong mofos.
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_ROCKETS); //The position we're firing from.
