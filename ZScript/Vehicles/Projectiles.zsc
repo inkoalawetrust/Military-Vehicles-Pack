@@ -764,7 +764,6 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 	}
 }
 
-//Ugh, I need to animate this with ANIMDEFS and also have custom age timings for transitioning from fire to smoke.
 Class MVP_RocketFireSprite : MVP_Tracer
 {
 	Override Void SetProperties()

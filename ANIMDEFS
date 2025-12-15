@@ -32,3 +32,23 @@ Texture RocketSmokeAnim
 	PIC RSMKC0 Tics 2
 	PIC RSMKD0 Tics 2
 	PIC RSMKE0 Tics 2
+
+Texture WaterVapourDissolve
+	Pic SMOKA0 Tics 2
+	Pic SMOKB0 Tics 2
+	Pic SMOKC0 Tics 2
+	Pic SMOKD0 Tics 2
+	Pic SMOKE0 Tics 2
+	Pic SMOKF0 Tics 2
+	Pic SMOKG0 Tics 2
+	Pic SMOKH0 Tics 2
+	Pic SMOKI0 Tics 2
+	Pic SMOKJ0 Tics 2
+	Pic SMOKK0 Tics 2
+	Pic SMOKL0 Tics 2
+	Pic SMOKM0 Tics 2
+	Pic SMOKN0 Tics 2
+	Pic SMOKO0 Tics 2
+	Pic SMOKP0 Tics 2
+	Pic SMOKQ0 Tics 2
+	Pic SMOKR0 Tics 2

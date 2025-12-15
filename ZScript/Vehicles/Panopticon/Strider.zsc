@@ -209,6 +209,29 @@ Class MVP_Strider : MVP_Humanoid
 		If (MeleeWindow >= 1)
 			MeleeWindow--;
 		
+		If (BlowVapour >= 1) //URGENT: IDEA: Maybe this could be a behavior whenever the fuck those are *finally* put in a release?
+		{
+			BlowVapour--;
+			
+			For (Int I = 0; I < 2; I++)
+			{
+				Let Vape = Level.SpawnVisualThinker ("MVP_HydrogenVapour");
+				
+				If (Vape) //Blow it out of your ass.
+				{
+					Vape.PostBeginPlay();
+					KAI_Tracer(Vape).RanPostBeginPlayEarly = True;
+					Vape.Pos = Vec3Angle (32,GetNearestCardinalAngle(),!Crouching ? 76 : STRIDER_CROUCHHEIGHT);
+					Vape.Scale *= FRandom(0.4f,1.2f);
+					Vape.Flags |= SPF_ROLL;
+					Vape.Roll = Random(-180,180);
+					Vape.PostBeginPlay();
+					KAI_Tracer(Vape).RanPostBeginPlayEarly = True;
+					Vape.Vel = KAI_Math.AngleToVector3D (Angle,-Pitch+FRandom (32,-32),FRandom (-0.2f,-5.0f));
+				}
+			}
+		}
+		
 		Bool IsDead = IsDead(Self);
 		Bool IsAttacking = IsInAttackState();
 		
@@ -501,6 +524,7 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Override Bool OnWander()
 	{
+		ReverseSteps = 0; //We don't need to moonwalk when chilling.
 		KAI_Look(LOF_NOJUMP,FOV: (CurrentOrder == ORDER_STAY && !Crouching) ? 360 : 0,extraflags:KAIL_CHASETARGET);
 		If (Target)
 		{
@@ -703,10 +727,6 @@ Class MVP_Strider : MVP_Humanoid
 		//RANGED ATTACKS.
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
-		
-		attacktype = attack_Grenade;
-		setstatelabel ("fire.start");
-		return true;
 		
 		//Fire rocket pods towards crowds and strong mofos.
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_ROCKETS); //The position we're firing from.
@@ -1045,6 +1065,10 @@ Class MVP_Strider : MVP_Humanoid
 						RevFrame = FRAME_F;
 					Else
 						RevFrame--;
+					
+					//Super special strider reversing splashes.
+					If (RevFrame == FRAME_B) StriderSplashy (True,True);
+					Else If (RevFrame == FRAME_E) StriderSplashy (False,True);
 				}
 				//console.printf ("showing sprite %s",texman.getname(curstate.getspritetexture (0,spritenum:sprite,frame)));
 				//Tics--; //Reduce tics twice as fast to make it reverse faster.
@@ -1493,6 +1517,7 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		If (AttackType == ATTACK_RAMMING)
 		{
+			If (Frame == FRAME_T) StriderSplashy (True); Else If (Frame == FRAME_W) StriderSplashy (False);
 			If (Frame == FRAME_T || Frame == FRAME_W) //Play stomp sound on frames where it steps on the ground.
 				A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.1,0.3));
 			Return;
@@ -1500,6 +1525,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		If (Running)
 		{
+			If (Frame == FRAME_H) StriderSplashy (False); Else If (Frame == FRAME_K) StriderSplashy (True);
 			If (Frame == FRAME_H || Frame == FRAME_K) //Play stomp sound on frames where it steps on the ground.
 				A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.1,0.3));
 			Return;
@@ -1512,8 +1538,42 @@ Class MVP_Strider : MVP_Humanoid
 			Return;
 		}
 		
-		If (Frame == FRAME_B || Frame == FRAME_D) //Play stomp sound on frames where it steps on the ground.
+		If (Frame == FRAME_B || Frame == FRAME_E) //Play stomp sound on frames where it steps on the ground.
+		{
+			If (Frame == FRAME_B) StriderSplashy (True); Else If (Frame == FRAME_E) StriderSplashy (False);
 			A_StartSound ("Vehicle/Strider/Stomp",flags:CHANF_OVERLAP,volume:FRandom(0.075,0.2));
+		}
+	}
+	
+	//Do terrain splash when stepping, using the terrain's small splash (If applicable) when crouching.
+	//PLAYTEST: Actually test the terrain splashes (The positions are right so HitWater() should work) and the footstep sounds (THAT might need actual testing).
+	Protected Void StriderSplashy (Bool Right, Bool ReverseMode = False)
+	{
+		//Only handle reverse footsteps from the alternate set of calls.
+		If (!ReverseMode && ReverseSteps > 0)
+			Return;
+		
+		Vector3 SPos = Pos;
+		If (Right)
+			SPos.XY = Vec2Angle(16,Angle+90);
+		Else
+			SPos.XY = Vec2Angle(16,Angle-90);
+		
+		Sector SSec = Level.PointInSector(SPos.XY);
+		SPos.Z = SSec.FloorPlane.ZAtPoint (SPos.XY);
+		
+		//Terrain footstep sounds. Yeah the support for the foot-specific sounds is kinda shit, because that whole idea was shit that was just left there for 20 years.
+		Let Ter = SSec.GetFloorTerrain (Sector.Floor);
+		If (Ter)
+		{
+			If (Ter.StepSound)
+				A_StartSound(Ter.StepSound, flags: CHANF_OVERLAP, volume: Ter.StepVolume * snd_footstepvolume);
+			Else If (Ter.LeftStepSound)
+				A_StartSound(Ter.LeftStepSound, flags: CHANF_OVERLAP, volume: Ter.StepVolume * snd_footstepvolume);
+			Else If (Ter.RightStepSound)
+				A_StartSound(Ter.RightStepSound, flags: CHANF_OVERLAP, volume: Ter.StepVolume * snd_footstepvolume);
+		}
+		HitWater (SSec,SPos,False,False,flags:THW_NOVEL| Crouching ? 0 : THW_SMALL);
 	}
 	
 	//Get the hardcoded jump values of the strider. HACK: This only exists because KAI_JumpTo() sucks.
@@ -1769,6 +1829,7 @@ Class MVP_Strider : MVP_Humanoid
 	Actor Rammed;
 	Double RamPower;
 	UInt16 ExplosiveDelay; //Time before we can fire an explosive weapon again.
+	UInt16 BlowVapour;
 	
 	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
 	{
@@ -1888,6 +1949,7 @@ Class MVP_Strider : MVP_Humanoid
 		See.Run: //Originally I had made a system that essentially converts See: into this state, but jumping between states is easier so.
 			PNS0 GHIJKL 2
 			{
+				BlowVapour = Random (24,35);
 				Speed *= STRIDER_RUNFACTOR;
 				MVP_StriderChase();
 				Speed /= STRIDER_RUNFACTOR;
@@ -1913,6 +1975,7 @@ Class MVP_Strider : MVP_Humanoid
 		Idle.Run:
 			PNS0 GHIJKL 2
 			{
+				BlowVapour = Random (24,35);
 				//If (CurrentOrder != ORDER_STAY) MVP_StriderFootsteps(True);
 				Speed *= STRIDER_RUNFACTOR;
 				KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit);
@@ -2571,6 +2634,7 @@ Class MVP_Strider : MVP_Humanoid
 			Jump.Start:
 				#### # Random(5,12) Fast
 				{
+					BlowVapour = Random (24,35);
 					If (JumpFlags & SJUMP_FAST)
 						Tics = Random (2,6);
 					
@@ -2985,15 +3049,15 @@ Class MVP_StriderGrenadeCheck : KAI_LOFRaycast
 		/*if (results.hittype == trace_hitwall) console.printf ("hit a wall at %.2f %.2f %.2f",results.hitpos);
 		if (results.hitactor) console.printf ("we hit a fucking %s, somehow",results.hitactor.getclassname());
 		
-		console.printf ("slopemode %d, hitgeo %d, hitsector %p, hittype %d",slopemode,hitgeo,results.hitsector,results.hittype);
+		console.printf ("slopemode %d, hitsector %p, hittype %d",slopemode,results.hitsector,results.hittype);
 		//Hit slope, begin slope traverse mode.
-		If (!SlopeMode && HitLevelGeometry (Results) && Results.HitSector && Results.HitType == Trace_HitFloor && Results.HitSector.FloorPlane.IsSlope())
+		If (!SlopeMode && Results.HitSector && Results.HitType == Trace_HitFloor && Results.HitSector.FloorPlane.IsSlope())
 		{
 			SlopeMode = True;
 			LastSlopeHeight = Results.HitSector.FloorPlane.ZAtPoint (Results.HitPos.XY);
 			HeightOffset = LastSlopeHeight;
 			console.printf ("beginning slope mode at %.2f %.2f %.2f",results.hitpos);
-			Return Trace_Continue;
+			Return Trace_Skip;
 		}
 		
 		//At every new line, check the floor height, if it's as high or taller than the last one, continue, otherwise, we are probably finally going down the slope.
@@ -3072,6 +3136,34 @@ Class MVP_StriderGrenadeCheck : KAI_LOFRaycast
 		}
 		
 		Return Trace_Skip;
+	}
+}
+
+Class MVP_HydrogenVapour : KAI_Tracer //Vapour from 'burning' hydrogen, AKA dihydrogen monoxide.
+{
+	Override Void SetProperties()
+	{
+		Super.SetProperties();
+		SetRenderStyle (STYLE_Normal);
+		DefaultSprite = TexMan.CheckForTexture("WaterVapourDissolve",TexMan.Type_Sprite);
+		NoWarp = True;
+		DestroyIfNoOwner = False;
+		Flags |= SPF_LOCAL_ANIM;
+	}
+	
+	Int Tics;
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (IsFrozen()) Return;
+		
+		If (Vel.Z <= 6.0f) Vel.Z += 0.25; //Vapour goes up.
+		Tics++;
+		Alpha -= 0.025f;
+		Scale *= 0.98;
+		If (Alpha <= 0.f || Tics >= 36)
+			Destroy();
 	}
 }
 
