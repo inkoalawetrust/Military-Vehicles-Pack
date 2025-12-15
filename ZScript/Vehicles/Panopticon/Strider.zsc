@@ -17,6 +17,7 @@
 //MAYDO:
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
 //Make strider able to strafe fire rockets :>
+//Since I might run with the idea of the Strider being hydrogen-electric, maybe add blowing water vapour effects when it jumps and runs.
 
 //TODO:
 //Add the remaining grenade attack. Make the strider not use it for flyers, but especially use it whenever the target is out of sight. Also add a grenade launch sound.
@@ -262,15 +263,14 @@ Class MVP_Strider : MVP_Humanoid
 					ProjSpeed = GetDefaultByType("MVP_40mmGrenade").Speed;
 					FastProjSpeed = GetDefaultByType("MVP_40mmGrenade").FastSpeed;
 					If (!bNoTargetPrediction) LastSawPos = LastEnemyPosition;
-					console.printf ("lastsawpos %.2f %.2f %.2f",lastsawpos);
 					
 					AttackTags.Push ("Explosive"); AttackTags.Push ("Grenade");
 					HazardInfo.EmitHazard (Self,512,HazardInfo.HAZARD_ATTACK,HazardInfo.HAZARD_LARGE,tags:AttackTags,Proj.HitLocation);
 					Break;
 			}
 			
-			If (AttackType == ATTACK_GRENADE) //Turn off target prediction when set to fire a grenade and the target is out of sight.
-				bNoTargetPrediction = !CheckSight (Target,SF_IGNOREWATERBOUNDARY);
+			//If (AttackType == ATTACK_GRENADE) //Turn off target prediction when set to fire a grenade and the target is out of sight.
+			//	bNoTargetPrediction = !CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 			
 			If (!bNoTargetPrediction)
 			{
@@ -284,8 +284,8 @@ Class MVP_Strider : MVP_Humanoid
 				SetZ (Pos.Z+AimOfs);
 				AimAtTarget (Turn,Turn,flags:FAF,attackspeed:ProjSpeed,fastattackspeed:FastProjSpeed);
 				SetZ (Pos.Z-AimOfs);
-				if (target)
-					kai_lofraycast.visualizetracepath (Pos,level.vec3offset(pos,kai_math.angletovector3d(angle,-pitch,distance3d(target))),distance3d(target));
+				//if (target)
+				//	kai_lofraycast.visualizetracepath (Pos,level.vec3offset(pos,kai_math.angletovector3d(angle,-pitch,distance3d(target))),distance3d(target));
 				Target = RealTarg;
 			}
 			
@@ -704,9 +704,9 @@ Class MVP_Strider : MVP_Humanoid
 		If (FireDelay != 0) //Can't shoot right now and we didn't decide to melee an enemy either.
 			Return False;
 		
-		/*attacktype = attack_Grenade;
+		attacktype = attack_Grenade;
 		setstatelabel ("fire.start");
-		return true;*/
+		return true;
 		
 		//Fire rocket pods towards crowds and strong mofos.
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_ROCKETS); //The position we're firing from.
@@ -1685,10 +1685,25 @@ Class MVP_Strider : MVP_Humanoid
 			pos.xy,
 			pos.z + (FireOfs.Z)
 		);
+		//NOTE: Commenting out the extra height makes it not work as well for flyers (Which the grenades aren't meant for anyway), but makes it work better on ground targets.
 		vector3 toPos = (
 			toAct.pos.xy, 
-			toAct.pos.z + (toAct.height * 0.5) 
+			toAct.pos.z// + (toAct.height * 0.5) 
 		);
+		
+		//Find any raised walls in the way, and add their height on top of the height of the target to try and fire over said wall.
+		Let Check = New ("MVP_StriderGrenadeCheck");
+		If (Check)
+		{
+			Check.Shooter = Self;
+			Check.Other = ToAct;
+			Check.Trace (FromPos,CurSector,KAI_Math.AngleToVector3D(Angle,-Pitch),MaxTargetRange,0,ignore:Self);
+		}
+		Check.VisualizeTracePath (FromPos,Check.Results.HitPos,Check.Results.Distance);
+		ToPos.Z += Check.HeightOffset;
+		console.printf ("obstacle height of %.2f is now accounted for, fired from %.2f %.2f %.2f",check.heightoffset,frompos);
+		//KAI_DebugPointDelay.KAI_TempPointSpawn(ToPos,16);
+		If (Check) Check.Destroy();
 		
 		vector3 diff = level.vec3diff(fromPos, toPos);
 		
@@ -1696,7 +1711,7 @@ Class MVP_Strider : MVP_Humanoid
 		let nade = Spawn(nade, fromPos);
 		if(!nade) return null;    
 		nade.target = self;
-		//nade.tracer = target; //Pass target as tracer.
+		nade.tracer = target; //Pass target as tracer.
 		
 		// Modify toPos Z component based on how many units the thrown grenade
 		// falls by the time it reaches the destination.
@@ -2855,7 +2870,7 @@ Class MVP_Strider : MVP_Humanoid
 }
 
 //Strider jump hint node, used for example to make it jump up a rooftop if one is nearby, and closer in height to the target than the striders' current position.
-Class MVP_StriderJumpSpot : SpecialSpot
+/*Class MVP_StriderJumpSpot : SpecialSpot
 {
 	Default
 	{
@@ -2866,7 +2881,7 @@ Class MVP_StriderJumpSpot : SpecialSpot
 		XScale 0.5;
 		YScale 0.416666; //0.5 / 1.2
 	}
-}
+}*/
 
 Class MVP_StriderHeadGib : Actor
 {
@@ -2954,9 +2969,115 @@ Class MVP_StriderArmGib : MVP_StriderHeadGib
 	}
 }
 
+//Return an added height to fire the Striders' grenade over if a raised floor wall is in the LOF.
+//TODO: Try adding handling for slopes too if I can, might do it by checking the ZAtPoint on every line transition until an equal or lower height to that last stored one is found. 
+Class MVP_StriderGrenadeCheck : KAI_LOFRaycast
+{
+	Double HeightOffset;
+	
+	Bool SlopeMode;
+	Double LastSlopeHeight;
+	
+	Override ETraceStatus TraceCallback()
+	{
+		If (!Other || Results.HitActor == Other) Return Trace_Abort;
+		
+		/*if (results.hittype == trace_hitwall) console.printf ("hit a wall at %.2f %.2f %.2f",results.hitpos);
+		if (results.hitactor) console.printf ("we hit a fucking %s, somehow",results.hitactor.getclassname());
+		
+		console.printf ("slopemode %d, hitgeo %d, hitsector %p, hittype %d",slopemode,hitgeo,results.hitsector,results.hittype);
+		//Hit slope, begin slope traverse mode.
+		If (!SlopeMode && HitLevelGeometry (Results) && Results.HitSector && Results.HitType == Trace_HitFloor && Results.HitSector.FloorPlane.IsSlope())
+		{
+			SlopeMode = True;
+			LastSlopeHeight = Results.HitSector.FloorPlane.ZAtPoint (Results.HitPos.XY);
+			HeightOffset = LastSlopeHeight;
+			console.printf ("beginning slope mode at %.2f %.2f %.2f",results.hitpos);
+			Return Trace_Continue;
+		}
+		
+		//At every new line, check the floor height, if it's as high or taller than the last one, continue, otherwise, we are probably finally going down the slope.
+		If (SlopeMode && Results.HitLine)
+		{
+			LastSlopeHeight = Results.HitSector.FloorPlane.ZAtPoint (Results.HitPos.XY);
+			
+			If (LastSlopeHeight >= HeightOffset){console.printf ("the height at %.2f %.2f is %.2f, higher than %.2f",results.hitpos.xy,lastslopeheight,heightoffset);
+				HeightOffset = LastSlopeHeight;}
+			Else //The next line is LOWER, so just stop and return the last (Tallest) height offset.
+				{console.printf ("we are finally over the slope at %.2f %.2f",results.hitpos.xy);Return Trace_Stop;}
+		}
+		
+		If (SlopeMode)
+			Return Trace_Continue;*/
+		
+		If ((HitLevelGeometry (Results) || Results.HitActor)) //Hit non-slope geometry or an actor.
+		{console.printf ("hit ffloor %p",results.ffloor);
+			Vector3 TraceOffset = Level.Vec3Offset (Results.HitPos,Results.HitVector*0.125); //Project trace 0.125 MU forward for height and back sector check.
+			Sector Back = Level.PointInSector (TraceOffset.XY);
+			//if (back) console.printf ("the back ");
+			//Hit raised floor wall line...
+			If (Results.HitLine && Results.HitLine.Sidedef[Line.Back] && Results.Tier == TIER_Lower)
+			{console.printf ("hit raised floor wall");
+				//... and the grenade would be able to fit through. So it ignores tricks like two-texture walls made of a raised floor and lowered ceiling. (Except if they are stupidly thin of course.)
+				Double Top = Back.CeilingPlane.ZAtPoint (TraceOffset.XY);
+				Double Bottom = Back.FloorPlane.ZAtPoint (TraceOffset.XY);
+				
+				If ((Top - Bottom) >= GetDefaultByType(Actor.GetReplacement("MVP_40mmGrenade")).Height+8)
+				{console.printf ("wall sector has enough space to fire over through");
+					HeightOffset = Bottom - (Other.Pos.Z+Other.Height); //Offset is the height of the raised wall minus the location of the target.
+					Return Trace_Stop;
+				}
+			}
+			Else If (Results.HitActor && Results.HitActor.bSolid && IsInanimateObject (Results.HitActor)) //Aiming at a blocking prop. NOTE: No firing over allies because the grenades go through them by default.
+			{
+				Double Top = Back.CeilingPlane.ZAtPoint (TraceOffset.XY);
+				Double Bottom = Results.HitActor.Pos.Z + Results.HitActor.Height;
+				
+				console.printf ("there's a blocking object (%s) in the way",results.hitactor.getclassname());
+				If ((Top - Bottom) >= GetDefaultByType(Actor.GetReplacement("MVP_40mmGrenade")).Height+8)
+				{console.printf ("blocking actor has enough space to fire over through");
+					HeightOffset = Bottom - (Other.Pos.Z+Other.Height);
+					Return Trace_Stop;
+				}
+			}
+			Else If (Results.FFloor && Results.FFloor.Top && Results.FFloor.Flags && F3DFloor.FF_SOLID) //Aiming at a solid 3D floor
+			{
+				Double Top = Results.FFloor.Top.ZAtPoint (TraceOffset.XY);
+				
+				//NOTE: Ignore space check for 3D floors, too complicated to bother.
+				//IDEA: Try using a CheckPosition() check of some sort?
+				//If ((Top - Bottom) >= GetDefaultByType(Actor.GetReplacement("MVP_40mmGrenade")).Height+8)
+				{
+					HeightOffset = Top - (Other.Pos.Z+Other.Height);
+					Return Trace_Stop;
+				}
+			}
+			//Aiming at a 3D middle texture that blocks projectiles.
+			Else If (Results.HitLine && Results.Tier == TIER_Middle && Results.HitLine.Flags & Line.ML_3DMIDTEX && !(Results.HitLine.Flags & Line.ML_3DMIDTEX_IMPASS))
+			{
+				Double Top = Back.CeilingPlane.ZAtPoint (TraceOffset.XY);
+				
+				Bool NotAVoidLine;
+				Vector2 LineBounds;
+				[NotAVoidLine,LineBounds.X,LineBounds.Y] = Results.HitLine.GetMidTexturePosition(Clamp(Level.PointOnLineSide(Results.HitPos.XY,Results.HitLine,True),0,1));
+				Double Bottom = LineBounds.X;
+				
+				If ((Top - Bottom) >= GetDefaultByType(Actor.GetReplacement("MVP_40mmGrenade")).Height+8)
+				{console.printf ("blocking 3d midtex has enough space to fire over through");
+					HeightOffset = Bottom - (Other.Pos.Z+Other.Height);
+					Return Trace_Stop;
+				}
+			}
+			//Return Trace_Stop;
+		}
+		
+		Return Trace_Skip;
+	}
+}
+
 Class MVP_DropoffToken : Inventory
 {
-	Default {ReactionTime 35;}
+	Default {ReactionTime 105;}
 	Bool PrevDropoff;
 	Override Void AttachToOwner (Actor Other)
 	{

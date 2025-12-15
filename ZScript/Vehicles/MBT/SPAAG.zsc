@@ -35,7 +35,11 @@ Class MVP_SPAAG : MVP_MBT
 		
 		If (User_CrushMode == CRUSH_ACTIVE) User_CrushMode = CRUSH_PASSIVE; //The SPAAG and MLRS hulls don't chase enemies.
 		If (User_CrushMode == CRUSH_NONE) bNoCrushing = True;
-		
+	}
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
 		User_APSDelay = INT.MAX; //Don't shoot projectiles down practically ever.
 		User_AltAPSDelay = INT.MAX; //Don't dazzle projectiles practically ever.
 		User_NoSmokescreen = True; //Only the MBT turret has smoke launchers. All variants can enter hull down positions though.

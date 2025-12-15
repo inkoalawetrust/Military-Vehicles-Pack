@@ -1,3 +1,5 @@
+//IDEA: Make more special handling than a dumb NPC search for FSVs and MBTs? Such as groups they can be put together in.
+
 Class MVP_BMPT : MVP_MBT
 {
 	Default
@@ -9,9 +11,9 @@ Class MVP_BMPT : MVP_MBT
 		Tag "M6 Fire Support Vehicle";
 		KAI_BaseVehicle.VehicleTurret "MVP_BMPTTurret";
 	}
-	Override Void UserVariableDefaults ()
+	Override Void PostBeginPlay () //Keep these user variables OFF.
 	{
-		Super.UserVariableDefaults();
+		Super.PostBeginPlay();
 		
 		User_APSDelay = INT.MAX; //Don't shoot projectiles down practically ever.
 		User_AltAPSDelay = INT.MAX; //Don't dazzle projectiles practically ever.
@@ -27,7 +29,7 @@ Class MVP_BMPTTurret : MVP_MBTTurret
 		Health 1500;
 		Height 24;
 		Radius 64;
-		Tag "M6-FSCV Turret";
+		Tag "M6-FSV Turret";
 		Mass 10000;
 		FriendlySeeBlocks 80;
 		MaxTargetRange 10000;

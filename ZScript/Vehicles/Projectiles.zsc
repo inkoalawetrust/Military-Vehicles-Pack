@@ -533,6 +533,46 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 	}
 }
 
+class fuckyou : grenade
+{
+	Default
+	{
+		Radius 8;
+		Height 16;
+		Speed 30;
+		FastSpeed 45;
+	}
+	//Detonate on impact with anything hostile to the shooter. And also try steering to the tracer if the actor has any.
+	Override Int SpecialBounceHit (Actor BounceMobj, Line BounceLine, ReadOnly<SecPlane> BouncePlane)
+	{
+		if (!tracer)
+		{
+		BlockThingsIterator AllyFind = BlockThingsIterator.Create (Self,1024); //"allyfind" its just copied ffs
+		
+		While (AllyFind.Next())
+		{
+			Actor Ally = AllyFind.Thing;			
+			if (ally && ally.bismonster)
+			{
+			tracer = ally;
+			break;
+			}
+			}
+		}
+		//Homing mode.
+		If (Tracer && BounceLine)
+		{
+			A_FaceTracer (0,0);console.printf ("bouncing towards %s, velocity is %.2f",tracer.getclassname(),vel.length());
+			Vel = KAI_Math.AngleToVector3D (Angle,Pitch,Vel.Length());
+			console.printf ("velocity is now %.2f",vel.length());
+			Return MHIT_DEFAULT;
+		}
+		
+		Return Super.SpecialBounceHit (BounceMobj, BounceLine, BouncePlane);
+	}
+
+}
+
 //Yes, this is basically just the 70mm rocket code.
 Class MVP_40mmGrenade : MVP_BaseProjectile
 {
@@ -542,7 +582,7 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 		Height 16;
 		Speed 30;
 		FastSpeed 45;
-		DamageFunction (Random (5,15));
+		DamageFunction (Random (10,20));
 		XScale 0.6;
 		YScale 0.5; //0.6 / 1.2
 		ExplosionRadius 128;
@@ -557,6 +597,7 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 		BounceCount 10;
 		BounceType "Hexen";
 		BounceSound "Weapon/GrenadeBounce";
+		KAI_BaseProjectile.Iterations 1;
 		+KAI_BaseProjectile.NoFriendlyFire; //Go through allies, but that DOESN'T mean the explosion's harmless to them.
 		-NoGravity;
 		+FloorClip;
@@ -583,7 +624,7 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 		Splash.bXFlip = Random (False,True);
 	}
 	
-	//Detonate on impact with anything hostile to the shooter. And also try steering the tracer if the actor has any.
+	//Detonate on impact with anything hostile to the shooter. And also try steering to the tracer if the actor has any.
 	Override Int SpecialBounceHit (Actor BounceMobj, Line BounceLine, ReadOnly<SecPlane> BouncePlane)
 	{
 		If (Target && BounceMobj && !IsInanimateObject (BounceMobj) && !IsDead (BounceMobj))
@@ -592,11 +633,25 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 				Return MHIT_DESTROY;
 		}
 		
-		//Homing mode, kinda works but not to well because the velocity and angle changed is added on top of where it bounced.
+		//Homing mode. //KLUDGE: BUG: Gets stuck bouncing! Even though the very first basic ass broken code I wrote for it didn't have that issue!!!!!!!!!!!
 		If (Tracer && bSeekerMissile && BounceLine)
 		{
-			A_FaceTracer ();
-			Vel += KAI_Math.AngleToVector3D (Angle,-Pitch,16);
+			// 2D vector to victim:
+			vector2 diff = LevelLocals.Vec2Diff(pos.xy, tracer.pos.xy);
+			vector2 dir = diff.unit(); //normalized (direction)
+			double dist = diff.length(); //distance
+			// vertical pos difference:
+			double vdiff = tracer.pos.z - pos.z + (tracer.height * 0.8);
+			
+			double flytime = dist/vel.length();
+			
+			// fly, baby!
+			vel.xy = dir * dist / flytime;
+			vel.z = (vdiff + 0.5 * flytime**2) / flytime;
+			vel *= GetGravity();
+			console.printf ("vel is %.2f %.2f %.2f",vel);
+			
+			Return MHIT_DEFAULT;
 		}
 		
 		Return Super.SpecialBounceHit (BounceMobj, BounceLine, BouncePlane);
@@ -606,6 +661,8 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 	{
 		Super.OnDestroy();
 		
+		//BUG: This DOESN'T work, somehow :>
+		//IDEA: Add an interval since the last bounce on a slope, to detect if it got stuck on a slope?
 		If (Light) Light.Destroy(); //KLUDGE: Just in case for when it gets stuck bouncing on a slope because UZDoom physics.
 	}
 	
