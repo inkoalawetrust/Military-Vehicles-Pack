@@ -21,6 +21,7 @@ Class MVP_LargeRifleBullet : MVP_BaseProjectile
 		KAI_BaseProjectile.InitialTrailsSkipped 4;
 		KAI_BaseProjectile.MaxTrails 128;
 		KAI_BaseProjectile.RipDepth 5;
+		KAI_BaseProjectile.Iterations 8; //Full 8 substeps for the ripping, mainly.
 		+Ripper;
 		+KAI_BaseProjectile.RipOnce;
 		+KAI_BaseProjectile.Deflectable;
@@ -240,6 +241,7 @@ Class MVP_Gyrojet : MVP_BaseProjectile
 		MissileType "MVP_RocketFlame";
 		Obituary "%o was hit by a gyrojet";
 		SeeSound "Vehicle/Drone/FireGyro";
+		KAI_BaseProjectile.Iterations 2;
 		+SeekerMissile;
 		+KAI_BaseProjectile.NoTrailLine;
 		KAI_BaseProjectile.TrailSprite "MVP_RocketFireSprite";
@@ -375,6 +377,7 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 		ProjectileKickback 256;
 		ExplosionRadius 128;
 		ExplosionDamage 128;
+		KAI_BaseProjectile.Iterations 2;
 		Decal "BigScorch";
 		DamageType "Explosive";
 		MissileType "MVP_RocketFlame";

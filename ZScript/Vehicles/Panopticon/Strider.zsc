@@ -17,10 +17,8 @@
 //MAYDO:
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
 //Make strider able to strafe fire rockets :>
-//Since I might run with the idea of the Strider being hydrogen-electric, maybe add blowing water vapour effects when it jumps and runs.
 
-//TODO:
-//Add the remaining grenade attack. Make the strider not use it for flyers, but especially use it whenever the target is out of sight. Also add a grenade launch sound.
+//TODO: Make strider able to consider firing at out of sight targets that it still might be able to hit with its' grenade launcher, using the grenade tracer or a custom LOF one.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid

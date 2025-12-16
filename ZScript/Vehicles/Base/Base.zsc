@@ -279,6 +279,7 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 	Default
 	{
 		+KAI_BaseProjectile.NoFriendlyFire; //MVP projectiles do not hit allies by default.
+		KAI_BaseProjectile.Iterations 4; //Reduced iterations for (Hopefully) performance by default.
 	}
 	Mixin MVP_UniversalFunctions;
 	
