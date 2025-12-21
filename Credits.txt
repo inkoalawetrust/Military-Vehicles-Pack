@@ -112,6 +112,8 @@ Drone turret turn sound (DroneTurret.ogg) is from ZapSplat (https://www.zapsplat
 
 Strider alert sound is a parasaurolophus sound reconstruction edited by me https://www.youtube.com/watch?v=rlKa7i_59As
 Strider kick miss sound (StrKickMiss.ogg) by qubodup https://freesound.org/people/qubodup/sounds/60013/
+Strider grenade launching sound by LeMudCrab https://freesound.org/people/LeMudCrab/sounds/163458/
+Strider leg movement and stomp sounds are from Star Wars Republic Commando and Battlefront.
 
 Di-Cokka sounds are from Metal Slug 7 and Metal Slug 3D.
 |==============|Sounds|==============|
