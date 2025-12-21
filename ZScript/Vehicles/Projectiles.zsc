@@ -474,12 +474,14 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 				RemoveAllyExplosionImmunity();
 				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.5);
 				
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = FRandom(0.4,0.5);
-					Ring.FloatSpeed = FRandom(0.15,0.12);
-					Ring.ReactionTime = (GameTicRate/2);
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = FRandom(0.4,0.5);
+					MVP_ShockwaveRing(Ring).FadeStep = FRandom(0.15,0.12);
+					MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+					MVP_ShockwaveRing(Ring).FadeStart = 3;
 				}
 				
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
@@ -509,12 +511,14 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 				RemoveAllyExplosionImmunity();
 				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.35);
 				
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = FRandom(0.4,0.5);
-					Ring.FloatSpeed = FRandom(0.15,0.12);
-					Ring.ReactionTime = (GameTicRate/2);
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = FRandom(0.4,0.5);
+					MVP_ShockwaveRing(Ring).FadeStep = FRandom(0.15,0.12);
+					MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+					MVP_ShockwaveRing(Ring).FadeStart = 3;
 				}
 				
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
@@ -534,46 +538,6 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 			TNT1 A 0 {If (Light) Light.Destroy();}
 			Stop;
 	}
-}
-
-class fuckyou : grenade
-{
-	Default
-	{
-		Radius 8;
-		Height 16;
-		Speed 30;
-		FastSpeed 45;
-	}
-	//Detonate on impact with anything hostile to the shooter. And also try steering to the tracer if the actor has any.
-	Override Int SpecialBounceHit (Actor BounceMobj, Line BounceLine, ReadOnly<SecPlane> BouncePlane)
-	{
-		if (!tracer)
-		{
-		BlockThingsIterator AllyFind = BlockThingsIterator.Create (Self,1024); //"allyfind" its just copied ffs
-		
-		While (AllyFind.Next())
-		{
-			Actor Ally = AllyFind.Thing;			
-			if (ally && ally.bismonster)
-			{
-			tracer = ally;
-			break;
-			}
-			}
-		}
-		//Homing mode.
-		If (Tracer && BounceLine)
-		{
-			A_FaceTracer (0,0);console.printf ("bouncing towards %s, velocity is %.2f",tracer.getclassname(),vel.length());
-			Vel = KAI_Math.AngleToVector3D (Angle,Pitch,Vel.Length());
-			console.printf ("velocity is now %.2f",vel.length());
-			Return MHIT_DEFAULT;
-		}
-		
-		Return Super.SpecialBounceHit (BounceMobj, BounceLine, BouncePlane);
-	}
-
 }
 
 //Yes, this is basically just the 70mm rocket code.
@@ -705,12 +669,14 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 				RemoveAllyExplosionImmunity();
 				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.5);
 				
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = FRandom(0.4,0.5);
-					Ring.FloatSpeed = FRandom(0.15,0.12);
-					Ring.ReactionTime = (GameTicRate/2);
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = FRandom(0.4,0.5);
+					MVP_ShockwaveRing(Ring).FadeStep = FRandom(0.15,0.12);
+					MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+					MVP_ShockwaveRing(Ring).FadeStart = 3;
 				}
 				
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
@@ -740,12 +706,14 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 				RemoveAllyExplosionImmunity();
 				A_StartSound ("SFX/Explosion",volume:1.0,attenuation:0.35);
 				
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = FRandom(0.4,0.5);
-					Ring.FloatSpeed = FRandom(0.15,0.12);
-					Ring.ReactionTime = (GameTicRate/2);
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = FRandom(0.4,0.5);
+					MVP_ShockwaveRing(Ring).FadeStep = FRandom(0.15,0.12);
+					MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+					MVP_ShockwaveRing(Ring).FadeStart = 3;
 				}
 				
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);

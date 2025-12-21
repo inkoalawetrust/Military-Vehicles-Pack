@@ -52,3 +52,33 @@ Texture WaterVapourDissolve
 	Pic SMOKP0 Tics 2
 	Pic SMOKQ0 Tics 2
 	Pic SMOKR0 Tics 2
+
+Texture GroundDust1
+	Pic SMK3A0 Tics 2
+	Pic SMK3B0 Tics 2
+	Pic SMK3C0 Tics 2
+	Pic SMK3D0 Tics 2
+	Pic SMK3E0 Tics 2
+	Pic SMK3F0 Tics 2
+	Pic SMK3G0 Tics 2
+	Pic SMK3H0 Tics 2
+	Pic SMK3I0 Tics 2
+	Pic SMK3J0 Tics 2
+	Pic SMK3K0 Tics 2
+	Pic SMK3L0 Tics 2
+	Pic SMK3M0 Tics 2
+
+Texture GroundDust2
+	//Pic SMK6A0 Tics 2 //Doesn't exist?
+	Pic SMK6B0 Tics 4
+	Pic SMK6C0 Tics 2
+	Pic SMK6D0 Tics 2
+	Pic SMK6E0 Tics 2
+	Pic SMK6F0 Tics 2
+	Pic SMK6G0 Tics 2
+	Pic SMK6H0 Tics 2
+	Pic SMK6I0 Tics 2
+	Pic SMK6J0 Tics 2
+	Pic SMK6K0 Tics 2
+	Pic SMK6L0 Tics 2
+	Pic SMK6M0 Tics 2

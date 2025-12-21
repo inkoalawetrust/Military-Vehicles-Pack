@@ -26,12 +26,14 @@ Class MVP_MBTFireEffect : KAI_MixinActor
 			{
 				If (bAlwaysPuff) //Can be set to false when spawning to not spawn a ring, and/or spawn your own.
 				{
-					Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+					Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 					If (Ring)
 					{
-						Ring.Speed = 1;
-						Ring.FloatSpeed = 0.1;
-						Ring.ReactionTime = (GameTicRate/2);
+						Ring.Pos = Pos.PlusZ(0.25);
+						MVP_ShockwaveRing(Ring).SizeStep = 1;
+						MVP_ShockwaveRing(Ring).FadeStep = 0.1;
+						MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+						MVP_ShockwaveRing(Ring).FadeStart = 3;
 					}
 				}
 				
@@ -64,93 +66,6 @@ Class MVP_MBTFireEffect : KAI_MixinActor
 			MBTF G 2 {Light.Args[3] = 96;}
 			TNT1 A 0 {If (Light) Light.Destroy();} //Fire over, get rid of the light.
 			MBTF HI 2;
-			Stop;
-	}
-}
-
-//Spawns ground dust around an explosion.
-Class MVP_GroundDustSpawner : Actor
-{
-	Default
-	{
-		RadiusDamageFactor 0.35; //How much distance off the ground affects the firing effect. 1 is a direct conversion of: 1 MU of the ground = 1 less dust cloud
-		ReactionTime 64; //How much smoke to spawn.
-		Threshold 256; //How far to spawn dust.
-		Scale 1.0; //Scale.X can increase or decrease the dust particle scale.
-	}
-	Override Void PostBeginPlay ()
-	{
-		Super.PostBeginPlay();
-		Int SmokeFactor = (Pos.Z - FloorZ) * RadiusDamageFactor;
-		Int DustCount = ReactionTime - SmokeFactor; //Decrement the dust to spawn the further off the ground the blast is.
-		//Console.Printf ("Ground height: %.2f, Dust count %d, SmokeFactor %d",(Pos.Z - FloorZ),DustCount,SmokeFactor);
-		Actor Dust;
-		Class<Actor> DustClasses[] = {"MVP_GroundDust","MVP_GroundDust2","MVP_GroundDust3"};
-		//Spawn random dust actors on the ground, the closer to the ground, the more dust spawned.
-		For (Int I = DustCount; 0 <= I; I--)
-		{
-			Dust = Spawn (DustClasses[Random(0,DustClasses.Size()-1)],Vec3Offset (FRandom (Threshold,-Threshold),FRandom(Threshold,-Threshold),0));
-			Dust.SetOrigin ((Dust.Pos.XY,GetZAt (Dust.Pos.X,Dust.Pos.Y,flags:GZF_ABSOLUTEPOS)+0.05),False);
-			//If the dust is out of bounds, or the height difference from the explosions' ground level is too high, remove it.
-			If (!Level.IsPointInLevel (Dust.Pos) || (FloorZ - Dust.Pos.Z) > 64 || Dust.Pos.Z > Pos.Z+16|| Distance2DSquared (Dust) > Threshold*Threshold)
-				Dust.Destroy();
-			
-			Dust.Scale *= FRandom (0.6,1.25)*Scale.X;
-			Dust.Speed *= FRandom (0.75,1.25); //Set roll speed, doesn't work for MVP_GroundDust3 though, which doesn't use it.
-			If (Random (0,255) < 255/2-16 && !(Dust Is "MVP_GroundDust3")) Dust.Vel.Z = FRandom(0.5,2);
-			If (Random (0,255) < 64) Dust.A_SetRenderStyle (1,STYLE_ADD);
-		}
-		Destroy();
-	}
-}
-
-//MAYDO: Make these actors visual thinkers, using ANIMDEFS defined smoke clouds.
-//Gray circular cloud.
-Class MVP_GroundDust : Actor
-{
-	Default
-	{
-		Speed 2;
-		//RenderStyle "Add";
-		+NoBlockmap;
-		+NoInteraction;
-		+NoGravity;
-		+RollSprite;
-		+ForceXYBillboard;
-	}
-	
-	Override Void PostBeginPlay ()
-	{
-		Super.PostBeginPlay();
-		If (!bSynchronized) Tics = Random(0,8); //Randomize the dust a bit.
-	}
-	
-	States
-	{
-		Spawn:
-			SMK3 ABCDEFGHIJKLM 2 A_SetRoll (Roll+Speed);
-			Stop;
-	}
-}
-
-//Dark circular cloud.
-Class MVP_GroundDust2 : MVP_GroundDust
-{
-	States
-	{
-		Spawn:
-			SMK6 ABCDEFGHIJKLM 2 A_SetRoll (Roll+Speed);
-			Stop;
-	}
-}
-
-//Light gray dust puff.
-Class MVP_GroundDust3 : MVP_GroundDust
-{
-	States
-	{
-		Spawn:
-			SMOK ABCDEFGHIJKLMNOPQR 2;
 			Stop;
 	}
 }
@@ -252,12 +167,14 @@ Class MVP_HEATShell : MVP_BaseProjectile
 					Light.Args[1] = 207;
 					Light.Args[2] = 13;
 				}
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = 1;
-					Ring.FloatSpeed = 0.1;
-					Ring.ReactionTime = (GameTicRate/2);
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = 1;
+					MVP_ShockwaveRing(Ring).FadeStep = 0.1;
+					MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+					MVP_ShockwaveRing(Ring).FadeStart = 3;
 				}
 				A_QuakeEx (3,3,3,GameTicRate*2,0,2048,"",QF_SCALEDOWN|QF_GROUNDONLY,falloff:128,rollintensity:3);
 				A_StartSound ("SFX/BigExplosion",flags:CHANF_OVERLAP,attenuation:0.2);
@@ -266,7 +183,7 @@ Class MVP_HEATShell : MVP_BaseProjectile
 				RemoveAllyExplosionImmunity();
 				
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
-				Duster.ReactionTime = 128;
+				Duster.ReactionTime = 256;
 				Duster.Threshold = 512;
 			}
 			MBTF JKL 1 {Light.Args[3] += 48;}
@@ -655,13 +572,14 @@ Class MVP_HESHShell : MVP_BaseProjectile
 					Light.Args[1] = 207;
 					Light.Args[2] = 13;
 				}
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = 1;
-					Ring.FloatSpeed = 0.8;
-					Ring.Threshold = 2;
-					Ring.ReactionTime = (GameTicRate/2);
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = 1;
+					MVP_ShockwaveRing(Ring).FadeStep = 0.8;
+					MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+					MVP_ShockwaveRing(Ring).FadeStart = 2;
 				}
 				A_QuakeEx (1.5,1.5,1.5,GameTicRate*2,0,1536,"",QF_SCALEDOWN|QF_GROUNDONLY,falloff:64,rollintensity:1.5);
 				A_StartSound ("SFX/BigExplosion",flags:CHANF_OVERLAP,attenuation:0.35);
@@ -670,7 +588,7 @@ Class MVP_HESHShell : MVP_BaseProjectile
 				RemoveAllyExplosionImmunity();
 				
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
-				Duster.ReactionTime = 128;
+				Duster.ReactionTime = 256;
 				Duster.Threshold = 512;
 			}
 			MBTF JKL 1 {Light.Args[3] += 32;}
@@ -1051,12 +969,14 @@ Class MVP_ATGM : MVP_BaseProjectile
 					Light.Args[1] = 207;
 					Light.Args[2] = 13;
 				}
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = 0.75;
-					Ring.FloatSpeed = 0.2;
-					Ring.ReactionTime = (GameTicRate/2);
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = 0.75;
+					MVP_ShockwaveRing(Ring).FadeStep = 0.2;
+					MVP_ShockwaveRing(Ring).Lifespan = (GameTicRate/2);
+					MVP_ShockwaveRing(Ring).FadeStart = 3;
 				}
 				A_QuakeEx (2,2,2,GameTicRate*2,0,1536,"",QF_SCALEDOWN|QF_GROUNDONLY,falloff:64,rollintensity:1.5);
 				A_StartSound ("SFX/BigExplosion",flags:CHANF_OVERLAP,attenuation:0.2);
@@ -1065,7 +985,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 				RemoveAllyExplosionImmunity();
 				
 				Actor Duster = Spawn ("MVP_GroundDustSpawner",Pos);
-				Duster.ReactionTime = 128;
+				Duster.ReactionTime = 256;
 				Duster.Threshold = 384;
 			}
 			MBTF JKL 1 {Light.Args[3] += 32;}
@@ -1087,12 +1007,14 @@ Class MVP_ATGM : MVP_BaseProjectile
 				Boom.Threshold = 384; //How far to spawn dust.
 				Boom.bAlwaysPuff = False; //We use our own ring.
 				
-				Actor Ring = Spawn ("MVP_ShockwaveRing",Pos);
+				Let Ring = Level.SpawnVisualThinker ("MVP_ShockwaveRing");
 				If (Ring)
 				{
-					Ring.Speed = 0.75;
-					Ring.FloatSpeed = 0.1;
-					Ring.ReactionTime = GameTicRate;
+					Ring.Pos = Pos.PlusZ(0.25);
+					MVP_ShockwaveRing(Ring).SizeStep = 0.75;
+					MVP_ShockwaveRing(Ring).FadeStep = 0.1;
+					MVP_ShockwaveRing(Ring).Lifespan = GameTicRate;
+					MVP_ShockwaveRing(Ring).FadeStart = 3;
 				}
 			}
 			Stop;

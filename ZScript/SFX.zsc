@@ -323,39 +323,131 @@ Class MVP_BrightFireParticle : MVP_FireParticle
 	}
 }
 
-//IDEA: Maybe this would be better as a textured particle with a sizestep ? Would be a lot more optimized.
-//An expanding white ring, used by certain explosions.
-//Speed: How fast the ring expands in size every tick.
-//FloatSpeed: How fast the ring fades every tick.
-//Threshold: How long before the ring begins fading.
-//ReactionTime: How long the ring will last before vanishing.
-Class MVP_ShockwaveRing : Actor
+//SizeStep: How much the ring grows per tick.
+//FadeStep: How much alpha it loses per tick.
+//Lifespan: How long it lasts until despawn.
+//FadeStart: How many tics in before it begins fading.
+Class MVP_ShockwaveRing : VisualThinker
+{
+	Float SizeStep, FadeStep;
+	Int Tics, Lifespan, FadeStart;
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		Texture = TexMan.CheckForTexture("SHOKA0",TexMan.Type_Sprite);
+		Scale = (0,0);
+		Alpha = 0.5;
+		SetRenderStyle (STYLE_ADD);
+		//Lifespan = 5; //Default values.
+		//FadeStart = 3;
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (!IsFrozen())
+		{
+			Scale.X += SizeStep;
+			Scale.Y += SizeStep;
+			If (Tics >= FadeStart) Alpha -= FadeStep;
+			console.printf ("thinker ring scale %.2f %.2f, alpha %.2f",scale,alpha);
+			Tics++; if (Tics >= Lifespan) console.printf ("thinker is old");
+			If (Tics >= Lifespan || Alpha <= 0)
+				Destroy();
+		}
+	}
+}
+
+//Spawns ground dust around an explosion.
+Class MVP_GroundDustSpawner : Actor
 {
 	Default
 	{
-		Scale 0;
-		Speed 0.25;
-		FloatSpeed 0.25;
-		Threshold 3;
-		RenderStyle "Add";
-		Alpha 0.5;
-		ReactionTime 5;
+		RadiusDamageFactor 0.35; //How much distance off the ground affects the firing effect. 1 is a direct conversion of: 1 MU of the ground = 1 less dust cloud
+		ReactionTime 64; //How much smoke to spawn.
+		Threshold 256; //How far to spawn dust.
+		Scale 1.0; //Scale.X can increase or decrease the dust particle scale.
 	}
-	Int Timer; //GetAge() still increments when frozen.
+	Override Void PostBeginPlay ()
+	{
+		Super.PostBeginPlay();
+		Int SmokeFactor = (Pos.Z - FloorZ) * RadiusDamageFactor;
+		Int DustCount = ReactionTime - SmokeFactor; //Decrement the dust to spawn the further off the ground the blast is.
+		//Console.Printf ("Ground height: %.2f, Dust count %d, SmokeFactor %d",(Pos.Z - FloorZ),DustCount,SmokeFactor);
+		Actor Dust;
+		//Class<Actor> DustClasses[] = {"MVP_GroundDustAct","MVP_GroundDustAct2","MVP_GroundDustAct3"};
+		//Spawn random dust actors on the ground, the closer to the ground, the more dust spawned.
+		For (Int I = DustCount; 0 <= I; I--)
+		{
+			//Dust = Spawn (DustClasses[Random(0,DustClasses.Size()-1)],Vec3Offset (FRandom (Threshold,-Threshold),FRandom(Threshold,-Threshold),0));
+			Let Dust = Random (1,3) == 3 ? Level.SpawnVisualThinker ("MVP_GroundDustAlt") : Level.SpawnVisualThinker ("MVP_GroundDust");
+			
+			Dust.Pos.XY = Level.Vec2Offset (Pos.XY, (FRandom (Threshold,-Threshold),FRandom(Threshold,-Threshold)) );
+			Dust.Pos.Z = GetZAt (Dust.Pos.X,Dust.Pos.Y,flags:GZF_ABSOLUTEPOS)+0.05;
+			//If the dust is out of bounds, or the height difference from the explosions' ground level is too high, remove it.
+			If (!Level.IsPointInLevel (Dust.Pos) || (FloorZ - Dust.Pos.Z) > 64 || Dust.Pos.Z > Pos.Z+16 || Level.Vec2Diff(Dust.Pos.XY,Pos.XY).LengthSquared() > Threshold*Threshold)
+				Dust.Destroy();
+			
+			Dust.Scale *= FRandom (0.6,1.25)*Scale.X;
+			MVP_GroundDust(Dust).Speed = 2*FRandom (0.75,1.25); //Set roll speed, doesn't work for MVP_GroundDust3 though, which doesn't use it.
+			If (Random (0,255) < 112 && Dust Is "MVP_GroundDust") Dust.Vel.Z = FRandom(0.5f,1.0f);
+			If (Random (0,255) < 64) Dust.SetRenderStyle (STYLE_ADD);
+		}
+		Destroy();
+	}
+}
+
+//Random dark or light gray dust ball.
+Class MVP_GroundDust : VisualThinker
+{
+	Float Speed;
+	Int Tics;
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		If (Random(False, True) == True) Texture = TexMan.CheckForTexture("GroundDust1",TexMan.Type_Sprite);
+		Else Texture = TexMan.CheckForTexture("GroundDust2",TexMan.Type_Sprite);
+		Flags |= SPF_LOCAL_ANIM|SPF_FACECAMERA;
+	}
+	
 	Override Void Tick()
 	{
-		If (IsFrozen()) Return;
+		Super.Tick();
 		
-		A_SetScale (Scale.X+Speed);
-		If (Threshold && Timer >= Threshold) A_FadeOut (FloatSpeed);
-		Timer++;
-		If (Timer >= ReactionTime)
-			Destroy();
+		If (!IsFrozen())
+		{
+			Roll += Speed;
+			Tics++;
+			If (Tics >= 25)
+				Destroy();
+		}
 	}
-	States
+}
+
+//Basically just the Strider's water vapour that it spawns whenever it's hydrogen fuel cells are supposed to be running.
+Class MVP_GroundDustAlt : MVP_GroundDust
+{
+	Override Void PostBeginPlay()
 	{
-		Spawn:
-			SHOK A -1;
-			Stop;
+		VisualThinker.PostBeginPlay();
+		
+		Texture = TexMan.CheckForTexture("WaterVapourDissolve",TexMan.Type_Sprite);
+		Flags |= SPF_LOCAL_ANIM|SPF_FACECAMERA;
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (!IsFrozen())
+		{
+			Roll += Speed;
+			Tics++;
+			If (Tics >= 35)
+				Destroy();
+		}
 	}
 }

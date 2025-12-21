@@ -228,6 +228,7 @@ Class MVP_DiCokkaTurretWreck : MVP_DiCokkaTurretProp
 }
 
 //Textured particles defined in ANIMDEFS all animate in unison. So they are useless for this.
+//TODO: VisualThinkers and SPF_LOCAL_ANIM were added since then, so reconsider making this into a visual thinker.
 Class MVP_DiCokkaFireParticle : Actor
 {
 	Default
