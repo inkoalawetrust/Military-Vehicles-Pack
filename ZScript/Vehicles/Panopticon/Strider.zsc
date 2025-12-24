@@ -600,7 +600,7 @@ Class MVP_Strider : MVP_Humanoid
 						MVP_StartRun (6);
 					
 					If (Followee) FolPos.Z = Followee.Pos.Z+(Followee.Height/2);
-					MVP_StriderMove (FolPos,StriderMove.DetourFactor,StriderMove.AngleLimit);
+					KAI_MoveTowards (FolPos,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMT_DROPOFFMOBJ);
 					MVP_StriderFootsteps(RunSteps);
 					Return False;
 				}
@@ -817,7 +817,7 @@ Class MVP_Strider : MVP_Humanoid
 		KAI_Chase_Retarget(0,True);
 		
 		Bool MovedAlready; Bool B;
-		Int KMTFlags = 0;
+		Int KMTFlags = KMT_DROPOFFMOBJ;
 		
 		//DETERMINE IF WE SHOULD BE MOVING AWAY FROM THE TARGET.
 		Bool RunAway = (!bNoFear && (IsFrightening (Target) || bFrightened)); //Run away from spooky actors, or maybe we're just a little bitch.
@@ -922,8 +922,8 @@ Class MVP_Strider : MVP_Humanoid
 				}
 				
 				//MAYDO: Make the strider able to attack when heading to cover as long as it's not running there?
-				
-				MVP_StriderMove (CoverPos,StriderMove.DetourFactor/2,StriderMove.AngleLimit); //No zigzag.
+				KMTFlags &= ~(KMT_ZIGZAG); //No zigzag
+				KAI_MoveTowards (CoverPos,StriderMove.DetourFactor/2,StriderMove.AngleLimit,flags:KMTFlags);
 				
 				KAI_DebugPointDelay.KAI_TempPointSpawn(coverpos,8);
 				NewPosStepCount++;
@@ -1055,13 +1055,7 @@ Class MVP_Strider : MVP_Humanoid
 				ReverseSteps = 0;
 			
 			If (ReverseSteps <= 0)
-			{
-				Bool Drop = bDropoff;
-				If (MVP_StandingOnGroundObject())
-					bDropoff = True;
 				KAI_MoveAway (Null,StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags,targpos:RunPos,StriderMove);
-				bDropoff = Drop;
-			}
 			Else //Reverse away from threat.
 			{
 				RunSteps = 0;
@@ -1085,13 +1079,7 @@ Class MVP_Strider : MVP_Humanoid
 				Angle -= 180;
 				Speed *= 1.2;
 				If (!MVP_StriderParkour()) //General handling of climbing, crouching, jumping down, yadda yadda. But for reversing!
-				{
-					Bool Drop = bDropoff;
-					If (MVP_StandingOnGroundObject())
-						bDropoff = True;
 					KAI_MoveAway (Null,0,StriderMove.RunRad,6,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags,KMA_STRAIGHT,RunPos,StriderMove);
-					bDropoff = Drop;
-				}
 				Speed /= 1.2;
 				Angle += 180;
 			}
@@ -1122,7 +1110,7 @@ Class MVP_Strider : MVP_Humanoid
 				}
 				Return;
 			}
-			MVP_StriderMove (Target.Pos.PlusZ(Target.Height/2),StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
+			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
 			MovedAlready = True;
 		}
 		
@@ -1131,7 +1119,7 @@ Class MVP_Strider : MVP_Humanoid
 		{
 			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Idle.Stand",StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
 			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
-				MVP_StriderMove (Goal.Pos,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
+				KAI_MoveTowards (Goal.Pos,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
 			If (b && goal) spawn ("kai_debugpoint",goal.pos);
 			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d, reactiontime %d",goal.pos,movedalready,b,reactiontime);
 		}
@@ -1139,16 +1127,6 @@ Class MVP_Strider : MVP_Humanoid
 		If (ShouldAttack ())
 			Return;
 		HandleChaseTimer();
-	}
-	
-	//MoveTowards wrapper that hopefully allows the Strider to not get STUCK.
-	Void MVP_StriderMove (Vector3 TargetPos, Double DetourFactor = 1.0, Double AngleLimit = 10, Int ChaseFlags = 0, Int Flags = 0, Double PitchLimit = 40)
-	{
-		Bool Drop = bDropoff;
-		If (MVP_StandingOnGroundObject())
-			bDropoff = True;
-		KAI_MoveTowards (TargetPos,DetourFactor,AngleLimit,ChaseFlags,Flags,PitchLimit);
-		bDropoff = Drop;
 	}
 	
 	//Strider is currently surrounded by melee-only enemies, and is also trying to traverse away. AKA, almost certainly overwhelmed by melee enemies.
@@ -1178,14 +1156,6 @@ Class MVP_Strider : MVP_Humanoid
 		If (!IsInanimateObject(TheActualFuckingData) && !IsDead (TheActualFuckingData) && IsActorHostile(TheActualFuckingData))
 			Return TheActualFuckingData;
 		Return Null;
-	}
-	
-	//Returns true if the strider is standing (Stuck) on an object that doesn't have +ACTLIKEBRIDGE, which is also already on the ground.
-	Bool MVP_StandingOnGroundObject()
-	{
-		Bool FuckYou; Actor Mo;
-		[FuckYou, Mo] = TestMobjZ(True);
-		Return (IsInanimateObject(Mo) && !Mo.bActLikeBridge && Mo.bSolid && Mo.Pos.Z <= Mo.FloorZ);
 	}
 	
 	Double MVP_GetSpeed (Actor Other)
@@ -2008,15 +1978,7 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			Loop;
 		Idle:
-			PNS0 ABCDEF 4
-			{
-				//If (CurrentOrder != ORDER_STAY) MVP_StriderFootsteps(False);
-				Bool Drop = bDropoff;
-				If (MVP_StandingOnGroundObject())
-					bDropoff = True;
-				KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit);
-				bDropoff = Drop;
-			}
+			PNS0 ABCDEF 4 KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMT_DROPOFFMOBJ);
 			Loop;
 		Idle.Run:
 			PNS0 GHIJKL 2
@@ -2025,11 +1987,7 @@ Class MVP_Strider : MVP_Humanoid
 				If (!IsActorPlayingSound (CHAN_ENGINE,"Vehicle/Strider/Vapour")) A_StartSound ("Vehicle/Strider/Vapour",CHAN_ENGINE,CHANF_OVERLAP,0.5,1.4,1.5,0.9);
 				//If (CurrentOrder != ORDER_STAY) MVP_StriderFootsteps(True);
 				Speed *= STRIDER_RUNFACTOR;
-				Bool Drop = bDropoff;
-				If (MVP_StandingOnGroundObject())
-					bDropoff = True;
-				KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit);
-				bDropoff = Drop;
+				KAI_Wander (StriderMove.Attempts,StriderMove.RunRad,StriderMove.MaxSteps,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMT_DROPOFFMOBJ);
 				Speed /= STRIDER_RUNFACTOR;
 				
 				If (RunSteps > 0)
@@ -2647,7 +2605,7 @@ Class MVP_Strider : MVP_Humanoid
 				//NOTE: The walk needs to run afterwards so the blocking line and mobj variables aren't cleared by the next step.
 				//RunSteps = 1;
 				Speed *= STRIDER_RUNFACTOR;
-				MVP_StriderMove (Target.Pos.PlusZ(Target.Height/2),StriderMove.DetourFactor,StriderMove.AngleLimit);
+				KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMT_DROPOFFMOBJ);
 				Speed /= STRIDER_RUNFACTOR;
 				MVP_StriderFootsteps(False);
 				

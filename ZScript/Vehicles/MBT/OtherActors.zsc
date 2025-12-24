@@ -1121,6 +1121,7 @@ Class MVP_SeekerDecoy : Actor
 	}*/
 }
 
+//MAYDO: Replace these with a single SHADOWBLOCK bounding box and turn them into pure visual effects.
 Class MVP_SmokeScreenParticle : Actor
 {
 	Default

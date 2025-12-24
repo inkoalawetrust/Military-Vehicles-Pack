@@ -361,6 +361,7 @@ Class MVP_ShockwaveRing : VisualThinker
 }
 
 //Spawns ground dust around an explosion.
+//MAYDO: Add handling for not spawning smoke behind points not visible to the spawner.
 Class MVP_GroundDustSpawner : Actor
 {
 	Default
@@ -377,7 +378,6 @@ Class MVP_GroundDustSpawner : Actor
 		Int DustCount = ReactionTime - SmokeFactor; //Decrement the dust to spawn the further off the ground the blast is.
 		//Console.Printf ("Ground height: %.2f, Dust count %d, SmokeFactor %d",(Pos.Z - FloorZ),DustCount,SmokeFactor);
 		Actor Dust;
-		//Class<Actor> DustClasses[] = {"MVP_GroundDustAct","MVP_GroundDustAct2","MVP_GroundDustAct3"};
 		//Spawn random dust actors on the ground, the closer to the ground, the more dust spawned.
 		For (Int I = DustCount; 0 <= I; I--)
 		{
@@ -390,8 +390,8 @@ Class MVP_GroundDustSpawner : Actor
 			If (!Level.IsPointInLevel (Dust.Pos) || (FloorZ - Dust.Pos.Z) > 64 || Dust.Pos.Z > Pos.Z+16 || Level.Vec2Diff(Dust.Pos.XY,Pos.XY).LengthSquared() > Threshold*Threshold)
 				Dust.Destroy();
 			
-			Dust.Scale *= FRandom (0.6,1.25)*Scale.X;
-			MVP_GroundDust(Dust).Speed = 2*FRandom (0.75,1.25); //Set roll speed, doesn't work for MVP_GroundDust3 though, which doesn't use it.
+			Dust.Scale *= FRandom (0.6f,1.6f)*Scale.X;
+			MVP_GroundDust(Dust).RollSpeed = 2*FRandom (0.75,1.25); //Set roll speed, doesn't work for MVP_GroundDust3 though, which doesn't use it.
 			If (Random (0,255) < 112 && Dust Is "MVP_GroundDust") Dust.Vel.Z = FRandom(0.5f,1.0f);
 			If (Random (0,255) < 64) Dust.SetRenderStyle (STYLE_ADD);
 		}
@@ -402,7 +402,7 @@ Class MVP_GroundDustSpawner : Actor
 //Random dark or light gray dust ball.
 Class MVP_GroundDust : VisualThinker
 {
-	Float Speed;
+	Float RollSpeed;
 	Int Tics;
 	Override Void PostBeginPlay()
 	{
@@ -419,7 +419,7 @@ Class MVP_GroundDust : VisualThinker
 		
 		If (!IsFrozen())
 		{
-			Roll += Speed;
+			Roll += RollSpeed;
 			Tics++;
 			If (Tics >= 25)
 				Destroy();
@@ -444,7 +444,7 @@ Class MVP_GroundDustAlt : MVP_GroundDust
 		
 		If (!IsFrozen())
 		{
-			Roll += Speed;
+			Roll += RollSpeed;
 			Tics++;
 			If (Tics >= 35)
 				Destroy();
