@@ -1280,7 +1280,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 			
 			If (!CheckSight (Proj,SF_IGNOREWATERBOUNDARY)) //Out of sight, out of mind.
 				Continue;
-			console.printf ("%s is incoming",proj.getclassname());
+			
 			Incoming.Push(Proj);
 		}
 		

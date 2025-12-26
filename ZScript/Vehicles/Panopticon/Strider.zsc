@@ -233,6 +233,9 @@ Class MVP_Strider : MVP_Humanoid
 		Bool IsDead = IsDead(Self);
 		Bool IsAttacking = IsInAttackState();
 		
+		If (!IsDead)
+			MVP_StriderAPS();
+		
 		//Target prediction during attack states.
 		If (!IsDead && IsAttacking)
 		{
@@ -1801,6 +1804,69 @@ Class MVP_Strider : MVP_Humanoid
 		return nade;
 	}
 	
+	Void MVP_StriderAPS()
+	{
+		If (User_APS <= 0 || APSDelay-- > 0) Return; //Don't run if we can't fire again or disabled.
+		
+		//High quality code rips.
+		Array <Actor> Incoming; //Detectable incoming projectiles found.
+		ForEach (Proj : KAIHandler.ProjectileList)
+		{
+			If (!Proj || Proj.Default.bMissile && Proj.Target == Self || Proj.Default.bMissile && !Proj.bMissile) //Null, one of our own projectiles, or a missile that blew up but is still on the list.
+				Continue;
+			
+			//If the projectile is faster than the threshold. Then begin raising the chance of a failed shootdown for each bit of excess velocity.
+			//This also allows to smooth out the speed cap. Instead of shooting down a speed 200 missile all the time, and a speed 201 one none of the time.
+			If (Proj.Vel.Length() > 40)
+			{
+				Double ExcessVel = Proj.Vel.Length() - 40;
+				If (Random (0, 128) < ExcessVel*4)
+					Continue;
+			}
+			
+			If (!IsActorHostile( Proj.Default.bMissile ? Proj.Target : Proj )) //Ignore friendly projectiles. Or if a non-projectile actor is on the list for some reason, if it's friendly.
+				Continue;
+			
+			If (Distance3DSquared(Proj) > 384*384) //Too far
+				Continue;
+			
+			//Credit: RaveYard
+			//Is the projectile actually coming at the tank ?
+			Bool IncomingProjectile = (Vec3To(Proj).Unit() Dot Proj.Vel.Unit()) < -0.15;
+			Double SafeRadius = Sqrt(2 * ((Proj.Radius + Radius) ** 2.2));
+			If(!(IncomingProjectile && KAI_Math.Distance3DLine(Pos, Proj.Pos, Proj.Pos + Proj.Vel) < SafeRadius))
+				Continue;
+			
+			If (!CheckSight (Proj,SF_IGNOREWATERBOUNDARY)) //Out of sight, out of mind.
+				Continue;
+			
+			Incoming.Push(Proj);
+		}
+		
+		//Now, let's find the strongest projectile.
+		Int HighestDamage;
+		Actor Strongest;
+		ForEach (Proj : Incoming)
+		{
+			Double Dmg = Proj.GetMissileDamage(1, 7);
+			If (Dmg > HighestDamage)
+			{
+				HighestDamage = Dmg;
+				Strongest = Proj;
+			}
+		}
+		
+		If (Strongest)
+		{
+			Actor Twinkle = Spawn ("MVP_Spark",Strongest.Pos);
+			Twinkle.A_StopAllSounds(); //Doesn't work lol.
+			Twinkle.A_SetScale (FRandom(0.15, 0.4));
+			Strongest.ExplodeMissile();
+			A_StartSound ("Vehicle/Tank/APSRun",CHAN_VOICE,CHANF_OVERLAP,attenuation:0.9);
+			APSDelay = User_APS;
+		}
+	}
+	
 	Void MVP_StriderEndFire()
 	{
 		A_StopSound (CHAN_WEAPON);
@@ -1820,6 +1886,7 @@ Class MVP_Strider : MVP_Humanoid
 	Bool Crouching;
 	Actor LastProj; //Last projectile dodged.
 	//Vector3 LastSawPos; //Where the target was last seen, used by the grenade attack when they are out of sight.
+	Int APSDelay;
 	
 	UInt8 AttackType; //What do we attack with currently?
 	UInt8 MGMode; //What mode to fire the nose gun at?
@@ -1909,6 +1976,7 @@ Class MVP_Strider : MVP_Humanoid
 	Bool User_NoCover;
 	String User_Color;
 	Bool User_NoParkour; //Don't parkour around the level, doesn't affect sneaking around players. Jumping for non-parkour reasons is handled by User_JumpMode.
+	Int User_APS;
 	
 	Const STRIDER_CROUCHHEIGHT = 64;
 	Const STRIDER_RUNFACTOR = 2.5;
