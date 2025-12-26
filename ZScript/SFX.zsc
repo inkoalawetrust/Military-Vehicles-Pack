@@ -276,21 +276,17 @@ Class MVP_Spark : Actor
 }
 
 //Lens effect used by rockets.
-Class MVP_FireLens : Actor
+Class MVP_FireLens : VisualThinker
 {
-	Default
+	Override Void PostBeginPlay()
 	{
-		RenderStyle "Add";
-		Scale 0.5;
-		Alpha 0.8;
-		+NoInteraction;
-		+NoGravity;
-	}
-	States
-	{
-		Spawn:
-			SPKY ABCDEF 5 Bright Fast;
-			Loop;
+		Super.PostBeginPlay();
+		
+		Texture = TexMan.CheckForTexture("SparkAnim",TexMan.Type_Sprite);
+		Scale = (0.5,0.5);
+		Alpha = 0.8;
+		SetRenderStyle (STYLE_ADD);
+		Flags |= SPF_LOCAL_ANIM|SPF_FULLBRIGHT|SPF_NO_XY_BILLBOARD;
 	}
 }
 

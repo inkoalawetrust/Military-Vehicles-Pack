@@ -82,3 +82,11 @@ Texture GroundDust2
 	Pic SMK6K0 Tics 2
 	Pic SMK6L0 Tics 2
 	Pic SMK6M0 Tics 2
+
+Texture SparkAnim
+	Pic SPKYA0 Tics 2
+	Pic SPKYB0 Tics 2
+	Pic SPKYC0 Tics 2
+	Pic SPKYD0 Tics 2
+	Pic SPKYE0 Tics 2
+	Pic SPKYF0 Tics 2

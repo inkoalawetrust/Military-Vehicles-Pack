@@ -835,7 +835,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 	
 	Double OldAngle;
 	Bool SteerDir;
-	Actor Flare;
+	VisualThinker Flare;
 	
 	Enum SteerDirections
 	{
@@ -859,7 +859,7 @@ Class MVP_ATGM : MVP_BaseProjectile
 			SteerDir = STEER_NONE;
 		
 		If (Flare)
-			Flare.SetOrigin (KAI_Math.Vec3OffsetRelative(Self,(-40,0,0)),True);
+			Flare.Pos = KAI_Math.Vec3OffsetRelative(Self,(-40,0,0));
 		
 		Vector3 Direction = (AngleToVector(Angle, Cos(Pitch)), -Sin(Pitch));
 		
@@ -895,12 +895,13 @@ Class MVP_ATGM : MVP_BaseProjectile
 			{
 				A_ScaleVelocity (2.0);
 				A_StartSound ("Vehicle/Tank/RocketMotor",flags:CHANF_LOOPING,0.5,0.5);
-				Flare = Spawn ("MVP_FireLens",KAI_Math.Vec3OffsetRelative(Self,(-40,0,0)));
+				Flare = Level.SpawnVisualThinker ("MVP_FireLens");
 				If (Flare)
 				{
-					Flare.bAlwaysFast = True;
+					Flare.Pos = KAI_Math.Vec3OffsetRelative(Self,(-40,0,0));
 					Flare.Scale *= 1.2;
 				}
+				
 				A_AttachLight ('ATGMLight',DynamicLight.FlickerLight,"F1F1A0",76,88,DynamicLight.LF_ATTENUATE,(-40,0,0));
 			}
 			Goto Fly;

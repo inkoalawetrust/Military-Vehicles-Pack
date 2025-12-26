@@ -3,3 +3,4 @@ Graphic Optional WaterVapourDissolve, 1, 1 {}
 Graphic Optional GroundDust1, 1, 1 {}
 Graphic Optional GroundDust2, 1, 1 {}
 Graphic Optional GroundDust3, 1, 1 {}
+Graphic Optional SparkAnim, 1, 1 {}

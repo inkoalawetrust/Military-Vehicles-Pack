@@ -17,6 +17,8 @@
 //MAYDO:
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
 //Make strider able to strafe fire rockets :>
+//I forgot this, but the Strider has two lasers on its' body, maybe make them function like the APS on the tank but worse in performance.
+//On that note, give it a basic weak laser attack? Lmao.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -241,7 +243,6 @@ Class MVP_Strider : MVP_Humanoid
 			bMissile = True; //HACK: Become missile for TRF_BLOCKSELF.
 			LineTrace (Angle,MaxTargetRange,Pitch,TRF_SOLIDACTORS|TRF_BLOCKSELF,AttackPos.Z,AttackPos.X,AttackPos.Y,Proj);
 			bMissile = False;
-			KAI_DebugPointDelay.KAI_TempPointSpawn (proj.hitlocation, 8);
 			
 			Double ProjSpeed, FastProjSpeed;
 			Array <String> AttackTags; AttackTags.Push ("Vehicle"); AttackTags.Push ("Drone"); AttackTags.Push ("Robot"); //Generic tags.
@@ -589,7 +590,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		//Follow something instead.
 		If (CurrentOrder == ORDER_FOLLOW)
-		{console.printf ("moving to %.2f %.2f %.2f, followee %p",folpos,followee);
+		{
 			If (!KAI_Math.IsEmptyVector3(FolPos))
 			{
 				Double Dist = Distance3D(Followee);
@@ -751,7 +752,7 @@ Class MVP_Strider : MVP_Humanoid
 			//Even more likely to fire rockets if the target is not necessarily immune to explosions, however it will still sometimes blast them sometimes even if they are.
 			If (!ImmuneToBlasts && Random (0,255) < 128)
 				Chance += 80;
-			console.printf ("rocket chance %d",chance);
+			
 			If (Chance >= Random (80,180))
 			{
 				AttackType = ATTACK_ROCKETS;
@@ -767,7 +768,6 @@ Class MVP_Strider : MVP_Humanoid
 		//Fire miniguns if close enough. Especially for very dangerous enemies. And based on if the enemy is flying and how fast.
 		Int MinigunChance = (Threat >= ThreatLevelThreshold) ? 192 : 128;
 		Int MinShots = !IsFlying (Target) ? 100 : KAI_Math.LinearMap (MVP_GetSpeed(Target),0,16,100,10); //Scale shot threshold with flyer speed if applicable.
-		console.printf ("minigun minshots for target %d",minshots);
 		If (InSight && Random (0,255) < MinigunChance &&
 		KAI_CheckLOF (Target,1000,0,FirePos,TLOF_OnlyAhead,"MVP_SmallRifleBullet",GetFAFAimPos(Target,FirePos)) &&
 		DetermineHitChance (Target,True,Dist,shots:MinShots,FirePos,(8,-8,8,-8),MaxTargetRange,GetFAFPosOffset(Target,GetFAFAimPos(Target,FirePos)),DHC_THRUHOSTILES) >= 30)
@@ -801,7 +801,6 @@ Class MVP_Strider : MVP_Humanoid
 				MGMode = MODE_SEMI;
 				Shots = 3;
 			}
-			console.printf ("firing machine gun with %d successful imaginary shots",hits);
 			If (!NoStateJump) SetStateLabel ("Fire.Start");
 			Return True;
 		}
@@ -925,7 +924,6 @@ Class MVP_Strider : MVP_Humanoid
 				KMTFlags &= ~(KMT_ZIGZAG); //No zigzag
 				KAI_MoveTowards (CoverPos,StriderMove.DetourFactor/2,StriderMove.AngleLimit,flags:KMTFlags);
 				
-				KAI_DebugPointDelay.KAI_TempPointSpawn(coverpos,8);
 				NewPosStepCount++;
 				Return;
 			}
@@ -1087,8 +1085,6 @@ Class MVP_Strider : MVP_Humanoid
 			If (ReverseSteps > 0)
 				ReverseSteps--;
 			
-			Console.Printf ("reversesteps %u",reversesteps);
-			
 			MovedAlready = True;
 		}
 		
@@ -1101,7 +1097,6 @@ Class MVP_Strider : MVP_Humanoid
 				Int Chance = DistToTarget >= 3072 ? 10 : 2;
 				If (Random (0,512) < Chance && User_JumpMode != -1) //May leapfrog towards enemy. Especially when really far but still in sight.
 				{
-					console.printf ("jumping to my enemy, angle to target is %.2f",angle);
 					Angle = GetAngleToPos (Target.Pos,StriderMove.AngleLimit*2);
 					JumpPos.XY = AngleToVector (Angle, MVP_GetStriderVal(STRIDER_JUMPRANGE));
 					JumpPos.XY = Level.Vec2Offset (Pos.XY,JumpPos.XY);
@@ -1120,8 +1115,6 @@ Class MVP_Strider : MVP_Humanoid
 			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Idle.Stand",StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
 			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
 				KAI_MoveTowards (Goal.Pos,StriderMove.DetourFactor,StriderMove.AngleLimit,flags:KMTFlags);
-			If (b && goal) spawn ("kai_debugpoint",goal.pos);
-			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d, reactiontime %d",goal.pos,movedalready,b,reactiontime);
 		}
 		
 		If (ShouldAttack ())
@@ -1237,7 +1230,6 @@ Class MVP_Strider : MVP_Humanoid
 				Int Strafe = (Random (0,255) < Chance) ? SJUMP_STRAFE : 0;
 				If (AlwaysStrafe)
 					Strafe = SJUMP_STRAFE;
-					console.printf ("let's dodge this projectile!!!");
 				MVP_StriderJump (DodgePos,flags:SJUMP_FAST|SJUMP_DODGE|Strafe,enemy:Target);
 				Return True;
 			}
@@ -1379,14 +1371,11 @@ Class MVP_Strider : MVP_Humanoid
 			
 			Vector2 Cur;
 			Double ZAt;
-			//console.printf ("own pos is %d %d",pos.xy);
 			//Go from the furthest point away from the Avoid pos in.
 			For (Int I = Distance; I >= 0; I -= 16)
 			{
 				Cur = Level.Vec2Offset(Pos.XY, Path*I);
-				console.printf ("curpos is %d %d",cur);
 				ZAt = GetZAt(Cur.X,Cur.Y,flags:GZF_ABSOLUTEPOS);
-				KAI_DebugPointDelay.KAI_TempPointSpawn((cur,zat),70*2);
 				//If (IsPosReachable ((Cur,ZAt)))
 				If (ZAt <= Pos.Z+MaxStepHeight)
 				{
@@ -1422,7 +1411,7 @@ Class MVP_Strider : MVP_Humanoid
 		Else
 			JumpSpeed = Velocity;
 		bNoFriction = True; //Go exactly where you're supposed to by ignoring air friction.
-		KAI_DebugPointDelay.KAI_TempPointSpawn(where,70*2);
+		//KAI_DebugPointDelay.KAI_TempPointSpawn(where,70*2);
 		SetStateLabel ("Jump");
 		Return True;
 	}
@@ -1638,12 +1627,12 @@ Class MVP_Strider : MVP_Humanoid
 			//No jump target, look for another one.
 			//BUG: When dodge firing, it will sometimes decide to target dead enemies for some reason.
 			If (IsDead(JumpTarget))
-			{console.printf ("current jumptarget %p died",jumptarget);
+			{
 				Vector3 Real = Pos;
 				If (JumpTarget) SetOrigin (JumpTarget.Pos,True);
 				Else If (Target) SetOrigin (Target.Pos,True);
 				JumpTarget = FindNearestEnemy (512);
-				SetOrigin (Real,True);console.printf ("attacking %p instead",jumptarget);
+				SetOrigin (Real,True);
 			}
 			Vector3 FirePos = MVP_StriderAttackPos (ATTACK_MACHINEGUN);
 			If (KAI_CheckLOF (JumpTarget,150,0,FirePos,TLOF_OnlyAhead,"MVP_RifleBullet",GetFAFAimPos(JumpTarget,FirePos)))
@@ -1775,8 +1764,6 @@ Class MVP_Strider : MVP_Humanoid
 		}
 		Check.VisualizeTracePath (FromPos,Check.Results.HitPos,Check.Results.Distance);
 		ToPos.Z += Check.HeightOffset;
-		console.printf ("obstacle height of %.2f is now accounted for, fired from %.2f %.2f %.2f",check.heightoffset,frompos);
-		//KAI_DebugPointDelay.KAI_TempPointSpawn(ToPos,16);
 		If (Check) Check.Destroy();
 		
 		vector3 diff = level.vec3diff(fromPos, toPos);
@@ -2123,8 +2110,6 @@ Class MVP_Strider : MVP_Humanoid
 							Inaccuracy = (8,8,8);
 							Break;
 					}
-					
-					console.printf ("set nose gun accuracy to %d %d %d",inaccuracy);
 				}
 				Else If (AttackType == ATTACK_MINIGUN)
 					Inaccuracy = (48,48,48); //Bad accuracy, but it does help with a wide AOE due to the fire volume.
@@ -2170,7 +2155,7 @@ Class MVP_Strider : MVP_Humanoid
 							Frame = FRAME_d;
 					}
 				}
-				console.printf ("showing sprite %s",texman.getname(curstate.getspritetexture (0,spritenum:sprite,frame)));
+				//console.printf ("showing sprite %s",texman.getname(curstate.getspritetexture (0,spritenum:sprite,frame)));
 				If (AttackType == ATTACK_MACHINEGUN) //Open faster for the machine gun.
 					Tics = 2;
 			}
@@ -2775,7 +2760,7 @@ Class MVP_Strider : MVP_Humanoid
 					Double JumpHeight = Abs(JumpPos.Z - Pos.Z+Height)+64; //Includes dramatic padding.
 					//CREDIT: RaveYard for the formula for launching an actor to an exact target height using gravity.
 					Double JumpVel = 0.5 * (sqrt(GetGravity()) * sqrt(GetGravity() + 8 * JumpHeight) + GetGravity());
-					console.printf ("height diff %2.f, vel %.2f",Abs(JumpPos.Z - Pos.Z+Height),jumpvel);
+					//console.printf ("height diff %2.f, vel %.2f",Abs(JumpPos.Z - Pos.Z+Height),jumpvel);
 					MVP_StriderJump (JumpPos,JumpVel,SJUMP_CLIMB|SJUMP_STEER);
 				}
 				Goto Jump;
@@ -3085,19 +3070,19 @@ Class MVP_StriderGrenadeCheck : KAI_LOFRaycast
 			Return Trace_Continue;*/
 		
 		If ((HitLevelGeometry (Results) || Results.HitActor)) //Hit non-slope geometry or an actor.
-		{console.printf ("hit ffloor %p",results.ffloor);
+		{
 			Vector3 TraceOffset = Level.Vec3Offset (Results.HitPos,Results.HitVector*0.125); //Project trace 0.125 MU forward for height and back sector check.
 			Sector Back = Level.PointInSector (TraceOffset.XY);
 			//if (back) console.printf ("the back ");
 			//Hit raised floor wall line...
 			If (Results.HitLine && Results.HitLine.Sidedef[Line.Back] && Results.Tier == TIER_Lower)
-			{console.printf ("hit raised floor wall");
+			{
 				//... and the grenade would be able to fit through. So it ignores tricks like two-texture walls made of a raised floor and lowered ceiling. (Except if they are stupidly thin of course.)
 				Double Top = Back.CeilingPlane.ZAtPoint (TraceOffset.XY);
 				Double Bottom = Back.FloorPlane.ZAtPoint (TraceOffset.XY);
 				
 				If ((Top - Bottom) >= GetDefaultByType(Actor.GetReplacement("MVP_40mmGrenade")).Height+8)
-				{console.printf ("wall sector has enough space to fire over through");
+				{
 					HeightOffset = Bottom - (Other.Pos.Z+Other.Height); //Offset is the height of the raised wall minus the location of the target.
 					Return Trace_Stop;
 				}
@@ -3107,9 +3092,8 @@ Class MVP_StriderGrenadeCheck : KAI_LOFRaycast
 				Double Top = Back.CeilingPlane.ZAtPoint (TraceOffset.XY);
 				Double Bottom = Results.HitActor.Pos.Z + Results.HitActor.Height;
 				
-				console.printf ("there's a blocking object (%s) in the way",results.hitactor.getclassname());
 				If ((Top - Bottom) >= GetDefaultByType(Actor.GetReplacement("MVP_40mmGrenade")).Height+8)
-				{console.printf ("blocking actor has enough space to fire over through");
+				{
 					HeightOffset = Bottom - (Other.Pos.Z+Other.Height);
 					Return Trace_Stop;
 				}
@@ -3137,7 +3121,7 @@ Class MVP_StriderGrenadeCheck : KAI_LOFRaycast
 				Double Bottom = LineBounds.X;
 				
 				If ((Top - Bottom) >= GetDefaultByType(Actor.GetReplacement("MVP_40mmGrenade")).Height+8)
-				{console.printf ("blocking 3d midtex has enough space to fire over through");
+				{
 					HeightOffset = Bottom - (Other.Pos.Z+Other.Height);
 					Return Trace_Stop;
 				}
