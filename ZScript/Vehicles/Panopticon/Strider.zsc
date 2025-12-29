@@ -937,7 +937,7 @@ Class MVP_Strider : MVP_Humanoid
 					NewPosStepCount = 0;
 				Else
 				{
-					NewPosStepCount = 0;
+					NewPosStepCount = RunSteps = 0;
 					A_FaceTarget();
 					A_StopSound (CHAN_BODY);
 					InCover = True;
@@ -2108,6 +2108,8 @@ Class MVP_Strider : MVP_Humanoid
 					OuttaSightTime = 0;
 					Return FindState ("Idle.Cover.End",True);
 				}
+				Else If (ShouldAttack()) //Target in sight, run attack decision code.
+					Return State (Null);
 				
 				If (User_NoCover)
 					Return FindState ("Idle.Cover.End",True);
@@ -2505,6 +2507,13 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			Goto Fire.End;
 		Fire.End:
+			PNS1 V 0
+			{
+				MVP_StriderEndFire();
+				If (InCover) //Strider is behind cover where it's always got its' panels open, so don't visual close them.
+					Return FindState ("Idle.Cover",True);
+				Return State (Null);
+			}
 			PNS1 VU 4 Fast
 			{
 				If (Crouching) //No prepare animation for the crouch firing.
@@ -2514,7 +2523,6 @@ Class MVP_Strider : MVP_Humanoid
 				If (AttackType == ATTACK_MACHINEGUN) //CLOSE faster for the machine gun.
 					Tics = 2;
 			}
-			PNS1 U 0 MVP_StriderEndFire();
 			Goto See;
 		Melee:
 			TNT1 A 0
@@ -2906,6 +2914,7 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			Stop;
 		//URGENT: TODO: Fix the fucking cropping. Fucking great, can't wait for my entire system to break a THIRD time because of the Strider sprites!!!!!
+		//Try replacing just PNS9G2 and G6 since those are the only shittily cropped ones.
 		AltDeath:
 			PNS9 EF 4;
 			PNS9 G -1

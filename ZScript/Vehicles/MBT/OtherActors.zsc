@@ -1122,19 +1122,16 @@ Class MVP_SeekerDecoy : Actor
 	}*/
 }
 
-//MAYDO: Replace these with a single SHADOWBLOCK bounding box and turn them into pure visual effects.
 Class MVP_SmokeScreenParticle : Actor
 {
 	Default
 	{
 		Speed 2; //How fast the smoke rolls around.
-		Radius 24;
-		Height 48;
+		//Radius 24;
+		//Height 48;
 		ReactionTime 35; //How long the smoke lasts.
-		ShadowPenaltyFactor 1.5;
 		+NoGravity;
 		+RollSprite;
-		+ShadowBlock; //The secret sauce.
 	}
 	
 	Override Void Tick ()
@@ -1172,7 +1169,7 @@ Class MVP_SmokeScreenParticle : Actor
 			SMK3 HIJKLM 2
 			{
 				A_SetRoll (Roll+Speed,SPF_INTERPOLATE);
-				A_SetSize (Radius*0.98,Height*0.98); //The hitbox size matters for SHADOWBLOCK as well.
+				//A_SetSize (Radius*0.98,Height*0.98); //The hitbox size matters for SHADOWBLOCK as well.
 				A_SetScale (Scale.X*0.98);
 				A_FadeOut (0.02);
 			}
@@ -1185,11 +1182,16 @@ Class MVP_SmokeScreen : Actor
 {
 	Default
 	{
+		Radius 128;
+		Height 160;
 		Speed 35; //How frequently to spawn new particles.
 		ReactionTime 32; //How much smoke to spawn.
 		Threshold 256; //How far to spawn Smoke.
 		Stamina 70; //Smoke lifespan.
-		Mass 175; //How long the smoke lasts;
+		Mass 175; //How long the smoke lasts.
+		
+		ShadowPenaltyFactor 1.5;
+		+ShadowBlock; //The secret sauce.
 	}
 	
 	Int Timer;

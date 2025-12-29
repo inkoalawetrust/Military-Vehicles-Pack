@@ -350,6 +350,7 @@ Class MVP_Gyrojet : MVP_BaseProjectile
 			}
 			TNT1 A 0
 			{
+				bForceXYBillboard = True;
 				Roll = Random (0,360);
 				A_SetScale (0.5);
 				A_SetRenderStyle (1.0,STYLE_ADD);
@@ -503,6 +504,7 @@ Class MVP_70mmRocket : MVP_BaseProjectile
 		Death.Air:
 			TNT1 A 0
 			{
+				bForceXYBillboard = True;
 				Roll = Random (0,360);
 				A_SetScale (FRandom(1.8,2.2));
 				A_SetRenderStyle (1.0,STYLE_ADD);
@@ -698,6 +700,7 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 		Death.Air:
 			TNT1 A 0
 			{
+				bForceXYBillboard = True;
 				Roll = Random (0,360);
 				A_SetScale (FRandom(1.8,2.2));
 				A_SetRenderStyle (1.0,STYLE_ADD);
@@ -975,6 +978,7 @@ Class MVP_AutocannonShell : MVP_BaseProjectile
 				A_Stop();
 				A_SetRenderStyle (1.0,Style_Add);
 				A_SetScale (1.5,1.5);
+				bForceXYBillboard = True;
 				Gravity = 0;
 				bRollSprite = True;
 				Roll = FRandom (0,180);

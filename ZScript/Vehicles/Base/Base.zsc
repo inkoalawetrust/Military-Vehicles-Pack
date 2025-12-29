@@ -345,39 +345,6 @@ Class MVP_BaseProjectile : KAI_BaseProjectile
 	}
 }
 
-//The MVPs' stock bullet tracer.
-Class MVP_Tracer : KAI_Tracer
-{
-	Override Void SetProperties()
-	{
-		Super.SetProperties();
-		DefaultSprite = TexMan.CheckForTexture("MVP1B0",TexMan.Type_Sprite);
-	}
-}
-
-Class MVP_ModelTracer : KAI_TracerActor
-{
-	Default
-	{
-		//Alpha 0.95;
-		RenderStyle "Add";
-		+NeverRespawn;
-		+Bright;
-	}
-	Override Void Tick()
-	{
-		Super.Tick();
-		If (!IsFrozen() && Master && GetAge() % 2 == 0)
-			{Angle = Master.Angle; Pitch = Master.Pitch;}
-	}
-	States
-	{
-		Spawn:
-			MVP1 B -1;
-			Stop;
-	}
-}
-
 //Note: This is a pistol that fires a specified line of fire raycast. Used to debug if the LineTracer in question returns BadLOF properly.
 Class MVP_LOFDebugGun : Pistol
 {

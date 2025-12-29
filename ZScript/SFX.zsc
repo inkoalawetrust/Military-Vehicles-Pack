@@ -274,6 +274,44 @@ Class MVP_Spark : Actor
 			Stop;
 	}
 }
+//The MVPs' stock bullet tracer.
+Class MVP_Tracer : KAI_Tracer
+{
+	Override Void SetProperties()
+	{
+		Super.SetProperties();
+		DefaultSprite = TexMan.CheckForTexture("MVP1B0",TexMan.Type_Sprite);
+	}
+}
+
+Class MVP_ModelTracer : KAI_TracerActor
+{
+	Default
+	{
+		//Alpha 0.95;
+		RenderStyle "Add";
+		+NeverRespawn;
+		+Bright;
+	}
+	Override Void Tick()
+	{
+		Super.Tick();
+		If (!IsFrozen() && Master && GetAge() % 2 == 0)
+			{Angle = Master.Angle; Pitch = Master.Pitch;}
+	}
+	States
+	{
+		Spawn:
+			MVP1 B -1;
+			Stop;
+	}
+}
+
+
+Class MVP_BeamModel : MVP_ModelTracer
+{
+	Default {-NeverRespawn; YScale 5; XScale 5;}
+}
 
 //Lens effect used by rockets.
 Class MVP_FireLens : VisualThinker
@@ -348,8 +386,7 @@ Class MVP_ShockwaveRing : VisualThinker
 			Scale.X += SizeStep;
 			Scale.Y += SizeStep;
 			If (Tics >= FadeStart) Alpha -= FadeStep;
-			console.printf ("thinker ring scale %.2f %.2f, alpha %.2f",scale,alpha);
-			Tics++; if (Tics >= Lifespan) console.printf ("thinker is old");
+			Tics++;
 			If (Tics >= Lifespan || Alpha <= 0)
 				Destroy();
 		}

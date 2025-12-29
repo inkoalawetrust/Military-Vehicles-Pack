@@ -9,3 +9,16 @@ Model MVP_ModelTracer
 	
 	FrameIndex MVP1 B 0 0
 }
+
+Model MVP_BeamModel
+{
+	Path "Models/"
+	Model 0 "Beam.obj"
+	Skin 0 "Beam.png"
+	USEACTORPITCH
+	USEACTORROLL
+	DONTCULLBACKFACES
+	AngleOffset 90
+	
+	FrameIndex MVP1 B 0 0
+}

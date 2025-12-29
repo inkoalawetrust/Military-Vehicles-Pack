@@ -4,6 +4,7 @@ BrightZDoomFire = "96:111=224:231", "3:7=231:231"
 Rocket70mm_Default = "176:191=%[0.00,0.00,0.00]:[2.00,1.01,0.00]"
 
 Tracer_White = "208:223=80:87"
+Beam_Red = "115:115=176:176"
 
 //Di-Cokka palette translations, I've finally made a vehicle that works with translations without looking like shit in Dooms' palette.
 DiCokka_Green 	= "64:79=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "144:151=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "236:239=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "1:1=%[0.00,0.00,0.00]:[0.00,1.01,0.50]", "2:2=%[0.00,0.00,0.00]:[0.00,1.01,0.50]"
