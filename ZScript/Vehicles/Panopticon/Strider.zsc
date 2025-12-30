@@ -16,7 +16,6 @@
 //MAYDO:
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
 //Make strider able to strafe fire rockets :>
-//I forgot this, but the Strider has two lasers on its' body, maybe make them function like the APS on the tank but worse in performance.
 //On that note, give it a basic weak laser attack? Lmao.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
@@ -647,7 +646,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		Int Threat = AssessThreatLevel (Target);
 		Double Dist = Distance3D (Target);
-		Bool InSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY); //IDEA: Try to make the grenade launcher fire at out of sight target? Otherwise just abort if out of sight.
+		Bool InSight = CheckSight (Target,SF_IGNOREWATERBOUNDARY);
 		
 		Bool WhackTarget = KAI_CheckMeleeRange (Target,flags:CMR_3DDISTANCE);
 		Actor NearestMeleeEnemy; //TL;DR Allow the strider to also kick other nearby enemies when surrounded.
@@ -1241,7 +1240,7 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Bool MVP_StriderParkour()
 	{
-		//Crouching comes first. Also sneak behind players. MAYDO: Have the sneaking up not be affected by parkour being disabled?
+		//Crouching comes first. Also sneak behind players.
 		If (!User_NoParkour) Crouching = KAI_HandleCrouching(Default.Height,STRIDER_CROUCHHEIGHT);
 		If (!Crouching && Target && Target.Player && !Target.CheckFOV (Self,90) && Distance3DSquared (Target) <= 384*384)
 			Crouching = True;
@@ -1814,12 +1813,15 @@ Class MVP_Strider : MVP_Humanoid
 			If (!Proj || Proj.Default.bMissile && Proj.Target == Self || Proj.Default.bMissile && !Proj.bMissile) //Null, one of our own projectiles, or a missile that blew up but is still on the list.
 				Continue;
 			
+			If (PitchTo(Proj,Height/2) < -45) //Too high up to be able to intercept.
+				Continue;
+			
 			//If the projectile is faster than the threshold. Then begin raising the chance of a failed shootdown for each bit of excess velocity.
 			//This also allows to smooth out the speed cap. Instead of shooting down a speed 200 missile all the time, and a speed 201 one none of the time.
 			If (Proj.Vel.Length() > 40)
 			{
 				Double ExcessVel = Proj.Vel.Length() - 40;
-				If (Random (0, 128) < ExcessVel*4)
+				If (Random (0, 88) < ExcessVel*2)
 					Continue;
 			}
 			

@@ -184,7 +184,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			FireAngle = Angle; FirePitch = Pitch;
 			
 			Angle = RealAngle; Pitch = RealPitch;
-			console.printf ("attack angle %d, real angle %d, attack pitch %d, real pitch %d",fireangle,angle,firepitch,pitch);
 			MVP_QuadcopterChase(); //Oh yes, we can run n' gun quite fine.
 			
 			If (FirePitch >= 15)
@@ -427,15 +426,13 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			
 			//If we are targeting a turret or a turreted vehicle. Bully it.
 			If (Tur && Tur.IsOverPitchLimits (Self,padding:10) == Tur.ELEVATION_INBOUNDS)
-			{console.printf ("cyberbullying");
 				KMT_3D_SpeedLimit (Speed,(0,0,0.75));
-			}
 		}
 		
 		//Target is too high up to fire at.
 		Bool CantAttack;
 		If (Target && TargetInSight && !(GetClass() == "MVP_GyrojetQuadcopter") && PitchTo (Target) <= MaxGunPitch)
-		{console.printf ("drone rising up to fire");
+		{
 			If (Landed)
 			{
 				SetStateLabel ("TakeOff");
@@ -465,7 +462,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 						TargetLandAttempts++;
 					Else
 						TargetLandAttempts = 0;
-					console.printf ("targetlandattempts %u",targetlandattempts);
 				}
 					
 				If (TargetLandThreshold <= TargetLandAttempts)
@@ -493,8 +489,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			}
 			Else
 				SpriteRotation = 0;
-			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
-			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d, reactiontime %d",goal.pos,movedalready,b,reactiontime);
 		}
 		Else If (Landed && Goal) //Follow patrol routes by air.
 		{
@@ -621,7 +615,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		If (Frens.Size())
 		{
 			Actor Fren = Frens[Random(0,Frens.Size()-1)];
-			console.printf ("what is bro waffling on about");
 			SayVoiceLine (VOICE_SEE,Yapper);
 			If (Random (True, False) == True) //Sometimes the other drone speaks back.
 				MVP_Quadcopter(Fren).SayVoiceLine (VOICE_SEE,MVP_Quadcopter(Fren).Yapper);
@@ -988,7 +981,6 @@ Mixin Class MVP_DroneFunctions
 					//Group member that can attack (Presumably another drone).
 					If (Mem.Target && (Mem.MissileState || Mem.MeleeState) && !IsDead(Mem) && Mem.Target != Goal)
 					{
-						console.printf ("%p is already targeting %p",mem,mem.target);
 						Taken.Push (Mem.Target);
 					}
 					//Turret of turreted vehicle shares target. Especially for drone *hulls* that don't attack themselves.
@@ -997,7 +989,6 @@ Mixin Class MVP_DroneFunctions
 						Let Tur = KAI_BaseVehicle(Mem).Turret;
 						If (Tur && Tur.Master != Self && Tur.Master != Whose && Tur.Target && !IsDead(Actor(Tur)) && Mem.Target != Goal)
 						{
-							console.printf ("%p (%s) is already targeting %p",Tur,tur.getclassname(),tur.target);
 							Taken.Push (Tur.Target);
 						}
 					}
@@ -1014,7 +1005,6 @@ Mixin Class MVP_DroneFunctions
 			If (Taken.Find (Targ) == Taken.Size()) //This target isn't taken.
 			{
 				Target = Targ;
-				console.printf ("found something my gang isn't targeting already");
 				Return True;
 			}
 		}

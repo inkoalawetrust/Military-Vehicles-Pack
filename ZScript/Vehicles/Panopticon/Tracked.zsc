@@ -195,7 +195,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 			Vector3 Where = Delta >= -2 ? (Vec2Angle(64,Angle+90),0) : (Vec2Angle(64,Angle-90),0);
 			Where.Z = GetZAt (Where.X,Where.Y,flags:GZF_ABSOLUTEPOS);
 			Bool B;
-			[B, DodgePos] = IsPosReachable (DodgePos);console.printf ("dodge");
+			[B, DodgePos] = IsPosReachable (DodgePos);
 			DodgePos = B ? Where : DodgePos; //We can just go where we want, do that. If not, go to the closest position IsPosReachable() returned.
 		}
 		
@@ -268,8 +268,6 @@ Class MVP_GunDrone : MVP_BaseVehicle
 			KAI_Chase_PatrolHandling ("Spawn",DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
 			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
 				KAI_MoveTowards (Goal.Pos,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
-			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
-			if (goal)console.printf ("patrolling, goal is at %d %d %d, reactiontime %d",goal.pos,reactiontime);
 		}
 		
 		//If (ShouldAttack())
@@ -341,7 +339,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 			{
 				//Don't dogpile.
 				If (Followee && Distance3DSquared(Followee) >= (FollowDist+Followee.Radius)*(FollowDist+Followee.Radius))
-				{console.printf ("going to %s",followee.getclassname());
+				{
 					If (Followee) FolPos.Z = Followee.Pos.Z+(Followee.Height/2);
 					KAI_MoveTowards (FolPos,DroneMove.DetourFactor,DroneMove.AngleLimit);
 					Return False;
@@ -602,7 +600,7 @@ Class MVP_GunDroneTurret : MVP_BaseTurret
 		If (!SmokeCounter && KAI_CheckMissileRange(Target) && !IsDead (Target) && IsActorHostile (Target) && KAI_TurretCheckLOF (Target,0,0,(0,0,VertOffset),TLOF_OnlyAhead,"MVP_SmallRifleBullet"))
 		{
 			If (!NoStateJump)
-			{console.printf ("fire");
+			{
 				SmokeCounter = 0;
 				If (Master && Master.Health <= WoundHealth)
 					Inaccuracy = Default.Inaccuracy*3;
@@ -833,7 +831,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		If (!KAI_Math.IsEmptyVector3(CoverPos) && !User_NoCover)
 		{
 			If (!KAI_Math.IsEmptyVector3 (CoverPos) && NewPosStepCount <= 128 && Level.Vec3Diff (Pos,CoverPos).Length() >= 24)
-			{console.printf ("distance to cover is %.2f",Level.Vec3Diff (Pos,DodgePos).Length());
+			{
 				//Speed += 2;
 				KAI_MoveTowards (CoverPos,DroneMove.DetourFactor/2,DroneMove.AngleLimit); //No zigzag.
 				//Speed -= 2;
@@ -883,7 +881,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		}
 		//We're healthy and the hazard isn't that scary, ignore.
 		If (Haz && Health > WoundHealth && Haz.Level <= Haz.HAZARD_MEDIUM)
-			{console.printf ("ignoring haz:"); haz.printhazardinfo();Haz = Null;}
+			Haz = Null;
 		
 		//Keep different distances for targets.
 		If (!LockedIn && !RunAway && TargetInSight && Target && Target != Goal)
@@ -1004,15 +1002,12 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			If (ReverseSteps > 0)
 				ReverseSteps--;
 			
-			Console.Printf ("reversesteps %u",reversesteps);
-			
 			MovedAlready = True;
 		}
 		
 		//If our turret can't aim at its' target, and we haven't ran away from something already and aren't focused on patrolling, try to position ourselves better.
 		If (!MovedAlready && !LockedIn && Turret && Turret.Target && Turret.ElevationState == Turret.ELEVATION_TOOHIGH)
 		{
-			Console.Printf ("Turret %p can't aim at %p because it's too high, get away",Turret,Turret.Target);
 			KAI_MoveAway (Turret.Target,DroneMove.Attempts,DroneMove.RunRad,DroneMove.MaxSteps,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
 			MovedAlready = True;
 		}
@@ -1020,12 +1015,9 @@ Class MVP_BigGunDrone : MVP_GunDrone
 		//Move to target.
 		If (!MovedAlready && Target && Target != Goal && !LockedIn)
 		{
-			Console.Printf ("Big hull %p chasing %p",Self,Target);
 			KAI_MoveTowards (Target.Pos.PlusZ(Target.Height/2),DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
 			MovedAlready = True;
 		}
-		else
-			console.printf ("we're NOT chasing %p but we ARE calling the main AI loop, goal %p, moved %d",target, goal, movedalready);
 		
 		//Patrol handling.
 		If (!MovedAlready)
@@ -1033,8 +1025,6 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			[B, MovedAlready] = KAI_Chase_PatrolHandling ("Spawn",DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
 			If (bChaseGoal && Goal && Target != Goal) //Manually go to goal when it "don't chase target" mode.
 				KAI_MoveTowards (Goal.Pos,DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
-			//If (b && goal) spawn ("kai_debugpoint",goal.pos);
-			if (goal)console.printf ("patrolling, goal is at %d %d %d, moved already %d, reached point %d, reactiontime %d",goal.pos,movedalready,b,reactiontime);
 		}
 		
 		HandleChaseTimer();
@@ -1092,7 +1082,7 @@ Class MVP_BigGunDrone : MVP_GunDrone
 			PND0 A 1
 			{
 				//Stop hiding if the target is behind the cover, another enemy is too close, there's no target left, or a hazard is in range.
-				Double TurOfs = MVP_BigGunDroneTurret(Turret) ? MVP_BigGunDroneTurret(Turret).FireOfs.Z : 0;console.printf ("target %p",target);
+				Double TurOfs = MVP_BigGunDroneTurret(Turret) ? MVP_BigGunDroneTurret(Turret).FireOfs.Z : 0;
 				InCover = KAI_HasCoverHere(Target,72,True,(72,192),(Height+MVP_BigGunDroneTurret(Turret).FireOfs.Z,Height),from:Turret);
 				NearestEnemy = FindNearestEnemy (128);
 				
@@ -1284,7 +1274,6 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 			RocketDelay--;
 			If (GetAge() % 8 == 0 && (Master && Master.Health <= Master.WoundHealth || AssessThreatLevel (Target) >= ThreatLevelThreshold))
 				RocketDelay -= 8; //Get ready to fire rockets twice as fast for very dangerous targets.
-			console.printf ("rocketdelay is %d",RocketDelay);
 		}
 		
 		//Emit rocket hazard at where we're aiming at.
@@ -1300,7 +1289,6 @@ Class MVP_BigGunDroneTurret : MVP_GunDroneTurret
 				Other = Finder.Thing;
 				If ((Master && Other == Master) && Level.Vec3Diff (FuckOff.Pos,Other.Pos).Length() > 256 || !(RocketHazard.Flags & RocketHazard.HAZ_NOSIGHT) && !Other.CheckSight (FuckOff,SF_IGNOREWATERBOUNDARY))
 					Continue;
-				//console.printf ("passing rocket hazard to %p (%s)",other,other.getclassname());
 				HazardInfo.GiveHazard (Other,RocketHazard);
 			}
 		}
