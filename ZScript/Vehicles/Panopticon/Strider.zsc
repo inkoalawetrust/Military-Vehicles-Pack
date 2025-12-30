@@ -1,7 +1,6 @@
 //FIXME:
 //The climb preperation frame (PNS1R1-8) has the foot spikes appearing over the top of the Striders' feet.
 //IIRC one of the grenade frames is missing brightmaps.
-//The AltDeath frame of the Strider fully fallen is cropped wrong.
 
 //BUG:
 //It (Sometimes at least) VM aborts from OnProjectileDeflect() in MVP_GenericShit when it tries deflecting a projectile?
@@ -2913,8 +2912,6 @@ Class MVP_Strider : MVP_Humanoid
 				}
 			}
 			Stop;
-		//URGENT: TODO: Fix the fucking cropping. Fucking great, can't wait for my entire system to break a THIRD time because of the Strider sprites!!!!!
-		//Try replacing just PNS9G2 and G6 since those are the only shittily cropped ones.
 		AltDeath:
 			PNS9 EF 4;
 			PNS9 G -1
