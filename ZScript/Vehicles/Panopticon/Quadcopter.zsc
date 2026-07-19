@@ -518,8 +518,6 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 		Else
 			Where.XY = HitPos.XY;
 		
-		kai_lofraycast.visualizetracepath (Pos,hitpos,check.distance);
-		
 		Return Where;
 	}
 	

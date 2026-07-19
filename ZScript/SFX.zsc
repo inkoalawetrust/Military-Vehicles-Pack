@@ -274,6 +274,52 @@ Class MVP_Spark : Actor
 			Stop;
 	}
 }
+
+//Basic placeholder laser effect. Will be replaced in the future with a more detailed tracer with effects like using sector fog values and intensity dropoffs.
+Class MVP_BeamParticle : VisualThinker
+{
+	Static Void SpawnBeam (Vector3 From, Vector3 To, Color BeamCol = Color(255,0,0), Int FailChance = 12, Float FadeSpeed = -0.06)
+	{
+		Vector3 Path = Level.Vec3Diff (From,To);
+		Double PathDist = Path.Length();
+		VisualThinker Beamlet;
+		TextureID FuckOff;
+		Path /= PathDist;
+		If (!(PathDist <= 1))
+		{
+			For(Double I = 0; I < PathDist; I += 0.5)
+			{
+				If (Random(0,16) <= FailChance) //Only spawn some beam particles, replicating lasers only being visible when passing through particles like dust and fog.
+					Continue;
+				
+				Beamlet = VisualThinker.Spawn ("MVP_BeamParticle",FuckOff,Level.Vec3Offset (From,Path*I),(0,0,0),scale:(3,3),style:STYLE_STENCIL);
+				If (MVP_BeamParticle(Beamlet))
+				{
+					Beamlet.SColor = BeamCol;
+					MVP_BeamParticle(Beamlet).FadeStep = FadeSpeed;
+				}
+			}
+		}
+	}
+	
+	Float FadeStep;
+	
+	Override Void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		
+		SetParticleType(PT_SMOOTH);
+	}
+	
+	Override Void Tick()
+	{
+		Super.Tick();
+		
+		If (!IsFrozen())
+			Alpha += FadeStep;
+	}
+}
+
 //The MVPs' stock bullet tracer.
 Class MVP_Tracer : KAI_Tracer
 {

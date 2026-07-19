@@ -1309,6 +1309,7 @@ Class MVP_MBTTurret : MVP_BaseTurret
 		Actor Twinkle = Spawn ("MVP_Spark",Who.Pos);
 		Twinkle.A_StopAllSounds(); //Doesn't work lol.
 		Twinkle.A_SetScale (FRandom(0.3, 0.5));
+		MVP_BeamParticle.SpawnBeam (Pos.PlusZ(32),Who.Pos.PlusZ(Who.Height/2),failchance:8); //MAYDO: Have 3 imaginary APS lasers and fire the beam from whichever is closest to the projectile.
 		If (Who Is "MVP_APFSDSShell") //If you happened to catch a dart, and also won the lottery probably. Then shatter it.
 			MVP_APFSDSShell(Who).Shatter = True;
 		Who.ExplodeMissile();
@@ -1947,6 +1948,8 @@ Class MVP_MBTTurret : MVP_BaseTurret
 	//FIXME: For some reason when marines are spawned by the turret, they always face at 0, ignoring the SpawnMarine angle change, or any angle change.
 	Void SpawnFleeingCrew (Vector3 PosOfs = (0,0,0), Double XVel = 0, Double YVel = 0, Double ZVel = 0)
 	{
+		If ((Pos.Z+Height - CeilingZ) >= -56) //Too little vertical space for crew to jump out.
+			Return;
 		Actor Marine; //Gunner comes out the left hatch.
 		Marine = SpawnMarine (PosOfs);
 		MVP_NPCDamageAfterExit (Marine,Target,Random (16,48),DeathType,DMG_NO_PAIN|DMG_THRUSTLESS); //Harm the marine by a random amount, the source being the MBT's killer.

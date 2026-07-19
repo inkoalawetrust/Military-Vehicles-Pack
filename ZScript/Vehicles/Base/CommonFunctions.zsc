@@ -244,7 +244,7 @@ Mixin Class MVP_SharedNonVehicleFunctions
 		{
 			Mobj = FindEnemies.Thing;
 			
-			If (!Mobj || IsDead (Mobj) || IsInanimateObject (Mobj) || Mobj == Self || !CountOrigin && Mobj == Origin) Continue;
+			If (!Mobj || Mobj == Self || !CountOrigin && Mobj == Origin || IsDead (Mobj) || IsInanimateObject (Mobj)) Continue;
 			
 			IsHostile = IsActorHostile (Mobj); IsVisible = IsVisible (Mobj,False);
 			If (AvoidAllies && !IsHostile && IsVisible)

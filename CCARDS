@@ -7,3 +7,5 @@ excludeactor, MVP_DiCokkaTurret
 excludeactor, MVP_MBTTurret
 excludeactor, MVP_SPAAGTurret
 excludeactor, MVP_SPAAGRadar
+excludeactor, MVP_GunDroneTurret
+excludeactor, MVP_BigGunDroneTurret

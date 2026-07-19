@@ -1,8 +1,10 @@
 Mod made by Inkoalawetrust
 
+Gorman Freebmane for making the original vehicle sprite sheets that began this and my future projects.
+
 |==============|Code|==============|
 Any code not written by me (Inkoalawetrust) will be specified here.
-Help with coding by RaveYard.
+Help with coding by RaveYard and Lewisk3.
 |==============|Code|==============|
 
 
@@ -54,6 +56,8 @@ Bullet flying by sound (Whizzby.ogg) is from the GDC 2020 sound library, "PMSFX 
 Casing drop sounds (CaseFall1-5.ogg) is from the GDC 2018 sound library, "Watson Wu - Battle Rifles & Pistols"
 Metal crashing sound (MetalCrash.ogg) is from Half-Life 2.
 Flesh impact sound (FleshHit.ogg) made by EFlexMusic https://freesound.org/people/EFlexMusic/sounds/369594/
+Small laser sound (LaserSmall.ogg) is from the GDC 2019 sound library, "3maze - Interference"
+Medium laser sound (LaserMedium.ogg) is from the GDC 2019 sound library, "3maze - Interference"
 
 Vehicles:
 Army car idle sound (CarIdle.ogg) is from the 2018 GDC sound library, "Pole Position - M5 High Speed Tractor"

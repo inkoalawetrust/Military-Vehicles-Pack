@@ -54,8 +54,10 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		
 		//The loitering munition is incredibly fragile to everything vehicles are normally protected against.
 		RipLevelMin 0;
+		DamageFactor 1;
 		DamageFactor "Melee", 0.8;
 		DamageFactor "Electric", 0.8;
+		DamageFactor "Laser", 4.0;
 		DamageFactor "ExplosiveImpact", 1.5;
 		DamageFactor "Explosion", 1.5;
 		DamageFactor "Explosive", 1.5;
@@ -65,7 +67,7 @@ Class MVP_KamikazeDrone : MVP_BaseFlyer
 		DamageFactor "Fire", 1;
 		DamageFactor "Crush", 1.5;
 		DamageFactor "Disintegrate", 1.5;
-		DamageFactor "Railgun", 2.0;
+		DamageFactor "Railgun", 4.0;
 		DamageFactor "Falling", 1.25;
 		DamageFactor "MarineHMG", 1;
 		DamageFactor "LargeRifleBullet", 1; //Replaces MarineHMG.

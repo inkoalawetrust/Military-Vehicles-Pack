@@ -16,7 +16,9 @@
 //MAYDO:
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
 //Make strider able to strafe fire rockets :>
-//On that note, give it a basic weak laser attack? Lmao.
+
+//TODO:
+//Make it rarely do the Windows XP shutdown sound when destroyed.
 
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
@@ -146,6 +148,7 @@ Class MVP_Strider : MVP_Humanoid
 		AttackStates.Push (FindState("Fire.Minigun",True));
 		AttackStates.Push (FindState("Fire.Rockets",True));
 		AttackStates.Push (FindState("Fire.Grenades",True));
+		AttackStates.Push (FindState("Fire.Laser",True));
 		
 		//Melee state is just called "Melee", no need to custom set it, and it functions like Fire:.
 		AttackStates.Push (FindState("Melee.Kick",True));
@@ -217,13 +220,13 @@ Class MVP_Strider : MVP_Humanoid
 				{
 					Vape.PostBeginPlay();
 					KAI_Tracer(Vape).RanPostBeginPlayEarly = True;
-					Vape.Pos = Vec3Angle (32,GetNearestCardinalAngle(),!Crouching ? 76 : STRIDER_CROUCHHEIGHT);
+					Vape.Pos = Vec3Angle (32,GetNearestCardinalAngle()+VapeOffset,!Crouching ? 76 : STRIDER_CROUCHHEIGHT);
 					Vape.Scale *= FRandom(0.4f,1.2f);
 					Vape.Flags |= SPF_ROLL;
 					Vape.Roll = Random(-180,180);
 					Vape.PostBeginPlay();
 					KAI_Tracer(Vape).RanPostBeginPlayEarly = True;
-					Vape.Vel = KAI_Math.AngleToVector3D (Angle,-Pitch+FRandom (32,-32),FRandom (-0.2f,-5.0f));
+					Vape.Vel = KAI_Math.AngleToVector3D (Angle+VapeOffset,-Pitch+FRandom (32,-32),FRandom (-0.2f,-5.0f));
 				}
 			}
 		}
@@ -396,6 +399,9 @@ Class MVP_Strider : MVP_Humanoid
 			Return Proj.HitLocation;
 		}
 		
+		If (AttackType == ATTACK_LASER && Target) //Laser is instantly hitscan aimed at center of mass.
+			Return Target.Pos.PlusZ(Target.Height/2);
+		
 		If (Target) //Doing melee attack, our attack location is the target.
 			Return Target.Pos;
 		Return (Double.NaN,Double.NaN,Double.NaN);
@@ -411,10 +417,10 @@ Class MVP_Strider : MVP_Humanoid
 			DeathFlames--;
 		
 		If (Random (0,255) < 3)
-			Spawn ("MVP_Spark",Level.Vec3Offset(Pos,(FRandom (Radius,Radius),FRandom (Radius,-Radius),FRandom (0,Height))));
+			Spawn ("MVP_Spark",Level.Vec3Offset(Pos,(FRandom (Radius,Radius),FRandom (Radius,-Radius),FRandom (56,Height))));
 		
 		Int CardAng = GetNearestCardinalAngle(False);
-		Vector3 SpawnPos = !Dead ? Vec3Angle (32,CardAng) : Vec3Angle (32,CardAng+135);
+		Vector3 SpawnPos = !Dead ? Vec3Angle (32,CardAng+VapeOffset) : Vec3Angle (32,CardAng+135);
 		If (IsInState (Self,"AltDeath"))
 			SpawnPos = Vec3Angle (48,CardAng-45);
 		
@@ -448,6 +454,16 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		If (AttackType == ATTACK_NONE && MOD == 'Crush') //Strider fell on victim lmao.
 			Return "A Strider fell on %os' head";
+		
+		If (MOD == 'Laser')
+		{
+			String LaserObituaries[] = {
+			"%o was blinded by a Strider",
+			"%o got melted by a Strider",
+			"%o couldn't dodge a Strider's laser"};
+			
+			Return LaserObituaries[Random(0,LaserObituaries.Size()-1)];
+		}
 		
 		If (MOD == 'Melee' || MOD == 'Crush' && AttackType == ATTACK_STOMP) //Melee attack obituaries.
 		{
@@ -497,7 +513,7 @@ Class MVP_Strider : MVP_Humanoid
 			Return "%o was shot by a Strider";
 		}
 		
-		If (Inflictor Is "MVP_70mmRocket") //MAYDO: Direct hit obituary?
+		If (Inflictor Is "MVP_70mmRocket") //MAYDO: Add a direct hit obituary?
 			Return "%o was blown up by a Striders' rocket";
 		
 		Return Super.GetObituary (Victim, Inflictor, MOD, PlayerAttack);
@@ -518,6 +534,7 @@ Class MVP_Strider : MVP_Humanoid
 		InCover = False;
 		SmokeCounter = 0;
 		RamPower = 0;
+		VapeOffset = 0;
 	}
 	
 	Override Bool OnWander()
@@ -573,6 +590,7 @@ Class MVP_Strider : MVP_Humanoid
 				Frame = FRAME_O;
 				Return False;
 			}
+			SpinnyHeadVapourOffsetting(); //Use VapeOffset.
 			Tics = 8;
 			Sprite = GetSpriteIndex ('PNS3');
 			A_StartSound ("Vehicle/Drone/Turret",CHAN_AUTO,volume:0.5,ATTN_STATIC);
@@ -595,7 +613,6 @@ Class MVP_Strider : MVP_Humanoid
 			If (!KAI_Math.IsEmptyVector3(FolPos))
 			{
 				Double Dist = Distance3D(Followee);
-				
 				If (Followee && Dist >= (FollowDist+Followee.Radius))
 				{
 					If (Dist >= (FollowDist*2) && !Crouching)
@@ -614,6 +631,7 @@ Class MVP_Strider : MVP_Humanoid
 						Frame = FRAME_O;
 						Return False;
 					}
+					SpinnyHeadVapourOffsetting(); //Use VapeOffset.
 					Tics = 8;
 					Sprite = GetSpriteIndex ('PNS3');
 					If (Frame > FRAME_F)
@@ -724,13 +742,54 @@ Class MVP_Strider : MVP_Humanoid
 		//==================
 		//RANGED ATTACKS.
 		
-		//Mainly fire grenades at targets you still are chasing, but who are behind an obstacle which you could fire grenades over. Do sometimes just shoot a grenade though.
+		//Mainly fire grenades at targets you are still chasing, but who are behind an obstacle which you could fire grenades over. Do sometimes just shoot a grenade though.
 		Vector3 FirePos = MVP_StriderAttackPos (ATTACK_GRENADE);
 		If (ExplosiveDelay <= 0 && Dist <= 768 && (!InSight || Random (0,255) < 8) && StriderGrenadeLOF (FirePos, Target))
 		{
 			AttackType = ATTACK_GRENADE;
 			If (!NoStateJump) SetStateLabel ("Fire.Start");
 			Return True;
+		}
+		
+		//Fire ze lazers at quick targets near you, or large crowds of weak (low total health) targets near you. Or to painlock thin skinned enemies. Or also do it randomly for variety.
+		FirePos = MVP_StriderAttackPos (ATTACK_LASER);
+		If (!User_NoLaser && Dist <= 512 && KAI_CheckLOF (Target,50,checkoffsets:FirePos,TLOF_FaceOther,aimpos:GetFAFAimPos(Target,FirePos)))
+		{
+			Int Chance = Random (-8,60);
+			//Normal TryMove() monsters have a higher standard of speed to count as "fast", no, I'm not using the target predictions' convoluted move division handling lol.
+			If (Target.Speed >= (IsTeleportingMonster (Target) ? 16 : 9))
+				Chance += Random (4,8);
+			//Thin skinned. Sadly there's no way to check the per-type pain chance like there is with damage factors. TriggerPainChance() actually triggers flinches.
+			//No effect on players, since vanilla players don't flinch and stop like NPCs usually do.
+			If (!Target.Player && Target.PainChance >= 10)
+				Chance += Random (4,8);
+			//Despite the target being an NPC (or it SHOULD be based on all the other code here!), it's ALSO on the projectile list, like the loitering drones, uh oh!
+			If (KAIHandler.ProjectileList.Find(Target))
+				Chance += 48; //Time to freak the fuck out!
+			
+			//Target rich environment
+			BlockThingsIterator FindEnemies = BlockThingsIterator.Create (Target,256);
+			Actor Mo;
+			While (FindEnemies.Next())
+			{
+				Mo = FindEnemies.Thing;
+				
+				If (!Mo || Mo == Self || Mo == Target || Mo.Health > 150|| IsDead (Mo) || IsInanimateObject (Mo) || !IsActorHostile (Mo)
+				|| !KAI_CheckLOF (Mo,50,checkoffsets:FirePos,TLOF_FaceOther,aimpos:GetFAFAimPos(Mo,FirePos))) Continue;
+				
+				If (Mo.Speed >= (IsTeleportingMonster (Mo) ? 16 : 9))
+					Chance += Random (2,4); //Bonus little shit chance.
+				
+				Chance += 2;
+			}
+			
+			If (Chance >= 60) //Imma fire ma lazor bwaaaahhh.
+			{
+				AttackType = ATTACK_LASER;
+				Shots = GameTicRate*4; //Fire laser for 4 seconds.
+				If (!NoStateJump) SetStateLabel ("Fire.Start");
+				Return True;
+			}
 		}
 		
 		//Fire rocket pods towards crowds and strong mofos.
@@ -1180,11 +1239,37 @@ Class MVP_Strider : MVP_Humanoid
 		Return False;
 	}
 	
+	Void SpinnyHeadVapourOffsetting()
+	{
+		Switch (Frame)
+		{
+			Case FRAME_B:
+				VapeOffset = -60;
+				Break;
+			Case FRAME_C:
+				VapeOffset = -120;
+				Break;
+			Case FRAME_D:
+				VapeOffset = -180;
+				Break;
+			Case FRAME_E:
+				VapeOffset = -240;
+				Break;
+			Case FRAME_F:
+				VapeOffset = -300;
+				Break;
+			Default:
+				VapeOffset = 0;
+				Break;
+		}
+	}
+	
 	Bool MVP_StartRun (Int Steps)
 	{
 		If (Crouching)
 			Return False;
 		RunSteps = Steps;
+		VapeOffset = 0; //Reset so the vapour isn't incorrectly offset.
 		If (IsInState (Self,"See"))
 			SetStateLabel ("See.Run");
 		Else If (IsInState (Self,"Idle"))
@@ -1532,12 +1617,12 @@ Class MVP_Strider : MVP_Humanoid
 	}
 	
 	//Do terrain splash when stepping, using the terrain's small splash (If applicable) when crouching.
-	//PLAYTEST: Actually test the terrain splashes (The positions are right so HitWater() should work) and the footstep sounds (THAT might need actual testing).
 	Protected Void StriderSplashy (Bool Right, Bool ReverseMode = False)
 	{
 		//Only handle reverse footsteps from the alternate set of calls.
 		If (!ReverseMode && ReverseSteps > 0)
-			Return;
+			{console.printf ("we got reverse steps but didn't call reverse mode");Return;}
+		
 		
 		Vector3 SPos = Pos;
 		If (Right)
@@ -1546,10 +1631,12 @@ Class MVP_Strider : MVP_Humanoid
 			SPos.XY = Vec2Angle(16,Angle-90);
 		
 		Sector SSec = Level.PointInSector(SPos.XY);
+		Let Ter = SSec.GetFloorTerrain (Sector.Floor);
+		If (!Ter || (Pos.Z - SPos.Z) >= 8) //Splash is too far down. Or no terrain.
+			Return;
 		SPos.Z = SSec.FloorPlane.ZAtPoint (SPos.XY);
 		
 		//Terrain footstep sounds. Yeah the support for the foot-specific sounds is kinda shit, because that whole idea was shit that was just left there for 20 years.
-		Let Ter = SSec.GetFloorTerrain (Sector.Floor);
 		If (Ter)
 		{
 			If (Ter.StepSound)
@@ -1559,7 +1646,7 @@ Class MVP_Strider : MVP_Humanoid
 			Else If (Ter.RightStepSound)
 				A_StartSound(Ter.RightStepSound, flags: CHANF_OVERLAP, volume: Ter.StepVolume * snd_footstepvolume);
 		}
-		HitWater (SSec,SPos,False,False,flags:THW_NOVEL| Crouching ? 0 : THW_SMALL);
+		HitWater (SSec,SPos,True,False,flags:THW_NOVEL | (Crouching ? 0 : THW_SMALL));
 	}
 	
 	//Get the hardcoded jump values of the strider. HACK: This only exists because KAI_JumpTo() sucks.
@@ -1600,7 +1687,6 @@ Class MVP_Strider : MVP_Humanoid
 	}
 	
 	//Get the relative coordinates from where an attack on the strider comes out of.
-	//PLAYTEST: Test the firing offsets (Crouched and uncrouched) for the rocket and grenade launchers.
 	Vector3 MVP_StriderAttackPos (StriderAttacks Type)
 	{
 		Switch (Type)
@@ -1610,11 +1696,13 @@ Class MVP_Strider : MVP_Humanoid
 			Case ATTACK_MACHINEGUN:
 				Return !Crouching ? (0,0,64) : (0,0,48);
 			Case ATTACK_MINIGUN: //NOTE: Just flip this after each shot by doing Abs(Y), same with the rockets.
-				Return !Crouching ? (0,-12,80) : (0,-12,64);
+				Return !Crouching ? (0,-12,80) : (0,-12,52);
 			Case ATTACK_ROCKETS:
-				Return !Crouching ? (0,-12,68) : (0,-12,52);
+				Return !Crouching ? (0,-12,68) : (0,-12,44); //NOTE: The crouch Z  is slightly off from where the rocket pods are on the sprites. To properly spawn the rockets when it's in spaces right at it's STRIDER_CROUCHHEIGHT.
 			Case ATTACK_GRENADE:
-				Return !Crouching ? (0,0,88) : (0,0,72);
+				Return !Crouching ? (0,0,88) : (0,0,56); //PLAYTEST: Does it work or does it spawn grenades out bounds when crouched under super tight ceilings like mentioned above?
+			Case ATTACK_LASER:
+				Return !Crouching ? (0,0,STRIDER_LASERHEIGHT) : (0,0,STRIDER_LASERHEIGHT-20);
 			Default:
 				Return (Double.NaN,Double.NaN,Double.NaN);
 		}
@@ -1669,7 +1757,7 @@ Class MVP_Strider : MVP_Humanoid
 	
 	Void MVP_StriderRocketBarrage()
 	{
-		Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_MINIGUN);
+		Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_ROCKETS);
 		Bool B; Actor Proj;
 		
 		A_StartSound ("Vehicle/Tank/Artillery3",CHAN_WEAPON,CHANF_OVERLAP,0.6);
@@ -1730,7 +1818,7 @@ Class MVP_Strider : MVP_Humanoid
 			Check.Other = ToAct;
 			Check.Trace (FromPos,CurSector,KAI_Math.AngleToVector3D(Angle,-Pitch),MaxTargetRange,0,ignore:Self);
 		}
-		Check.VisualizeTracePath (FromPos,Check.Results.HitPos,Check.Results.Distance);
+		//Check.VisualizeTracePath (FromPos,Check.Results.HitPos,Check.Results.Distance);
 		OnlyGrenadeWorks = Check.HeightOffset > Margin;
 		If (Check) Check.Destroy();
 		Return OnlyGrenadeWorks;
@@ -1763,7 +1851,7 @@ Class MVP_Strider : MVP_Humanoid
 			Check.Other = ToAct;
 			Check.Trace (FromPos,CurSector,KAI_Math.AngleToVector3D(Angle,-Pitch),MaxTargetRange,0,ignore:Self);
 		}
-		Check.VisualizeTracePath (FromPos,Check.Results.HitPos,Check.Results.Distance);
+		//Check.VisualizeTracePath (FromPos,Check.Results.HitPos,Check.Results.Distance);
 		ToPos.Z += Check.HeightOffset;
 		If (Check) Check.Destroy();
 		
@@ -1859,9 +1947,11 @@ Class MVP_Strider : MVP_Humanoid
 		
 		If (Strongest)
 		{
-			Actor Twinkle = Spawn ("MVP_Spark",Strongest.Pos);
+			Actor Twinkle = Spawn ("MVP_Spark",Strongest.Pos.PlusZ(Strongest.Height/2));
 			Twinkle.A_StopAllSounds(); //Doesn't work lol.
 			Twinkle.A_SetScale (FRandom(0.15, 0.4));
+			Double LaserHeight = !Crouching ? STRIDER_LASERHEIGHT : STRIDER_LASERHEIGHT-20;
+			MVP_BeamParticle.SpawnBeam (Pos.PlusZ(LaserHeight),Strongest.Pos.PlusZ(Strongest.Height/2),failchance:8);
 			Strongest.ExplodeMissile();
 			A_StartSound ("Vehicle/Tank/APSRun",CHAN_VOICE,CHANF_OVERLAP,attenuation:0.9);
 			APSDelay = User_APS;
@@ -1899,6 +1989,7 @@ Class MVP_Strider : MVP_Humanoid
 	Double RamPower;
 	UInt16 ExplosiveDelay; //Time before we can fire an explosive weapon again.
 	UInt16 BlowVapour;
+	Int VapeOffset; //Angle offset from the water vapour effect.
 	
 	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
 	{
@@ -1907,6 +1998,7 @@ Class MVP_Strider : MVP_Humanoid
 		ATTACK_MINIGUN,
 		ATTACK_ROCKETS,
 		ATTACK_GRENADE,
+		ATTACK_LASER,
 		ATTACK_PUNT, //Old punt
 		ATTACK_ALTPUNT, //NEW punt!!!!!!!!!1
 		ATTACK_STOMP,
@@ -1978,10 +2070,12 @@ Class MVP_Strider : MVP_Humanoid
 	String User_Color;
 	Bool User_NoParkour; //Don't parkour around the level, doesn't affect sneaking around players. Jumping for non-parkour reasons is handled by User_JumpMode.
 	Int User_APS;
+	Bool User_NoLaser;
 	
 	Const STRIDER_CROUCHHEIGHT = 64;
 	Const STRIDER_RUNFACTOR = 2.5;
 	Const STRIDER_CROUCHFRAMEOFFSET = 12; //Offset the PNS0 sprite name by 12 frames (From PNS0A) to map to the crouch animation instead.
+	Const STRIDER_LASERHEIGHT = 56;
 	
 	States
 	{
@@ -2060,6 +2154,7 @@ Class MVP_Strider : MVP_Humanoid
 		Idle.Stand: //Spinny 360 head state.
 			PNS3 ABCDEF 8
 			{
+				SpinnyHeadVapourOffsetting();
 				If (Crouching) //No 360 turning for crouching, just sit around.
 					Frame = FRAME_O;
 				Else
@@ -2143,16 +2238,10 @@ Class MVP_Strider : MVP_Humanoid
 				AttackType = Random (ATTACK_MACHINEGUN,ATTACK_GRENADE);
 				
 				If (AttackType == ATTACK_MACHINEGUN)
-				{
 					Shots = Random (10,30);
-					AttackType = ATTACK_MACHINEGUN;
-				}
 				Else If (AttackType == ATTACK_MINIGUN)
-				{
 					Shots = Random (192,255);
-					AttackType = ATTACK_MINIGUN;
-				}
-				Else
+				Else //Grenading
 					Shots = 3;
 				
 				//Return FindStateByString (Attack,True);
@@ -2165,6 +2254,19 @@ Class MVP_Strider : MVP_Humanoid
 				
 				If (AttackType == ATTACK_NONE) //Womp womp.
 					Return SeeState;
+				
+				If (AttackType == ATTACK_LASER) //Instant, fun!
+				{
+					//HACK: For some reason the weapon preperation animation is darker and I can't be bothered to blow up Windows explorer re-rendering it!
+					If (!Crouching)
+						{Sprite = GetSpriteIndex ('PNS3'); Frame = FRAME_A;}
+					Else
+						{Sprite = GetSpriteIndex ('PNS0'); Frame = FRAME_O;}
+					
+					A_StartSound ("Weapon/LaserSmall",CHAN_WEAPON,CHANF_LOOPING|CHANF_OVERLAP);
+					
+					Return FindState ("Fire.Laser",True);
+				}
 				
 				//Set nose gun accuracy before firing.
 				If (AttackType == ATTACK_MACHINEGUN)
@@ -2507,10 +2609,86 @@ Class MVP_Strider : MVP_Humanoid
 					ExplosiveDelay = Clamp (GameTicRate*Random(3,8),0,UInt8.MAX);
 			}
 			Goto Fire.End;
+		Fire.Laser: //No attack animations for this lol. The lasers are just directly on its' body.
+			#### # 1
+			{
+				Vector3 LaserPos = MVP_StriderAttackPos(ATTACK_LASER);
+				
+				If (Target)
+				{
+					LineAttack (AngleTo(Target),
+					512+64,
+					PitchTo(Target,LaserPos.Z,Target.Height/2),
+					1,
+					'Laser',
+					Null,
+					LAF_NORANDOMPUFFZ|LAF_NOIMPACTDECAL|LAF_OVERRIDEZ,
+					offsetz:LaserPos.Z);
+					MVP_BeamParticle.SpawnBeam ((Pos.XY,LaserPos.Z),Target.Pos.PlusZ(Target.Height/2),failchance:15,-0.1);
+				}
+			}
+			#### # 0
+			{
+				If (Shots-- <= 1)
+				{
+					Shots = 0;
+					FireDelay = FireDelay = Clamp (GameTicRate*Random(1,6),0,UInt8.MAX);
+					Return FindState ("Fire.End",True); 
+				}
+				
+				Bool Optimization = (Random (0,6) == Random (0,6));
+				//Dodge projectiles.
+				If (MVP_StriderDodge (True))
+				{
+					MVP_StriderEndFire();
+					Return State (Null);
+				}
+				
+				//Stop trying to fire when totally surrounded by melee fuckers. Much lower threshold for the laser than the minigun attack, because the laser is much weaker.
+				If (Random (0,255) < 32 && MVP_IsSurrounded (256,6,True) && FindNearestEnemy (88))
+				{
+					MVP_StriderEndFire();
+					Return FindState ("Fire.End",True);
+				}
+				
+				//Dodge very dangerous hazard in range.
+				HazardInfo Haz;
+				If (bAvoidHazards && Random (0,255) < 128 && (Haz = GetStrongestHazard(Hazards)) && Haz.Level >= HazardInfo.HAZARD_HUGE)
+				{
+					If (MVP_StriderJump (MVP_StriderJumpFromPos (GetHazardOriginPos(Haz),32,384),flags:SJUMP_STRAFE,enemy:Target))
+					{
+						MVP_StriderEndFire();
+						Return State(Null);
+					}
+				}
+				
+				//If you have no target, or it's dead.
+				If (!Target || IsDead (Target))
+				{
+					A_ClearTarget();
+					LookForPlayers (True); //Look for a new target.
+				}
+				
+				Vector3 FireOfs = MVP_StriderAttackPos (ATTACK_LASER);
+				If (KAI_NPCRefire (48,"Fire.End",True,16) || Target && Distance3DSquared (Target) > 512*512|| !KAI_CheckLOF (Target,50,checkoffsets:FireOfs,TLOF_FaceOther,aimpos:GetFAFAimPos(Target,FireOfs)))
+				{
+					A_ClearTarget();
+					Return FindState ("Fire.End",True);
+				}
+				
+				Return State (Null);
+			}
+			Loop;
 		Fire.End:
 			PNS1 V 0
 			{
+				Bool WasLasering = (AttackType == ATTACK_LASER);
 				MVP_StriderEndFire();
+				If (WasLasering)
+				{
+					A_StopSound (CHAN_WEAPON);
+					Return SeeState;
+				}
 				If (InCover) //Strider is behind cover where it's always got its' panels open, so don't visual close them.
 					Return FindState ("Idle.Cover",True);
 				Return State (Null);
@@ -2521,8 +2699,8 @@ Class MVP_Strider : MVP_Humanoid
 					Frame = FRAME_BRACKETOPEN;
 				Else
 					A_StartSound ("Vehicle/Drone/Turret",CHAN_WEAPON);
-				If (AttackType == ATTACK_MACHINEGUN) //CLOSE faster for the machine gun.
-					Tics = 2;
+				//If (AttackType == ATTACK_MACHINEGUN) //CLOSE faster for the machine gun. NOTE: How the fuck did I not realize this doesn't work for so long? AttackType is cleared right above FFS.
+				//	Tics = 2;
 			}
 			Goto See;
 		Melee:
@@ -2605,7 +2783,8 @@ Class MVP_Strider : MVP_Humanoid
 		Melee.Ram:
 			PNS0 STUVWX 2
 			{
-				RamPower += 0.01f; //More damage as you run more.
+				AttackType = ATTACK_RAMMING; //NOTE: This should probably be here anyway. But it's a half hack because otherwise it can't ram other actors.
+				RamPower += 0.001f; //More damage as you run more.
 				RamPower = Clamp (RamPower,0.0,1.0);
 				If (SmokeCounter++ >= 250) //Stop running after some time.
 					Return FindState ("Melee.End",True);
@@ -2643,15 +2822,18 @@ Class MVP_Strider : MVP_Humanoid
 					
 					//Very special exit condition, we rammed an enemy at insufficient power to launch them away, so jump away!
 					//MAYDO: Make it able to sometimes jump back just to immediately ram again? Particularly against melee only enemies.
-					If (RamPower <= 0.5)
+					If (RamPower <= 0.02)
 					{
 						RamPower = 0;
 						SmokeCounter = 0;
 						AttackType = ATTACK_NONE;
 						MeleeTarget = Null;
-						MVP_StriderJump (MVP_StriderJumpFromPos (Rammed.Pos,32,256),flags:SJUMP_STRAFE,enemy:Target);
+						Bool JumpAway = MVP_StriderJump (MVP_StriderJumpFromPos (Rammed.Pos,32,256),flags:SJUMP_STRAFE,enemy:Target);
 						Rammed = Null;
-						Return State(Null);
+						If (JumpAway) //We're leaving to go to the Jump state.
+							Return State(Null);
+						Else //Can't jump, just stop.
+							Return FindState ("Melee.End",True);
 					}
 					Rammed = Null;
 					Return FindState ("Melee.End",True);
@@ -2674,7 +2856,7 @@ Class MVP_Strider : MVP_Humanoid
 				Return State(Null);
 			}
 			Loop;
-			tnt1 a 0 a_log ("is there some kinda fall through what the fuck is happening here");
+			//tnt1 a 0 a_log ("is there some kinda fall through what the fuck is happening here");
 		Melee.End:
 			TNT1 A 0
 			{
@@ -2702,12 +2884,13 @@ Class MVP_Strider : MVP_Humanoid
 			PNS1 T 0 A_JumpIf (!Target,"Idle");
 			Goto See;
 		//JUMP STATES
-		//You can check if the strider is jumping by seeing if they are in any Jump.##### state.
+		//NOTE: You can check if the strider is jumping by seeing if they are in any Jump.##### state.
 		Jump:
 			Jump.Start:
 				#### # Random(5,12) Fast
 				{
 					BlowVapour = Random (24,35);
+					VapeOffset = 0; //Reset offset in case we were turning our head/body around before.
 					If (!IsActorPlayingSound (CHAN_ENGINE,"Vehicle/Strider/Vapour")) A_StartSound ("Vehicle/Strider/Vapour",CHAN_ENGINE,CHANF_OVERLAP,0.5,1.4,1.5,0.9);
 					If (JumpFlags & SJUMP_FAST)
 						Tics = Random (2,6);
@@ -2802,7 +2985,7 @@ Class MVP_Strider : MVP_Humanoid
 					Return State (Null);
 				}
 				Loop;
-			//MAYDO: Make it lose momentum or have a massive friction penalty once landed so it doesn't slide off thin surface?
+			//MAYDO: Make it lose momentum or have a massive friction penalty once landed so it doesn't slide off thin surfaces?
 			Jump.End: //All comes back here.
 				#### # 8
 				{
@@ -2849,7 +3032,9 @@ Class MVP_Strider : MVP_Humanoid
 					DeathFlames = Random (80,150)*10;
 				
 				A_StopSound (CHAN_BODY);
+				A_StopSound (CHAN_WEAPON);
 				A_StartSound ("SFX/Fire",CHAN_VOICE,CHANF_LOOPING,0.5,1.1);
+				If (Random (0,255) == Random (0,512)) A_StartSound ("Vehicle/Strider/Ded",CHAN_ENGINE);
 				Actor Boom = Spawn ("MVP_Explosion",Pos.PlusZ(48));
 				Boom.Scale *= FRandom (1.8f,2.2f);
 				Boom.SetDamage (192);

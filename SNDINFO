@@ -58,6 +58,8 @@ SFX/FleshHit "Sounds/SFX/FleshHit.ogg"
 Weapon/RadioCall "Sounds/SFX/RadioCall.ogg"
 Weapon/DebugFire "Sounds/SFX/DebugGunFire.ogg"
 Weapon/GrenadeBounce "Sounds/SFX/GrenadeBounce.ogg"
+Weapon/LaserSmall "Sounds/SFX/LaserSmall.ogg"
+Weapon/LaserMedium "Sounds/SFX/LaserMedium.ogg"
 
 $Random SFX/MSExplosion
 {
@@ -117,6 +119,8 @@ $Limit SFX/MSExplosion1 0
 $Limit SFX/MSExplosion2 0
 //$Limit BulletRicochet5 0
 $Limit Weapon/RadioCall 0
+$Limit Weapon/LaserSmall 0
+$Limit Weapon/LaserMedium 0
 
 //Crap marine
 MVPMarine/Death1 DSPLDETH
@@ -354,6 +358,7 @@ $Random MVPMarine/Death
 	Vehicle/Strider/Alert "Sounds/Vehicles/Drones/Strider/StrAlert.ogg"
 	Vehicle/Strider/KickFail "Sounds/Vehicles/Drones/Strider/StrKickMiss.ogg"
 	Vehicle/Strider/Grenade "Sounds/Vehicles/Drones/Strider/StrGrenade.ogg"
+	Vehicle/Strider/Ded "Sounds/Vehicles/Drones/Strider/Ded.ogg"
 	$Alias Vehicle/Strider/Vapour Vehicle/Tank/Smokescreen
 	
 	$Random Vehicle/Strider/Motor
