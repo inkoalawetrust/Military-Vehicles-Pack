@@ -227,38 +227,26 @@ Class MVP_DiCokkaTurretWreck : MVP_DiCokkaTurretProp
 	}
 }
 
-//Textured particles defined in ANIMDEFS all animate in unison. So they are useless for this.
-//TODO: VisualThinkers and SPF_LOCAL_ANIM were added since then, so reconsider making this into a visual thinker.
-Class MVP_DiCokkaFireParticle : Actor
+Class MVP_DiCokkaFireParticle : KAI_Tracer //Vapour from 'burning' hydrogen, AKA dihydrogen monoxide.
 {
-	Default
+	Override Void SetProperties()
 	{
-		+Bright;
-		+NoBlockmap;
+		Super.SetProperties();
+		SetRenderStyle (STYLE_Normal);
+		DefaultSprite = TexMan.CheckForTexture("MetalSlugFireParticle");
+		NoWarp = True;
+		DestroyIfNoOwner = False;
+		Flags |= SPF_LOCAL_ANIM;
 	}
 	
-	//Fun fact, an empty or totally custom tick override doesn't actually provide a noticeable performance improvement.
+	Int Tics;
 	Override Void Tick()
 	{
+		Super.Tick();
+		
 		If (IsFrozen()) Return;
-		// Copied from FastProjectile.
-		if (tics != -1)
-		{
-			if (tics > 0) tics--;
-			while (!tics)
-			{
-				if (!SetState (CurState.NextState))
-				{ // mobj was removed
-					return;
-				}
-			}
-		}
-	}
-	States
-	{
-		Spawn:
-			MSX3 ABDEFGHIJKLMNOPQRSTUVXYZ 3;
-			Stop;
+		If (Tics++ >= 26)
+			Destroy();
 	}
 }
 

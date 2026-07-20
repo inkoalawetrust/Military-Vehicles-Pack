@@ -17,9 +17,6 @@
 //Think of some extra behaviors and such when in an MVP_DroneSwarm or groups in general.
 //Make strider able to strafe fire rockets :>
 
-//TODO:
-//Make it rarely do the Windows XP shutdown sound when destroyed.
-
 //HACK: Fucking christ shut up about overriding Tick() you bastard.
 Class MVP_Humanoid : KAI_Humanoid
 {
@@ -3414,10 +3411,9 @@ Class MVP_HydrogenVapour : KAI_Tracer //Vapour from 'burning' hydrogen, AKA dihy
 		If (IsFrozen()) Return;
 		
 		If (Vel.Z <= 6.0f) Vel.Z += 0.25; //Vapour goes up.
-		Tics++;
 		Alpha -= 0.025f;
 		Scale *= 0.98;
-		If (Alpha <= 0.f || Tics >= 36)
+		If (Alpha <= 0.f || Tics++ >= 36)
 			Destroy();
 	}
 }

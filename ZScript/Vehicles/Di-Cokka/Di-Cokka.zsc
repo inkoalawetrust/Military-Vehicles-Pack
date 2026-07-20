@@ -149,15 +149,18 @@ Class MVP_DiCokka : MVP_BaseVehicle
 				KAI_Look (maxseedist:MaxTargetRange,DEFAULT_HEARDISTANCE,extraflags:KAIL_CHASETARGET);
 			}
 			Loop;
+		Idle:
 		//The hull is basically just a moving platform for the turret, so its' AI is just whatever KAI_Chase has.
 		See:
 			MSV1 AABBCCDDEEFF 2
 			{
 				A_StopSound (CHAN_IDLING);
 				ActiveSound = Health >= SpawnHealth()/2.5 ? "Vehicle/Di-Cokka/Move" : "Vehicle/Di-Cokka/AltMove";
+				If (!Target && CurrentOrder == ORDER_STAY) Return SpawnState;
 				A_StartSound (ActiveSound,CHAN_MOVING,CHANF_LOOPING,0.6,0.7);
 				KAI_LandVehicleChase ("Spawn",chaseflags:CHF_DONTIDLE,followdist:FollowDist);
 				If (!User_NoCorpseCrush) KAI_CrushCorpses (1);
+				Return State (Null);
 			}
 			Loop;
 		Pain:
@@ -543,6 +546,8 @@ Mixin Class MVP_DiCokkaSharedVirtuals
 		Return True;
 	}
 	
+	TextureID FireDud;
+	
 	Override Void Tick()
 	{
 		Super.Tick();
@@ -553,8 +558,8 @@ Mixin Class MVP_DiCokkaSharedVirtuals
 			//Spawn fire particles when the vehicle is weakened enough.
 			If (ForcedFireParticlesCount || !IsDead (Self) && Health <= SpawnHealth()/2.5)
 			{
-				Actor Particle = Spawn ("MVP_DiCokkaFireParticle",Vec3Offset (FRandom (Radius, -Radius),FRandom (Radius, -Radius),FRandom (0, Height)),ALLOW_REPLACE);
-				Particle.Scale.X = Particle.Scale.Y = FRandom (0.4,0.55);
+				Let Particle = VisualThinker.Spawn ("MVP_DiCokkaFireParticle",FireDud,Vec3Offset (FRandom (Radius, -Radius),FRandom (Radius, -Radius),FRandom (0, Height)),(0,0,0));
+				Particle.Scale *= FRandom (0.4,0.55);
 				Particle.bXFlip = Random (False,True);
 				If (ForcedFireParticlesCount) ForcedFireParticlesCount--;
 			}
