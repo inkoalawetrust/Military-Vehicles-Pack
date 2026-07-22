@@ -183,7 +183,7 @@ Class MVP_PainRay : MVP_BaseTurret
 				Actor Spark;
 				Vector3 SpawnPos = Vec3Offset (FRandom (Radius*0.05,-Radius*0.05),FRandom(Radius*1.75,-Radius*1.75),FRandom (0,DeathHeight));
 				
-				//May spark sometimes. Maybe add a limit to how many times the destroyed turret can spark ?
+				//May spark sometimes.
 				If (Random[pr_cajump](0,255) < 6)
 					Spark = Spawn ("MVP_Spark",SpawnPos);
 			}
@@ -464,7 +464,7 @@ Class MVP_PainRayProp : KAI_BaseTurretProp
 				Actor Spark;
 				Vector3 SpawnPos = Vec3Offset (FRandom (Radius*0.05,-Radius*0.05),FRandom(Radius*1.75,-Radius*1.75),FRandom (0,DeathHeight));
 				
-				//May spark sometimes. Maybe add a limit to how many times the destroyed turret can spark ?
+				//May spark sometimes.
 				If (Random[pr_cajump](0,255) < 6)
 					Spark = Spawn ("MVP_Spark",SpawnPos);
 			}
@@ -524,7 +524,7 @@ Class MVP_PainRayWreck : MVP_PainRayProp
 					Actor Spark;
 					Vector3 SpawnPos = Vec3Offset (FRandom (Radius*0.05,-Radius*0.05),FRandom(Radius*1.75,-Radius*1.75),FRandom (0,DeathHeight));
 					
-					//May spark sometimes. Maybe add a limit to how many times the destroyed turret can spark ?
+					//May spark sometimes.
 					If (Random[pr_cajump](0,255) < 6)
 						Spark = Spawn ("MVP_Spark",SpawnPos);
 				}

@@ -160,7 +160,6 @@ $Random MVPMarine/Death
 	Vehicle/ArmyTruck/BackOpen "Sounds/Vehicles/Army Truck/TruckOpen.ogg"
 	Vehicle/ArmyTruck/BackSlam "Sounds/Vehicles/Army Truck/TruckSlam.ogg"
 	Vehicle/ArmyTruck/Brake "Sounds/Vehicles/Army Truck/TruckBrake.ogg"
-	Vehicle/ArmyTruck/Crash "Sounds/Vehicles/Army Truck/TruckCrash.ogg"
 	Vehicle/ArmyTruck/Stuffing "Sounds/Vehicles/Army Truck/Move.aiff"
 	Vehicle/ArmyTruck/HitCreature "Sounds/Vehicles/Army Truck/TruckHitLiving.ogg"
 	Vehicle/ArmyTruck/HitObject "Sounds/Vehicles/Army Truck/TruckHitObject.ogg"
@@ -169,7 +168,6 @@ $Random MVPMarine/Death
 	$Limit Vehicle/ArmyTruck/BackOpen 0
 	$Limit Vehicle/ArmyTruck/BackSlam 0
 	$Limit Vehicle/ArmyTruck/Brake 0
-	$Limit Vehicle/ArmyTruck/Crash 0
 	$Limit Vehicle/ArmyTruck/HitCreature 0
 	$Limit Vehicle/ArmyTruck/HitObject 0
 	

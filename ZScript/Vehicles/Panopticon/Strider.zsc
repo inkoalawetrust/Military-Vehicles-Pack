@@ -750,7 +750,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		//Fire ze lazers at quick targets near you, or large crowds of weak (low total health) targets near you. Or to painlock thin skinned enemies. Or also do it randomly for variety.
 		FirePos = MVP_StriderAttackPos (ATTACK_LASER);
-		If (!User_NoLaser && Dist <= 512 && KAI_CheckLOF (Target,50,checkoffsets:FirePos,TLOF_FaceOther,aimpos:GetFAFAimPos(Target,FirePos)))
+		If (!User_NoLaser && Dist <= 512 && Target.ApplyDamageFactor ('Laser',2) > 0 && KAI_CheckLOF (Target,50,checkoffsets:FirePos,TLOF_FaceOther,aimpos:GetFAFAimPos(Target,FirePos)))
 		{
 			Int Chance = Random (-8,60);
 			//Normal TryMove() monsters have a higher standard of speed to count as "fast", no, I'm not using the target predictions' convoluted move division handling lol.
@@ -2607,7 +2607,7 @@ Class MVP_Strider : MVP_Humanoid
 			}
 			Goto Fire.End;
 		Fire.Laser: //No attack animations for this lol. The lasers are just directly on its' body.
-			#### # 1
+			#### # 2
 			{
 				Vector3 LaserPos = MVP_StriderAttackPos(ATTACK_LASER);
 				
@@ -2616,12 +2616,13 @@ Class MVP_Strider : MVP_Humanoid
 					LineAttack (AngleTo(Target),
 					512+64,
 					PitchTo(Target,LaserPos.Z,Target.Height/2),
-					1,
+					2, /*NOTE: This was 1 originally. But with 1 damage, a victim with even a damage factor of 0.99 would round the damage received to 0.
+					This ensures that victims need damage factor (either general or Laser specific) of 0.5 or less to not be harmed by it.*/
 					'Laser',
 					Null,
 					LAF_NORANDOMPUFFZ|LAF_NOIMPACTDECAL|LAF_OVERRIDEZ,
 					offsetz:LaserPos.Z);
-					MVP_BeamParticle.SpawnBeam ((Pos.XY,LaserPos.Z),Target.Pos.PlusZ(Target.Height/2),failchance:15,-0.1);
+					MVP_BeamParticle.SpawnBeam (Pos.PlusZ(LaserPos.Z),Target.Pos.PlusZ(Target.Height/2),failchance:15,-0.1);
 				}
 			}
 			#### # 0

@@ -316,7 +316,11 @@ Class MVP_BeamParticle : VisualThinker
 		Super.Tick();
 		
 		If (!IsFrozen())
+		{
 			Alpha += FadeStep;
+			If (Alpha <= 0)
+				Destroy();
+		}
 	}
 }
 

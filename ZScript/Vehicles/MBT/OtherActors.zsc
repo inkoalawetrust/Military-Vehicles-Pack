@@ -1234,6 +1234,40 @@ Class MVP_SmokeScreen : Actor
 	}
 }
 
+Class MVP_SPAAGRadarDishChunk : Actor
+{
+	Default
+	{
+		Radius 8;
+		Height 8;
+		XScale 0.5;
+		YScale 0.416666;
+		Mass 20;
+	}
+	States
+	{
+		Spawn:
+			MBTD IJK 4 A_CheckFloor("Crash");
+			Loop;
+		Crash:
+			MBTD L -1;
+			Stop;
+	}
+}
+
+Class MVP_SPAAGRadarAntennaChunk : MVP_SPAAGRadarDishChunk
+{
+	States
+	{
+		Spawn:
+			MBTD MNO 4 A_CheckFloor("Crash");
+			Loop;
+		Crash:
+			MBTD P -1;
+			Stop;
+	}
+}
+
 //Check for level geometry to hide behind.
 Class MVP_MBTHullDownCheck : KAI_LOFRaycast
 {

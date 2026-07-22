@@ -336,7 +336,15 @@ Class MVP_Quadcopter : MVP_BaseFlyer
 			If (Health <= WoundHealth) //Keep some extra distance when hurt.
 				Dist += 32;
 			
+			
 			Double TargDist = Distance3D (Target);
+			
+			//We are after a Strider lazing us, better BTFO.
+			//MAYDO: There will be more enemies with hitscan lasers. This will eventually need to be a generic check.
+			If (MVP_Strider(Target) && !MVP_Strider(Target).User_NoLaser && 
+			MVP_Strider(Target).AttackType == MVP_Strider(Target).ATTACK_LASER && TargDist <= 512+64)
+				RunAway = True;
+				
 			//Run from target if hazard isn't closer.
 			//BUG: Yeah so this just doesn't run if we have a hazard in range I guess? Isn't that just splendid?
 			If (Dist && TargDist <= Dist && !(Haz && TargDist >= HazardDist))

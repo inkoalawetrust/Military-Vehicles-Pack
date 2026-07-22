@@ -262,7 +262,7 @@ Class MVP_GunDrone : MVP_BaseVehicle
 		}
 		
 		//Patrol handling.
-		//BUG: ZDoom's hacky usage of ReactionTime makes the (Ground ! Yes this is copy of MVP_QuadcopterChase) drone not wait at patrol points when it has a target.
+		//BUG: ZDoom's hacky usage of ReactionTime makes the (Ground ! Yes this is a copy of MVP_QuadcopterChase) drone not wait at patrol points when it has a target.
 		//If (!MovedAlready)
 		{
 			KAI_Chase_PatrolHandling ("Spawn",DroneMove.DetourFactor,DroneMove.AngleLimit,flags:KMTFlags);
