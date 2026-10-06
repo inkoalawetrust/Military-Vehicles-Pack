@@ -1,4 +1,6 @@
 //Common effects used by most or all vehicles.
+//MAYDO: Ground shockwave effects that follow the slope normal of the floor (3D floor or not) beneath them.
+//MAYDO: Add an arc flash effect (with damage). Really since almost all the drones are meant to be powered by li-air batteries, all of them should have at least this effect in addition to the usual explosion effects.
 
 //Customizable explosion actor.
 //+GETOWNER makes the explosions' target be the inflictor of the explosion.

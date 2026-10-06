@@ -750,7 +750,7 @@ Class MVP_Strider : MVP_Humanoid
 		
 		//Fire ze lazers at quick targets near you, or large crowds of weak (low total health) targets near you. Or to painlock thin skinned enemies. Or also do it randomly for variety.
 		FirePos = MVP_StriderAttackPos (ATTACK_LASER);
-		If (!User_NoLaser && Dist <= 512 && Target.ApplyDamageFactor ('Laser',2) > 0 && KAI_CheckLOF (Target,50,checkoffsets:FirePos,TLOF_FaceOther,aimpos:GetFAFAimPos(Target,FirePos)))
+		If (!User_NoLaser && Dist <= 512 && Target.Health <= 400 && Target.ApplyDamageFactor ('Laser',2) > 0 && KAI_CheckLOF (Target,50,checkoffsets:FirePos,TLOF_FaceOther,aimpos:GetFAFAimPos(Target,FirePos)))
 		{
 			Int Chance = Random (-8,60);
 			//Normal TryMove() monsters have a higher standard of speed to count as "fast", no, I'm not using the target predictions' convoluted move division handling lol.
@@ -1618,7 +1618,7 @@ Class MVP_Strider : MVP_Humanoid
 	{
 		//Only handle reverse footsteps from the alternate set of calls.
 		If (!ReverseMode && ReverseSteps > 0)
-			{console.printf ("we got reverse steps but didn't call reverse mode");Return;}
+			Return;
 		
 		
 		Vector3 SPos = Pos;
@@ -1988,7 +1988,7 @@ Class MVP_Strider : MVP_Humanoid
 	UInt16 BlowVapour;
 	Int VapeOffset; //Angle offset from the water vapour effect.
 	
-	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim and down to the target.
+	Enum StriderAttacks //All strider attacks. The MG, minigun, and rockets visually update the strider to aim up and down to the target.
 	{
 		ATTACK_NONE,
 		ATTACK_MACHINEGUN,

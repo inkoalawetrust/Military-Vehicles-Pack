@@ -618,7 +618,7 @@ Class MVP_40mmGrenade : MVP_BaseProjectile
 			vel.xy = dir * dist / flytime;
 			vel.z = (vdiff + 0.5 * flytime**2) / flytime;
 			vel *= GetGravity();
-			console.printf ("vel is %.2f %.2f %.2f",vel);
+			//console.printf ("vel is %.2f %.2f %.2f",vel);
 			
 			Return MHIT_DEFAULT;
 		}
